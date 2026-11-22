@@ -1,0 +1,4 @@
+# 試聽聲音、除錯用，不放進公開的專案
+tools/voice-samples/
+tools/voice-debug/
+node_modules/

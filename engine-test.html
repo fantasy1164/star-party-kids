@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>引擎測試</title><link rel="stylesheet" href="css/main.css"></head>
+<body><div id="stage"></div>
+<div id="fps" style="position:fixed;left:8px;top:8px;z-index:99;color:#fff;font:16px monospace;background:#0008;padding:4px 8px">fps</div>
+<script type="module">
+// 等角引擎測試：臥室模型＋玩具，自動繞一圈並顯示 FPS（家長頁也可以開）
+import { setupStage, stage } from './js/core/dom.js';
+import { buildBedroom, TOY_SPOTS } from './js/scenes/bedroom-set.js';
+import { toySvg } from './js/art/props.js';
+import { kidSvg } from './js/art/stars.js';
+setupStage(document.getElementById('stage'));
+const scr = document.createElement('div'); scr.className = 'screen'; scr.style.background = 'linear-gradient(#ffe3c4,#f7c9a8)';
+stage().appendChild(scr);
+const set = buildBedroom();
+scr.appendChild(set.dio.el);
+for (const [id, p] of Object.entries(TOY_SPOTS)) set.dio.addSprite({ x: p.x, y: p.y, w: 76, h: 76, html: toySvg(id), tap: 'toy' });
+set.dio.addSprite({ x: 420, y: 380, w: 110, h: 206, html: kidSvg('yy', ['shirt', 'pants', 'socks']) });
+const q = new URLSearchParams(location.search);
+if (q.has('a')) { set.dio.view.a = +q.get('a'); set.dio.apply(); }
+if (q.has('spin')) { (async () => { for (;;) { await set.dio.rotateBy(90); await new Promise(r => setTimeout(r, 400)); } })(); }
+let n = 0, t0 = performance.now();
+const tick = (t) => { n++; if (t - t0 > 1000) { document.getElementById('fps').textContent = `fps ${n}`; n = 0; t0 = t; } requestAnimationFrame(tick); };
+requestAnimationFrame(tick);
+</script></body></html>
