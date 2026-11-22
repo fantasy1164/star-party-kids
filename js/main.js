@@ -10,10 +10,14 @@ import { PROFILES, NAMES } from './config.js';
 import { mount as opening } from './ui/opening.js';
 import { mount as house } from './ui/house.js';
 import { mount as bedroom } from './scenes/bedroom.js';
+import { mount as bath } from './scenes/bathroom.js';
+import { mount as kitchen } from './scenes/kitchen.js';
+import { mount as living } from './scenes/living.js';
 import { mountRest, mountSleep } from './ui/rest.js';
 import { openParent } from './ui/parent.js';
 
-const SCREENS = { opening, house, bedroom, rest: mountRest, sleep: mountSleep };
+const SCREENS = { opening, house, bedroom, bath, kitchen, living, rest: mountRest, sleep: mountSleep };
+const ROOMS = ['house', 'bedroom', 'bath', 'kitchen', 'living'];
 let current = null;
 
 // 現在應該去哪：睡覺時間 → 睡覺；發條休息中 → 休息；不然回家
@@ -44,7 +48,7 @@ const app = {
     }
     turnsScene(null);
     if (!app.profile && name !== 'opening') name = 'opening';
-    if ((name === 'house' || name === 'bedroom') && route() !== 'house') name = route();
+    if (ROOMS.includes(name) && route() !== 'house') name = route();
     const root = div(`screen fade-in scr-${name}`);
     stage().innerHTML = '';
     stage().appendChild(root);

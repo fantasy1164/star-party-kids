@@ -13,7 +13,12 @@ export function openParent(root, onClose) {
   const days = [];
   const d = new Date();
   for (let i = 0; i < 7; i++) { days.push(dateKey(d)); d.setDate(d.getDate() - 1); }
-  const NAMES = { toys: '收玩具', dress: '換衣服', simon: '晚晚說' };
+  const NAMES = {
+    'bedroom.toys': '收玩具', 'bedroom.dress': '換衣服', 'bedroom.simon': '晚晚說',
+    'bath.brush': '刷牙', 'bath.wash': '洗手', 'bath.haz': '找危險',
+    'kitchen.plate': '我的餐盤', 'kitchen.table': '擺餐具', 'kitchen.safe': '什麼能摸',
+    'living.tv': '關電視', 'living.door': '誰按電鈴', 'living.stage': '明星舞台',
+  };
   const row = (id, day) => {
     const k = state.kids[id];
     const done = k.done[day] || {};

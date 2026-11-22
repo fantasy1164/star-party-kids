@@ -139,6 +139,22 @@ const SFX = {
   ding: (t) => { INST.musicbox(ctx, sfxBus, 659, t, 0.28); INST.musicbox(ctx, sfxBus, 523, t + 0.22, 0.25); },
   giggle: (t) => [0, 0.09, 0.18, 0.27].forEach((d, i) => tone(900 + i * 80, t + d, 0.07, { to: 1200 + i * 80, gain: 0.08 })),
   open: (t) => { tone(220, t, 0.25, { to: 520, gain: 0.15 }); noise(t, 0.2, { freq: 800, q: 1, gain: 0.15 }); },
+  // ---- 廁所、廚房、客廳 ----
+  water: (t) => { noise(t, 1.3, { freq: 1800, q: 0.4, gain: 0.22 }); noise(t, 1.3, { freq: 600, q: 0.6, gain: 0.12 }); },
+  scrub: (t) => noise(t, 0.12, { freq: 3500, q: 1.5, gain: 0.16 }),
+  bubble: (t) => tone(500 + Math.random() * 500, t, 0.08, { to: 1400, gain: 0.12 }),
+  pump: (t) => { noise(t, 0.15, { freq: 900, q: 2, gain: 0.2 }); tone(300, t, 0.1, { to: 180, gain: 0.12 }); },
+  mop: (t) => noise(t, 0.5, { freq: 1200, to: 500, q: 0.8, gain: 0.2 }),
+  chomp: (t) => { noise(t, 0.08, { freq: 700, q: 1.5, gain: 0.35 }); tone(160, t, 0.1, { to: 90, gain: 0.25 }); },
+  burp: (t) => tone(140, t, 0.35, { type: 'sawtooth', to: 90, gain: 0.08, lp: 600 }),
+  slide: (t) => noise(t, 0.3, { freq: 2200, to: 900, q: 0.7, gain: 0.1 }),
+  doorbell: (t) => { INST.musicbox(ctx, sfxBus, 659, t, 0.4); INST.musicbox(ctx, sfxBus, 523, t + 0.45, 0.4); },
+  phone: (t) => { for (let i = 0; i < 2; i++) for (let k = 0; k < 8; k++) tone(k % 2 ? 1300 : 1100, t + i * 0.7 + k * 0.05, 0.05, { type: 'square', gain: 0.05, lp: 3000 }); },
+  alarm: (t) => { for (let k = 0; k < 14; k++) tone(k % 2 ? 2100 : 1800, t + k * 0.06, 0.05, { type: 'triangle', gain: 0.16 }); },
+  door: (t) => { tone(180, t, 0.4, { to: 260, type: 'sawtooth', gain: 0.05, lp: 900 }); noise(t + 0.3, 0.1, { freq: 400, q: 1, gain: 0.2 }); },
+  tvoff: (t) => { tone(1600, t, 0.15, { to: 80, gain: 0.12 }); noise(t, 0.06, { freq: 3000, q: 1, gain: 0.15 }); },
+  tick: (t) => { tone(1500, t, 0.04, { gain: 0.15 }); },
+  drum: (t) => { kick(ctx, sfxBus, t, 0.9); noise(t, 0.08, { freq: 1800, q: 0.8, gain: 0.25 }); },
 };
 export function sfx(name) {
   if (!ctx || ctx.state !== 'running') return;
@@ -185,6 +201,30 @@ const TRACKS = {
     style: 'song', bpm: 122, inst: 'marimba', gain: 0.28,
     melody: seq('G5 E5 G5 E5 C5 . D5 E5 F5 D5 F5 D5 B4 . C5 D5  E5 C5 E5 G5 A5 . G5 E5 D5 . G4 . C5 . . .'),
     bass: seq('C3 . G3 . C3 . G3 . G2 . D3 . G2 . D3 .  A2 . E3 . F2 . C3 . G2 . G2 . C3 . . .'),
+  },
+  // 廁所：泡泡感的木琴
+  bath: {
+    style: 'bg', bpm: 100, inst: 'marimba', gain: 0.24,
+    melody: seq('E5 G5 E5 C5 . . D5 E5 F5 . A5 . G5 . . .  E5 G5 C6 . B5 . G5 . A5 F5 D5 . C5 . . .'),
+    bass: seq('C3 . G2 . C3 . G2 . F2 . C3 . G2 . D3 .  A2 . E3 . G2 . D3 . F2 . G2 . C3 . . .'),
+  },
+  // 刷牙歌（真的刷兩分鐘時）
+  brush: {
+    style: 'song', bpm: 120, inst: 'toypiano', gain: 0.22,
+    melody: seq('C5 E5 G5 E5 C5 E5 G5 . A5 G5 F5 E5 D5 . . .  D5 F5 A5 F5 D5 F5 A5 . G5 F5 E5 D5 C5 . . .'),
+    bass: seq('C3 . G2 . C3 . G2 . F2 . C3 . G2 . . .  D3 . A2 . D3 . A2 . G2 . D3 . C3 . . .'),
+  },
+  // 廚房：玩具鋼琴，輕快
+  kitchen: {
+    style: 'bg', bpm: 112, inst: 'toypiano', gain: 0.2,
+    melody: seq('G4 C5 E5 . D5 C5 A4 . G4 C5 E5 G5 . E5 D5 .  F5 E5 D5 . C5 D5 E5 . D5 C5 A4 . C5 . . .'),
+    bass: seq('C3 . G3 . A2 . E3 . C3 . G3 . G2 . D3 .  F2 . C3 . A2 . E3 . G2 . G2 . C3 . . .'),
+  },
+  // 客廳：木琴＋輕鼓
+  living: {
+    style: 'bg', bpm: 104, inst: 'marimba', gain: 0.24,
+    melody: seq('A4 C5 E5 . C5 A4 G4 . A4 C5 E5 G5 . E5 D5 .  C5 D5 E5 . D5 C5 A4 . G4 A4 C5 . A4 . . .'),
+    bass: seq('A2 . E3 . F2 . C3 . A2 . E3 . G2 . D3 .  F2 . C3 . D3 . A2 . G2 . G2 . A2 . . .'),
   },
   // 晚晚說：很輕，讓小孩聽得清楚口令
   listen: {

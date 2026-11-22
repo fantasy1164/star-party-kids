@@ -1,13 +1,14 @@
-// 家：明星小鎮裡的一站（之後的小鎮地圖會連到學堂、農場等）。四個房間的立體模型，手指可以轉。第一版只有臥室開放，其他房間放三角錐「準備中」。
+// 家：明星小鎮裡的一站（之後的小鎮地圖會連到學堂、農場等）。四個房間的立體模型，手指可以轉，點房間就進去。
 import { createDiorama } from '../engine/diorama.js';
 import { div } from '../core/dom.js';
 import { speak } from '../core/voice.js';
 import { playMusic, sfx } from '../core/audio.js';
-import { state, markSeen } from '../core/store.js';
+import { state, markSeen, doneToday } from '../core/store.js';
 import { roomTint, isDark } from '../core/clock.js';
 import { turnsScene } from '../core/turns.js';
 import { setHint, setPlaying, mountClock } from '../core/session.js';
-import { shanSvg, wanSvg, starPolygon } from '../art/stars.js';
+import { shanSvg, wanSvg } from '../art/stars.js';
+import { guaSvg, dongSvg, ICON2 } from '../art/more.js';
 import { ICON } from '../art/props.js';
 import { backdrop, homeBtn, rotateBtns, jars } from './hud.js';
 
@@ -28,7 +29,7 @@ export async function mount(root, app) {
   if (isDark()) root.classList.add('night');
 
   for (const [id, r] of Object.entries(ROOMS)) {
-    dio.addDecal({ x: r.x + 4, y: r.y + 4, w: r.w - 8, h: r.d - 8, z: 0.8, css: `background:${r.floor};border-radius:6px`, cls: `room-floor ${r.open ? '' : 'closed'}` }).dataset.tap = id;
+    dio.addDecal({ x: r.x + 4, y: r.y + 4, w: r.w - 8, h: r.d - 8, z: 0.8, css: `background:${r.floor};border-radius:6px`, cls: 'room-floor' }).dataset.tap = id;
   }
   // 隔間牆（矮矮的，中間留門）
   const wall = '#f3dcc0';
@@ -46,21 +47,32 @@ export async function mount(root, app) {
   dio.addBox({ x: 200, y: 24, w: 56, d: 56, h: 60, color: '#f1c48d', tap: 'bedroom' });
   dio.addBox({ x: 300, y: 40, w: 120, d: 60, h: 170, color: '#f4b8c9', tap: 'bedroom' });
   const wan = dio.addSprite({ x: 228, y: 56, z: 60, w: 84, h: 105, html: wanSvg(), shadow: 0.5, tap: 'bedroom' });
-  const marker = dio.addSprite({ x: 230, y: 230, z: 120, w: 110, h: 110, html: `<div class="inner">${ICON.moon}</div>`, cls: 'marker', shadow: 0, tap: 'bedroom' });
-
-  // 廁所（準備中）
+  // 廁所：浴缸、洗手台、呱呱
   dio.addBox({ x: 600, y: 30, w: 270, d: 120, h: 60, color: '#ffffff', cls: 'soft', tap: 'bath' });
   dio.addBox({ x: 480, y: 30, w: 70, d: 70, h: 80, color: '#e9f6fb', tap: 'bath' });
+  dio.addSprite({ x: 740, y: 100, z: 56, w: 70, h: 78, html: guaSvg(), shadow: 0, tap: 'bath' });
   // 客廳：沙發、電視櫃（閃閃在這裡）
   dio.addBox({ x: 40, y: 600, w: 250, d: 100, h: 50, color: '#a98bff', cls: 'soft', tap: 'living' });
   dio.addBox({ x: 40, y: 660, w: 250, d: 40, h: 100, color: '#9478f0', cls: 'soft', tap: 'living' });
   dio.addBox({ x: 40, y: 420, w: 180, d: 50, h: 60, color: '#d4955f', tap: 'living' });
-  // 廚房（準備中）
+  // 廚房：餐桌、冰箱、咚咚
   dio.addBox({ x: 600, y: 520, w: 160, d: 120, h: 70, color: '#ffd9a8', tap: 'kitchen' });
   dio.addBox({ x: 820, y: 400, w: 70, d: 80, h: 190, color: '#e8f4ff', tap: 'kitchen' });
-  for (const [x, y, room] of [[700, 230, 'bath'], [690, 690, 'kitchen']]) {
-    dio.addSprite({ x, y, w: 80, h: 80, html: ICON.cone, shadow: 0.5, tap: room });
+  dio.addSprite({ x: 560, y: 600, w: 96, h: 120, html: dongSvg(), shadow: 0.6, tap: 'kitchen' });
+  // 每個房間上面漂著一個標記；今天這個房間三件事都做完，標記變綠
+  const ROOM_MARK = {
+    bedroom: { x: 230, y: 230, icon: ICON.moon, games: ['toys', 'dress', 'simon'] },
+    bath: { x: 680, y: 240, icon: ICON2.brush, games: ['brush', 'wash', 'haz'] },
+    living: { x: 330, y: 470, icon: ICON2.tv, games: ['tv', 'door', 'stage'] },
+    kitchen: { x: 680, y: 660, icon: ICON2.plate, games: ['plate', 'table', 'safe'] },
+  };
+  const markers = {};
+  for (const [id, m] of Object.entries(ROOM_MARK)) {
+    markers[id] = dio.addSprite({ x: m.x, y: m.y, z: 130, w: 104, h: 104, html: `<div class="inner">${m.icon}</div>`, cls: 'marker', shadow: 0, tap: id });
+    if (m.games.every((g) => doneToday(app.profile.members, `${id}.${g}`))) markers[id].el.classList.add('done');
   }
+  const firstOpen = Object.keys(ROOM_MARK).find((id) => !markers[id].el.classList.contains('done')) || 'bedroom';
+  const marker = markers[firstOpen];
   const shan = dio.addSprite({ x: 330, y: 560, w: 130, h: 148, html: shanSvg(), shadow: 0.7, tap: 'shan' });
 
   homeBtn(root, () => app.go('opening'));
@@ -72,20 +84,21 @@ export async function mount(root, app) {
   playMusic(isDark() ? 'lullaby' : 'house');
   setHint(() => marker.el);
 
-  dio.onTap(async (name, el) => {
-    if (name === 'bedroom') {
+  const GO = { bedroom: 'house_bedroom', bath: 'house_bath', kitchen: 'house_kitchen', living: 'house_living' };
+  let going = false;
+  dio.onTap(async (name) => {
+    if (GO[name]) {
+      if (going) return;
+      going = true;
       sfx('tap');
-      marker.el.classList.add('hop');
+      markers[name].el.classList.add('hop');
       setPlaying(false);
-      await speak('shan', 'house_bedroom', { node: shan.el });
-      app.go('bedroom');
+      await speak('shan', GO[name], { node: shan.el });
+      if (app.alive()) app.go(name);
     } else if (name === 'shan') {
       sfx('boing');
       shan.el.classList.remove('hop'); void shan.el.offsetWidth; shan.el.classList.add('hop');
       speak('shan', 'house_pick', { node: shan.el });
-    } else if (name === 'bath' || name === 'kitchen') {
-      sfx('soft');
-      speak('shan', 'locked', { node: shan.el });
     }
   });
 
