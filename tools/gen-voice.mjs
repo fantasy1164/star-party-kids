@@ -410,6 +410,9 @@ console.log(`共 ${all.length} 句，這次要產生 ${todo.length} 句（模型
 
 if (flag('dry')) {
   todo.forEach((j) => console.log(`  ${j.key}  ←  ${j.text}`));
+  // 預估請求次數（同一角色每 BATCH 句串成一次請求；切不開時會多用幾次）
+  const est = Object.keys(cfg.characters).reduce((n, c) => n + Math.ceil(todo.filter((j) => j.charId === c).length / BATCH), 0);
+  console.log(`預估 ${est} 次請求（每次最多 ${BATCH} 句）`);
 } else if (todo.length) {
   if (!KEY) { console.error('請先設定環境變數 GEMINI_API_KEY'); process.exit(1); }
   // 依角色分組，每組再切成每批 BATCH 句
