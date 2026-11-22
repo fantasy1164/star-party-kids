@@ -34,13 +34,18 @@ export function createDiorama(opt = {}) {
     floor: '#e9c99f', floorCss: null, wall: '#f7ead6', base: '#c98b5e', rim: 26, walls: true, rotatable: true,
     ...opt,
   };
+  // 結構：.dio（外框）> .dio-view（透視）> .dio-cam > .dio-world，調暗層與燈光層放在 .dio-view 外面。
+  // 調暗層如果跟立體場景放在同一個透視容器裡，iPad 的 Chrome 會把它當成 z=0 的平面跟地板交錯，
+  // 地板會變成一半暗一半亮（11/23 夜晚開場發現）。
   const el = div('dio');
+  const viewEl = div('dio-view');
   const cam = div('dio-cam');
   const world = div('dio-world');
   world.style.width = `${o.w}px`;
   world.style.height = `${o.d}px`;
   cam.appendChild(world);
-  el.appendChild(cam);
+  viewEl.appendChild(cam);
+  el.appendChild(viewEl);
   const tint = div('dio-tint');
   el.appendChild(tint);
   const glow = div('dio-glow');

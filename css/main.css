@@ -27,7 +27,8 @@ html, body {
 @keyframes tw { 50% { opacity: .2; transform: scale(.6); } }
 
 /* ---------- 立體模型屋引擎 ---------- */
-.dio { position: absolute; inset: 0; perspective: 2600px; perspective-origin: 50% 30%; overflow: hidden; }
+.dio { position: absolute; inset: 0; overflow: hidden; }
+.dio-view { position: absolute; inset: 0; perspective: 2600px; perspective-origin: 50% 30%; }
 .dio-cam { position: absolute; width: 0; height: 0; transform-style: preserve-3d; transform-origin: 0 0; will-change: transform; }
 .dio-world, .dio-box { position: absolute; left: 0; top: 0; transform-style: preserve-3d; }
 .dio-face, .dio-decal, .dio-sprite, .dio-shadow {
@@ -42,8 +43,8 @@ html, body {
 .dio-sprite { transform-origin: 50% 100%; transform: translateZ(var(--z, 0px)) rotateZ(calc(var(--ang) * -1)) rotateX(-90deg); }
 .dio-sprite > svg, .dio-sprite > .inner { display: block; width: 100%; height: 100%; overflow: visible; }
 .dio-shadow { border-radius: 50%; background: radial-gradient(ellipse, rgba(60,30,10,.32), rgba(60,30,10,0) 70%); pointer-events: none; }
-.dio-tint { position: absolute; inset: 0; pointer-events: none; transition: background 1.2s; }
-.dio-glow { position: absolute; inset: 0; pointer-events: none; }
+.dio-tint { position: absolute; inset: 0; pointer-events: none; transition: background 1.2s; z-index: 1; }
+.dio-glow { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
 .wall { overflow: hidden; }
 .wall-art { position: absolute; }
 [data-tap] { cursor: pointer; }
