@@ -5,12 +5,12 @@ export const LINES = {
   // ---- 開場、選人 ----
   knock: { shan: '叩叩叩！玩具箱裡有人喔！' },
   title: { shan: '明星總動員！歡樂派對！' },
-  intro: { shan: '我是閃閃！玩具屋的明星主持人！' },
+  intro: { shan: '我是閃閃！明星小鎮的主持人！' },
   who: { shan: '今天誰要來玩呢？' },
-  welcome: { shan: '{name}，歡迎來到玩具屋！' },
+  welcome: { shan: '{name}，歡迎來到明星小鎮！' },
   short_hi: { shan: '派對開始囉！' },
 
-  // ---- 玩具屋（家） ----
+  // ---- 家 ----
   house_pick: { shan: '要去哪個房間呢？點點看！' },
   house_spin: { shan: '用手指轉轉看，房子會轉喔！' },
   house_bedroom: { shan: '去臥室！找晚晚！' },

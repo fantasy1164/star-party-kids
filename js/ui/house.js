@@ -1,4 +1,4 @@
-// 玩具屋（家）：四個房間的立體模型，手指可以轉。第一版只有臥室開放，其他房間放三角錐「準備中」。
+// 家：明星小鎮裡的一站（之後的小鎮地圖會連到學堂、農場等）。四個房間的立體模型，手指可以轉。第一版只有臥室開放，其他房間放三角錐「準備中」。
 import { createDiorama } from '../engine/diorama.js';
 import { div } from '../core/dom.js';
 import { speak } from '../core/voice.js';

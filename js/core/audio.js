@@ -162,7 +162,7 @@ const TRACKS = {
     melody: seq('C5 C5 E5 G5 . G5 A5 G5 E5 . C5 . D5 E5 D5 .  F5 F5 A5 C6 . A5 G5 E5 D5 . G5 . C5 . . .'),
     bass: seq('C3 . G2 . C3 . G2 . A2 . E2 . G2 . G2 .  F2 . C3 . F2 . C3 . G2 . D3 . C3 . . .'),
   },
-  // 玩具屋（家）：木琴
+  // 家：木琴
   house: {
     style: 'bg', bpm: 108, inst: 'marimba', gain: 0.26,
     melody: seq('C5 . E5 G5 . E5 A5 . G5 . E5 . D5 . C5 .  D5 . F5 A5 . F5 G5 . E5 . C5 . D5 . . .  C5 . E5 G5 . E5 C6 . A5 . G5 . E5 . D5 .  C5 . D5 E5 . G5 E5 . D5 . C5 . . . . .'),
