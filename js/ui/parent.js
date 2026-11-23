@@ -5,6 +5,7 @@ import { setMusicVolume } from '../core/audio.js';
 import { clearRest } from '../core/session.js';
 import { TEST_KEY, testSettings, dateKey } from '../core/clock.js';
 import { KIDS } from '../config.js';
+import * as M from '../core/mult.js';
 
 export function openParent(root, onClose) {
   const s = state.settings;
@@ -18,7 +19,12 @@ export function openParent(root, onClose) {
     'bath.brush': '刷牙', 'bath.wash': '洗手', 'bath.haz': '找危險',
     'kitchen.plate': '我的餐盤', 'kitchen.table': '擺餐具', 'kitchen.safe': '什麼能摸',
     'living.tv': '關電視', 'living.door': '誰按電鈴', 'living.stage': '明星舞台',
+    'school.robot': '修理機器人', 'school.blocks': '積木排排站', 'school.hop': '跳跳口訣',
   };
+  // 九九乘法：每一題的熟練度（顏色）與答錯次數
+  const BOXC = ['#ffd0d0', '#ffe3c4', '#fff2b8', '#c8f5d6', '#9fe6b8', '#6fd99a'];
+  const multTable = `<table class="mult"><tr><th></th>${[2, 3, 4, 5, 6, 7, 8, 9].map((b) => `<th>×${b}</th>`).join('')}</tr>
+    ${M.table().map((row, i) => `<tr><th>${i + 2}</th>${row.map((f) => `<td style="background:${BOXC[f.box]}">${f.bad ? `✕${f.bad}` : ''}</td>`).join('')}</tr>`).join('')}</table>`;
   const row = (id, day) => {
     const k = state.kids[id];
     const done = k.done[day] || {};
@@ -30,6 +36,11 @@ export function openParent(root, onClose) {
     <h3>這一週</h3>
     <table><tr><th>日期</th><th>${KIDS.yy.name} 星星</th><th>完成</th><th>${KIDS.kk.name} 星星</th><th>完成</th></tr>
       ${days.map((day) => `<tr><td>${day.slice(5)}</td>${row('yy', day)}${row('kk', day)}</tr>`).join('')}</table>
+    <h3>九九乘法（岳岳）</h3>
+    <p class="note">正在練：${M.focusRow()} 的乘法　已學會 ${M.masteredCount()}／81 題　${M.checked() ? '' : '（還沒做程度檢查：在學堂玩「修理機器人」會先做）'}<br>
+      顏色越綠越熟（第 3 盒以上算學會，星空會亮）；✕ 是答錯次數。</p>
+    ${multTable}
+    <div class="row"><button id="recheck" class="gray">下次重新做程度檢查</button></div>
     <h3>遊玩時間</h3>
     <div class="row"><label>每次可以玩（分鐘）</label><select id="sessionMin">${[5, 10, 12, 15, 20, 25, 30].map((v) => `<option ${v === s.sessionMin ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
     <div class="row"><label>玩完休息（分鐘）</label><select id="restMin">${[1, 10, 20, 30, 45, 60, 90, 120].map((v) => `<option ${v === s.restMin ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
@@ -61,6 +72,7 @@ export function openParent(root, onClose) {
   };
   $('clearTest').onclick = () => { localStorage.removeItem(TEST_KEY); location.reload(); };
   $('perf').onclick = () => { location.href = 'engine-test.html?spin=1'; };
+  $('recheck').onclick = () => { state.mult = { ...(state.mult || {}), checked: false }; save(); $('recheck').textContent = '下次進學堂會重新檢查 ✓'; };
   $('wipe').onclick = () => { if (confirm('確定清除全部進度？')) { clearAll(); location.reload(); } };
   p.querySelector('.close').onclick = () => { commit(); p.remove(); onClose?.(); };
   p.addEventListener('pointerdown', (e) => e.stopPropagation());

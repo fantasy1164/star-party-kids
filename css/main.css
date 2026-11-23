@@ -40,7 +40,7 @@ html, body {
 .dio-box.soft .dio-face { border-radius: 10px; }
 .dio-decal { transform-origin: 50% 50%; }
 .dio-floor { border-radius: 2px; }
-.dio-sprite { transform-origin: 50% 100%; transform: translateZ(var(--z, 0px)) rotateZ(calc(var(--ang) * -1)) rotateX(-90deg); }
+.dio-sprite { transform-origin: 50% 100%; transform: translateZ(var(--z, 0px)) rotateZ(calc(var(--ang) * -1)) rotateX(calc(-90deg + var(--lean, 0deg))); }
 .dio-sprite > svg, .dio-sprite > .inner { display: block; width: 100%; height: 100%; overflow: visible; }
 .dio-shadow { border-radius: 50%; background: radial-gradient(ellipse, rgba(60,30,10,.32), rgba(60,30,10,0) 70%); pointer-events: none; }
 .dio-tint { position: absolute; inset: 0; pointer-events: none; transition: background 1.2s; z-index: 1; }
@@ -337,8 +337,8 @@ body.turn-kk .glowy > svg { animation-name: glowyK; }
 @keyframes tvball { from { transform: translate(-40px, 0); } 50% { transform: translate(0, -30px); } to { transform: translate(40px, 0); } }
 .lane { position: absolute; z-index: 21; left: 50%; bottom: 190px; width: 160px; height: 520px; margin-left: -80px; border-radius: 80px; background: linear-gradient(rgba(255,255,255,0), rgba(255,255,255,.35)); pointer-events: none; }
 .lane .hit { position: absolute; left: 20px; bottom: 0; width: 120px; height: 120px; border-radius: 50%; border: 8px solid #fff; box-shadow: 0 0 20px #ffd23f; }
-.note { position: absolute; left: 35px; top: -90px; width: 90px; height: 90px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, #ffd23f 60%, #ff9f43); transition-property: top; transition-timing-function: linear; }
-.note.hit-ok { transform: scale(1.6); opacity: 0; transition: transform .25s, opacity .25s; }
+.beatnote { position: absolute; left: 35px; top: -90px; width: 90px; height: 90px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, #ffd23f 60%, #ff9f43); transition-property: top; transition-timing-function: linear; }
+.beatnote.hit-ok { transform: scale(1.6); opacity: 0; transition: transform .25s, opacity .25s; }
 .spotlight { position: absolute; inset: 0; z-index: 3; pointer-events: none; background: radial-gradient(circle at 50% 55%, rgba(255,250,210,.0) 0, rgba(255,250,210,0) 180px, rgba(10,8,40,.55) 380px); }
 .dio-sprite.mv-jump > svg { animation: hop .5s ease 3; }
 .dio-sprite.mv-spin > svg { animation: spinY 1s ease; }
@@ -350,3 +350,59 @@ body.turn-kk .glowy > svg { animation-name: glowyK; }
 
 .panel.beltpanel { background: repeating-linear-gradient(0deg, transparent 0 58px, rgba(255,255,255,.7) 58px 62px), repeating-linear-gradient(90deg, #fff1dc 0 58px, #ffe8c8 58px 62px); }
 .panel.doorpanel { background: linear-gradient(#f3e3ff, #fffaf0); }
+
+/* ---------- 學堂 ---------- */
+.btn-view { right: 24px; top: 136px; width: 84px; height: 84px; }
+.factcard { position: absolute; left: 50%; top: 132px; transform: translateX(-50%) scale(0); display: flex; align-items: center; gap: 10px; padding: 8px 26px; border-radius: 30px;
+  background: #fff; box-shadow: 0 8px 0 rgba(0,0,0,.1); transition: transform .35s cubic-bezier(.3,1.6,.5,1); font: 900 78px/1 -apple-system, "PingFang TC", sans-serif; color: #4a3b6b; }
+.factcard.show { transform: translateX(-50%) scale(1); }
+.factcard .n { color: var(--c, #4a3b6b); }
+.factcard .x { font-size: 56px; color: #b9b3d6; }
+.answers { position: absolute; z-index: 26; left: 50%; bottom: 30px; transform: translateX(-50%); display: none; gap: 30px; }
+.answers.show { display: flex; }
+.answers .ans { width: 150px; height: 150px; border: 0; border-radius: 50%; padding: 16px; background: radial-gradient(circle at 35% 30%, #fff, #fff3c4 60%, #ffd23f); box-shadow: 0 8px 0 #d6a23a; animation: popin .4s cubic-bezier(.3,1.6,.5,1) both; }
+.answers .ans:nth-child(2) { animation-delay: .08s; } .answers .ans:nth-child(3) { animation-delay: .16s; }
+.answers .ans svg { width: 100%; height: 100%; }
+.answers .ans.right { background: radial-gradient(circle at 35% 30%, #fff, #c8f5d6 60%, #4cd07d); box-shadow: 0 8px 0 #2f9a5a; transform: scale(1.12); }
+.answers .ans.wrong { opacity: .3; transform: scale(.85); }
+.answers.in-panel { position: absolute; left: auto; right: 40px; bottom: 36px; transform: none; gap: 18px; }
+.answers.in-panel .ans { width: 130px; height: 130px; }
+.rowstrip { border: 4px dashed var(--c); border-radius: 10px; background: rgba(255,255,255,.35); }
+.rowstrip.next { background: color-mix(in srgb, var(--c) 35%, transparent); animation: rowglow 1s ease-in-out infinite; }
+.rowstrip.done { border-color: transparent; background: transparent; }
+@keyframes rowglow { 50% { box-shadow: 0 0 18px 6px var(--c); } }
+.dio-box.cube { transition: transform .45s cubic-bezier(.3,1.5,.5,1); }
+.dio-box.cube-hop { animation: cubehop .45s ease; }
+@keyframes cubehop { 50% { transform: translateZ(26px); } }
+.stone { border-radius: 50%; background: var(--c); opacity: .55; box-shadow: inset 0 -6px 0 rgba(0,0,0,.12); transition: opacity .3s; }
+.stone.lit { opacity: 1; }
+.stone.next { opacity: 1; animation: rowglow 1s ease-in-out infinite; }
+.robot-big { left: 40px; top: 60px; width: 330px; height: 410px; }
+.robot-big.dance > svg { animation: wiggle .5s ease 4; }
+.qcard { right: 60px; top: 50px; display: flex; align-items: center; gap: 12px; font: 900 110px/1 -apple-system, "PingFang TC", sans-serif; color: #4a3b6b; }
+.qcard.small { font-size: 64px; }
+.qcard .x { color: #b9b3d6; font-size: .7em; }
+.qdots { right: 60px; top: 170px; width: 470px; height: 270px; display: flex; align-items: center; justify-content: center; }
+.qdots svg { max-width: 100%; max-height: 100%; }
+.qdots .dot { opacity: .9; transition: transform .3s; transform-box: fill-box; transform-origin: 50% 50%; }
+.qdots .dot.lit { transform: scale(1.25); }
+.skybig { left: 50%; top: 24px; width: 560px; height: 560px; margin-left: -280px; border-radius: 30px; background: #2a2f6b; padding: 22px; }
+.skybig polygon { transition: transform .3s; transform-box: fill-box; transform-origin: 50% 50%; }
+.skybig polygon.on { filter: drop-shadow(0 0 6px #fff3a0); }
+.skybig polygon.tw { animation: pulse .5s ease 2; }
+.panel.skypanel { background: #1d2150; }
+.closebtn { right: 24px; top: 24px; width: 84px; height: 84px; border: 0; border-radius: 50%; padding: 20px; background: #6b6fb0; }
+.closebtn svg { width: 100%; height: 100%; }
+.wall-art.sky-flash { animation: skyflash 1s ease 2; }
+@keyframes skyflash { 50% { box-shadow: 0 0 0 8px #ffd9a8, 0 0 40px 20px #ffd23f; } }
+.bibi .part { transition: opacity .4s, transform .4s; }
+.bibi.miss-wheels .part-wheels { opacity: .12; }
+.bibi.miss-armL .part-armL { opacity: .12; }
+.bibi.miss-armR .part-armR { opacity: .12; }
+.bibi.miss-chest .part-chest { opacity: .12; }
+.bibi.miss-head .part-head { opacity: .12; }
+.bibi.miss-antenna .part-antenna { opacity: .12; }
+.bibi .blink { animation: tw 1.4s ease-in-out infinite; }
+.btn-school { right: 24px; top: 136px; width: 110px; height: 110px; background: radial-gradient(circle at 35% 30%, #fff, #ffe0a8 60%, #ffb347); box-shadow: 0 6px 0 #d6862a, 0 10px 18px rgba(0,0,0,.2); }
+.parent table.mult td { width: 56px; height: 40px; text-align: center; font-size: 16px; color: #a33; border: 2px solid #fff; }
+.parent table.mult th { padding: 4px 8px; }

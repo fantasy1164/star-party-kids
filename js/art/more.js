@@ -178,3 +178,50 @@ export const germSvg = (c = '#7fd36a') => `<svg viewBox="0 0 60 60" width="100%"
   <path d="M22 40 Q30 46 38 40" stroke="#2b2140" stroke-width="3" fill="none" stroke-linecap="round"/></svg>`;
 export const toothbrushSvg = `<svg viewBox="0 0 220 80" width="100%" height="100%"><rect x="70" y="30" width="150" height="20" rx="10" fill="#3ec7e0"/><rect x="6" y="22" width="80" height="34" rx="10" fill="#fff" stroke="#3ec7e0" stroke-width="5"/>
   <path d="M16 6 V24 M28 6 V24 M40 6 V24 M52 6 V24 M64 6 V24 M76 6 V24" stroke="#bfe9ff" stroke-width="6" stroke-linecap="round"/><ellipse cx="44" cy="8" rx="36" ry="8" fill="#fff" opacity=".9"/></svg>`;
+
+// ---- 嗶嗶：機器人老師。零件分開畫（修理機器人時一個一個裝回去）----
+export const BIBI_PARTS = ['wheels', 'armL', 'armR', 'chest', 'head', 'antenna'];
+export function bibiSvg(missing = []) {
+  const g = id('b');
+  return `<svg class="char bibi ${missing.map((m) => `miss-${m}`).join(' ')}" viewBox="0 0 200 250" width="100%" height="100%">
+  <defs><linearGradient id="${g}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#bff0ff"/><stop offset=".6" stop-color="#7fd3f5"/><stop offset="1" stop-color="#4fb3e0"/></linearGradient></defs>
+  <g class="bob">
+    <g class="part part-wheels"><rect x="44" y="206" width="112" height="34" rx="17" fill="#4a3b6b"/>
+      <circle cx="64" cy="223" r="11" fill="#8a7fb0"/><circle cx="100" cy="223" r="11" fill="#8a7fb0"/><circle cx="136" cy="223" r="11" fill="#8a7fb0"/></g>
+    <rect class="body-core" x="50" y="118" width="100" height="92" rx="22" fill="url(#${g})"/>
+    <g class="part part-chest"><rect x="66" y="134" width="68" height="50" rx="10" fill="#2f3a5a"/>
+      <circle cx="84" cy="152" r="7" fill="#ff5d73"/><circle cx="100" cy="152" r="7" fill="#ffd23f"/><circle cx="116" cy="152" r="7" fill="#4cd07d"/>
+      <rect x="78" y="166" width="44" height="8" rx="4" fill="#7fd3f5"/></g>
+    <g class="part part-armL"><rect x="20" y="126" width="30" height="16" rx="8" fill="#ff9f43"/><rect x="14" y="134" width="16" height="50" rx="8" fill="#ff9f43"/>
+      <path d="M10 184 L22 196 L34 184" fill="none" stroke="#4a3b6b" stroke-width="6" stroke-linecap="round"/></g>
+    <g class="part part-armR"><rect x="150" y="126" width="30" height="16" rx="8" fill="#ff9f43"/><rect x="170" y="134" width="16" height="50" rx="8" fill="#ff9f43"/>
+      <path d="M166 184 L178 196 L190 184" fill="none" stroke="#4a3b6b" stroke-width="6" stroke-linecap="round"/></g>
+    <g class="part part-head"><rect x="86" y="104" width="28" height="18" rx="6" fill="#8a7fb0"/>
+      <rect x="40" y="34" width="120" height="78" rx="26" fill="url(#${g})"/>
+      <rect x="54" y="48" width="92" height="52" rx="16" fill="#2f3a5a"/>
+      <g class="eyes"><rect x="72" y="60" width="16" height="20" rx="8" fill="#7ff0c0"/><rect x="112" y="60" width="16" height="20" rx="8" fill="#7ff0c0"/></g>
+      <path class="mouth" d="M88 88 Q100 96 112 88" fill="none" stroke="#7ff0c0" stroke-width="4" stroke-linecap="round"/>
+      <ellipse class="mouth-o" cx="100" cy="91" rx="9" ry="6" fill="#7ff0c0"/>
+      <circle cx="38" cy="72" r="9" fill="#ff9f43"/><circle cx="162" cy="72" r="9" fill="#ff9f43"/>
+      <ellipse cx="62" cy="42" rx="12" ry="5" fill="#fff" opacity=".6"/></g>
+    <g class="part part-antenna"><rect x="96" y="12" width="8" height="24" rx="4" fill="#8a7fb0"/><circle class="blink" cx="100" cy="12" r="10" fill="#ff5d73"/></g>
+  </g></svg>`;
+}
+
+// 學堂的圖示
+Object.assign(ICON2, {
+  school: `<svg viewBox="0 0 100 100"><path d="M10 44 L50 16 L90 44Z" fill="#ff5d73"/><rect x="18" y="44" width="64" height="46" fill="#ffe0a8"/><rect x="42" y="62" width="16" height="28" fill="#a8693f"/>
+    <rect x="24" y="52" width="12" height="12" fill="#bfe6ff"/><rect x="64" y="52" width="12" height="12" fill="#bfe6ff"/><circle cx="50" cy="34" r="6" fill="#ffd23f"/></svg>`,
+  blocks: `<svg viewBox="0 0 100 100">${[0, 1, 2].map((r) => [0, 1, 2, 3].map((c) => `<rect x="${10 + c * 21}" y="${22 + r * 21}" width="18" height="18" rx="4" fill="${['#ff8a3d', '#3ec7e0', '#7ee06a'][r]}"/>`).join('')).join('')}</svg>`,
+  hop: `<svg viewBox="0 0 100 100"><path d="M14 78 Q30 40 46 70 Q62 40 78 66" fill="none" stroke="#ffd23f" stroke-width="5" stroke-dasharray="6 6" stroke-linecap="round"/>
+    ${[[14, 82], [46, 74], [78, 70]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="12" ry="6" fill="#a98bff"/>`).join('')}<polygon points="${starPolygon(78, 44, 14, 6)}" fill="#ffd23f"/></svg>`,
+  robot: `<svg viewBox="0 0 200 250">${bibiSvg().replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '')}</svg>`,
+  eye: `<svg viewBox="0 0 100 100"><path d="M8 50 C26 22 74 22 92 50 C74 78 26 78 8 50Z" fill="#fff"/><circle cx="50" cy="50" r="17" fill="#3ea8e0"/><circle cx="50" cy="50" r="8" fill="#2b2140"/><circle cx="56" cy="44" r="4" fill="#fff"/></svg>`,
+  sky: `<svg viewBox="0 0 100 100"><rect x="6" y="6" width="88" height="88" rx="16" fill="#2a2f6b"/>${[[30, 30], [52, 24], [72, 40], [36, 60], [62, 70], [48, 46]].map(([x, y]) => `<polygon points="${starPolygon(x, y, 8, 3.5)}" fill="#ffd23f"/>`).join('')}</svg>`,
+});
+
+// 大數字（3D 地板的數字格、卡片）
+export function numSvg(n, { color = '#4a3b6b', bg = null, size = 100 } = {}) {
+  return `<svg viewBox="0 0 ${size} ${size}" width="100%" height="100%">${bg ? `<rect x="3" y="3" width="${size - 6}" height="${size - 6}" rx="${size * 0.22}" fill="${bg}"/>` : ''}
+    <text x="50%" y="54%" text-anchor="middle" dominant-baseline="middle" font-family="-apple-system,'PingFang TC',sans-serif" font-weight="900" font-size="${String(n).length > 1 ? size * 0.52 : size * 0.62}" fill="${color}">${n}</text></svg>`;
+}

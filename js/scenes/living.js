@@ -357,7 +357,7 @@ function drumRound(R, lane, drum, { bpm, win, extra }) {
       const spawnIn = (t - lead - performance.now() / 1000) * 1000;
       setTimeout(() => {
         if (!R.alive()) return;
-        const n = div('note');
+        const n = div('beatnote');
         lane.appendChild(n);
         const nt = { t, el: n, hit: false };
         notes.push(nt);

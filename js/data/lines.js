@@ -17,6 +17,7 @@ export const LINES = {
   house_bath: { shan: '去浴室！找呱呱！' },
   house_kitchen: { shan: '去廚房！找咚咚！' },
   house_living: { shan: '去客廳！閃閃的舞台！' },
+  house_school: { shan: '去學堂！找嗶嗶老師！' },
 
   // ---- 臥室：打招呼、選關卡 ----
   bed_hello_morning: { wan: '早安，{name}。我是夜燈晚晚。我們一起準備出門吧。' },
@@ -186,6 +187,46 @@ export const LINES = {
   drum_ok: { shan: '打得好開心！' },
   stage_done: { shan: '表演結束！大家給你拍拍手！' },
 
+  // ================= 學堂（機器人老師嗶嗶） =================
+  sch_hello_morning: { bibi: '嗶嗶！早安，{name}！我是嗶嗶老師，今天一起玩乘法！' },
+  sch_hello_day: { bibi: '嗶嗶！{name}，歡迎來到學堂！我是嗶嗶老師！' },
+  sch_hello_evening: { bibi: '嗶嗶！{name}，晚上好！睡覺前來玩一下乘法吧！' },
+  sch_pick: { bibi: '要先玩哪一個呢？嗶嗶！' },
+  sch_next: { bibi: '下一個玩什麼呢？' },
+  sch_all_done: { bibi: '學堂的挑戰全部完成！你是乘法小明星！', shan: '乘法大明星！' },
+  bibi_beep: { bibi: '嗶嗶嗶！' },
+  // 積木排排站
+  blocks_go: { bibi: '我們用積木來排乘法！點亮亮的地方，就會放上一排積木。' },
+  blocks_build: { bibi: '照著虛線，一排一排放上去！' },
+  blocks_ask: { bibi: '一共有幾個積木呢？' },
+  blocks_kk: { bibi: '數一數，一共有幾個積木？' },
+  blocks_count: { bibi: '我們一排一排數！' },
+  blocks_turn: { bibi: '轉過來看看！排數和每排的個數交換了，積木還是一樣多！' },
+  blocks_top: { bibi: '從上面看，排得整整齊齊！' },
+  blocks_good: { bibi: '答對了！' },
+  blocks_wrong: { bibi: '差一點點，我們一起數一數。' },
+  blocks_done: { bibi: '積木排完了！乘法就是好幾排一樣多的東西！' },
+  // 跳跳口訣
+  hop_go: { bibi: '閃閃要跳格子了！聽嗶嗶數數，跟著一起唸！' },
+  hop_you: { bibi: '換你了！格子亮起來的時候，點一下！' },
+  hop_quiz: { bibi: '閃閃停下來了！這一格是多少呢？' },
+  hop_good: { bibi: '跳得好！' },
+  hop_done: { bibi: '你會跳這一排的口訣了！' },
+  // 修理機器人
+  robot_broken: { bibi: '嗶嗶……我壞掉了！答對題目，幫我把零件裝回去！' },
+  robot_check: { bibi: '嗶嗶！先幫我做健康檢查，看看你會哪些乘法。不會的沒關係，慢慢來！' },
+  robot_check_done: { bibi: '檢查完畢！我知道要從哪裡開始練習了！' },
+  robot_kk: { bibi: '嗶嗶……我壞掉了！數一數有幾個點點，幫我裝零件！' },
+  robot_good: { bibi: '答對了！裝上一個零件！' },
+  robot_fast: { bibi: '好快！嗶嗶！' },
+  robot_wrong: { bibi: '沒關係，我們看看積木。' },
+  robot_again: { bibi: '再試一次！' },
+  robot_fixed: { bibi: '零件都裝好了！嗶嗶嗶，我又可以動了！謝謝你！' },
+  // 乘法星空
+  sky_open: { bibi: '這是乘法星空！每學會一題，就會點亮一顆星。點星星可以聽口訣喔！' },
+  sky_new: { bibi: '新的星星亮了！' },
+  sky_row: { bibi: '一整排都亮了，變成星座了！' },
+
   // ---- 通用 ----
   praise1: { shan: '好棒！', wan: '好棒喔。' },
   praise2: { shan: '超厲害！', wan: '做得真好。' },
@@ -205,6 +246,28 @@ export const LINES = {
   rest_ready: { shan: '發條轉好了！可以玩囉！' },
   sleep: { wan: '噓，玩具們都睡著了。{name}也去睡覺吧，晚安。' },
 };
+
+// ---- 九九乘法：題目（q_a_b）、口訣（c_a_b）、數字（n_x）都由嗶嗶唸，用程式產生 ----
+// 口訣照學校的唸法：二三得六、三四十二、二五一十、九九八十一
+{
+  const CN = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+  const num = (n, chant = false) => {
+    if (n < 10) return CN[n];
+    const t = Math.floor(n / 10), u = n % 10;
+    if (t === 1) return u ? `十${CN[u]}` : chant ? '一十' : '十';
+    return `${CN[t]}十${u ? CN[u] : ''}`;
+  };
+  const products = new Set();
+  for (let a = 1; a <= 9; a++) {
+    for (let b = 1; b <= 9; b++) {
+      const p = a * b;
+      products.add(p);
+      LINES[`c_${a}_${b}`] = { bibi: `${CN[a]}${CN[b]}${p < 10 ? `得${CN[p]}` : num(p, true)}。` };
+      if (a > 1 && b > 1) LINES[`q_${a}_${b}`] = { bibi: `${CN[a]}乘${CN[b]}，等於多少？` };
+    }
+  }
+  for (const p of products) LINES[`n_${p}`] = { bibi: `${num(p)}！` };
+}
 
 export function lineText(id, charId, name = '') {
   const l = LINES[id];

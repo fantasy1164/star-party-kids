@@ -10,7 +10,7 @@ import { setHint, setPlaying, mountClock } from '../core/session.js';
 import { shanSvg, wanSvg } from '../art/stars.js';
 import { guaSvg, dongSvg, ICON2 } from '../art/more.js';
 import { ICON } from '../art/props.js';
-import { backdrop, homeBtn, rotateBtns, jars } from './hud.js';
+import { backdrop, homeBtn, rotateBtns, jars, roundBtn } from './hud.js';
 
 const W = 900, D = 760;
 const ROOMS = {
@@ -75,7 +75,16 @@ export async function mount(root, app) {
   const marker = markers[firstOpen];
   const shan = dio.addSprite({ x: 330, y: 560, w: 130, h: 148, html: shanSvg(), shadow: 0.7, tap: 'shan' });
 
+  let going = false;
   homeBtn(root, () => app.go('opening'));
+  // 去學堂（之後小鎮地圖做好，改成坐叭叭的車去）
+  const schoolBtn = roundBtn(root, 'btn-school', ICON2.school, async () => {
+    if (going) return;
+    going = true;
+    setPlaying(false);
+    await speak('shan', 'house_school', { node: shan.el });
+    if (app.alive()) app.go('school');
+  });
   jars(root, app.profile.members);
   mountClock(root);
   const rot = rotateBtns(root, dio);
@@ -85,7 +94,6 @@ export async function mount(root, app) {
   setHint(() => marker.el);
 
   const GO = { bedroom: 'house_bedroom', bath: 'house_bath', kitchen: 'house_kitchen', living: 'house_living' };
-  let going = false;
   dio.onTap(async (name) => {
     if (GO[name]) {
       if (going) return;

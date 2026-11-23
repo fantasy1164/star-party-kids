@@ -13,11 +13,12 @@ import { mount as bedroom } from './scenes/bedroom.js';
 import { mount as bath } from './scenes/bathroom.js';
 import { mount as kitchen } from './scenes/kitchen.js';
 import { mount as living } from './scenes/living.js';
+import { mount as school } from './scenes/school.js';
 import { mountRest, mountSleep } from './ui/rest.js';
 import { openParent } from './ui/parent.js';
 
-const SCREENS = { opening, house, bedroom, bath, kitchen, living, rest: mountRest, sleep: mountSleep };
-const ROOMS = ['house', 'bedroom', 'bath', 'kitchen', 'living'];
+const SCREENS = { opening, house, bedroom, bath, kitchen, living, school, rest: mountRest, sleep: mountSleep };
+const ROOMS = ['house', 'bedroom', 'bath', 'kitchen', 'living', 'school'];
 let current = null;
 
 // 現在應該去哪：睡覺時間 → 睡覺；發條休息中 → 休息；不然回家

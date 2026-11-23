@@ -60,6 +60,8 @@ export function createDiorama(opt = {}) {
     cam.style.top = `${900 * o.cy}px`;
     cam.style.transform = `scale(${view.z}) rotateX(${view.t}deg) rotateZ(${view.a}deg) translate3d(${-view.px}px,${-view.py}px,0)`;
     world.style.setProperty('--ang', `${view.a}deg`);
+    // 鏡頭往下看得更多時（學堂的「從高處看」），看板角色往後仰一點，才不會被壓扁
+    world.style.setProperty('--lean', `${o.tilt - view.t}deg`);
     rotHooks.forEach((f) => f(view.a));
   }
   const offFit = onFit(apply);

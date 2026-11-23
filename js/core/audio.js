@@ -226,6 +226,12 @@ const TRACKS = {
     melody: seq('A4 C5 E5 . C5 A4 G4 . A4 C5 E5 G5 . E5 D5 .  C5 D5 E5 . D5 C5 A4 . G4 A4 C5 . A4 . . .'),
     bass: seq('A2 . E3 . F2 . C3 . A2 . E3 . G2 . D3 .  F2 . C3 . D3 . A2 . G2 . G2 . A2 . . .'),
   },
+  // 學堂：開朗的木琴＋玩具鋼琴風
+  school: {
+    style: 'bg', bpm: 96, inst: 'toypiano', gain: 0.18,
+    melody: seq('C5 D5 E5 . G5 . E5 . F5 E5 D5 . C5 . . .  E5 F5 G5 . C6 . A5 . G5 E5 D5 . C5 . . .'),
+    bass: seq('C3 . G2 . C3 . G2 . F2 . C3 . G2 . . .  C3 . E3 . F2 . A2 . G2 . G2 . C3 . . .'),
+  },
   // 晚晚說：很輕，讓小孩聽得清楚口令
   listen: {
     style: 'quiet', bpm: 76, inst: 'marimba', gain: 0.12,

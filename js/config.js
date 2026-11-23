@@ -29,4 +29,5 @@ export const CHARACTERS = {
   wan: { id: 'wan', name: '晚晚', tts: { pitch: 1.15, rate: 0.85 } },    // 月亮夜燈娃娃，臥室
   gua: { id: 'gua', name: '呱呱', tts: { pitch: 1.45, rate: 1.05 } },   // 橡皮小鴨，廁所
   dong: { id: 'dong', name: '咚咚', tts: { pitch: 0.75, rate: 0.92 } },  // 小恐龍主廚，廚房
+  bibi: { id: 'bibi', name: '嗶嗶', tts: { pitch: 1.0, rate: 0.95 } },   // 機器人老師，學堂
 };
