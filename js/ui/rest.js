@@ -47,7 +47,7 @@ export async function mountRest(root, app) {
       clearRest();
       sfx('windup');
       await speak('shan', 'rest_ready', { node: ch });
-      app.go('house');
+      app.go('town');
     }
   }, 1000);
 }

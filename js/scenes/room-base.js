@@ -12,6 +12,7 @@
 //   lines          → { hello(ph), pick, next, allDone: [[角色, 台詞]], after(ph) }
 //   music(night)   → 背景音樂名稱
 //   games          → [{ id, icon, marker: {x,y,z}, run(R) }]
+//   back           → 左上角回家鈕要回哪裡（家裡的房間回 'house'，小鎮的地點回 'town'）
 //   setup(R)       → 房間自己的初始化（可省略）
 //   playful(name, R) → 沒在玩關卡時點到東西的反應，處理了就回傳 true（可省略）
 import { div, wait, burst, stageRect, toStage, stageW } from '../core/dom.js';
@@ -41,7 +42,7 @@ export async function runRoom(root, app, spec) {
   dio.setTint(roomTint());
   if (isDark()) root.classList.add('night');
 
-  homeBtn(root, () => app.go('house'));
+  homeBtn(root, () => app.go(spec.back || 'house'));
   const jar = jars(root, members);
   mountClock(root);
   const rot = rotateBtns(root, dio);

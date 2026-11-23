@@ -1,6 +1,6 @@
 // 把台詞表輸出成 docs/voice-lines.csv，給語音合成批次產生用。
 // 用法：node tools/export-lines.mjs
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, mkdirSync } from 'node:fs';
 import { LINES } from '../js/data/lines.js';
 
 const CHARS = ['dudu', 'kiki'];
@@ -23,5 +23,6 @@ for (const [id, l] of Object.entries(LINES)) {
   }
 }
 const csv = rows.map((r) => r.map((v) => `"${v.replaceAll('"', '""')}"`).join(',')).join('\n');
+mkdirSync(new URL('../docs/', import.meta.url), { recursive: true });
 writeFileSync(new URL('../docs/voice-lines.csv', import.meta.url), '﻿' + csv + '\n');
 console.log(`${rows.length - 1} lines -> docs/voice-lines.csv`);

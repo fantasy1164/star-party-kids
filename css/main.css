@@ -406,3 +406,84 @@ body.turn-kk .glowy > svg { animation-name: glowyK; }
 .btn-school { right: 24px; top: 136px; width: 110px; height: 110px; background: radial-gradient(circle at 35% 30%, #fff, #ffe0a8 60%, #ffb347); box-shadow: 0 6px 0 #d6862a, 0 10px 18px rgba(0,0,0,.2); }
 .parent table.mult td { width: 56px; height: 40px; text-align: center; font-size: 16px; color: #a33; border: 2px solid #fff; }
 .parent table.mult th { padding: 4px 8px; }
+
+/* ---------- 共用關卡工具 ---------- */
+.sort-items { left: 40px; right: 40px; top: 30px; height: 300px; display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; align-content: center; }
+.sitem { position: relative; width: 112px; height: 112px; border-radius: 26px; background: #fff; padding: 10px; box-shadow: 0 6px 0 rgba(0,0,0,.08); }
+.sitem.used { visibility: hidden; }
+.sitem svg, .sbin svg { width: 100%; height: 100%; }
+.sort-bins { left: 20px; right: 20px; bottom: 26px; height: 250px; display: flex; gap: 26px; justify-content: center; align-items: flex-end; }
+.sbin { position: relative; width: 190px; height: 210px; padding: 8px; border-radius: 30px; background: rgba(255,255,255,.6); }
+.sbin .n { position: absolute; right: 4px; top: 4px; min-width: 44px; height: 44px; border-radius: 22px; background: #4cd07d; color: #fff; font: 900 28px/44px -apple-system, sans-serif; text-align: center; }
+.findlist { position: absolute; left: 50%; top: 22px; transform: translateX(-50%); display: flex; gap: 10px; padding: 8px 14px; border-radius: 30px; background: rgba(255,255,255,.85); z-index: 20; }
+.findlist .fl { position: relative; width: 74px; height: 74px; border-radius: 18px; background: #fff; padding: 6px; }
+.findlist .fl svg { width: 100%; height: 100%; }
+.findlist .fl.ok::after { content: ''; position: absolute; inset: 0; border-radius: 18px; background: rgba(76,208,125,.35) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M22 52 L42 72 L80 30' fill='none' stroke='%23fff' stroke-width='14' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/70% no-repeat; }
+.dio-sprite.found { opacity: 0; transition: opacity .6s; pointer-events: none; }
+.wtap svg { width: 100%; height: 100%; }
+.patient { left: 170px; top: 90px; width: 260px; height: 488px; }
+.patient svg { width: 100%; height: 100%; }
+.tool-on { position: absolute; width: 110px; height: 110px; animation: popin .4s cubic-bezier(.3,1.6,.5,1) both; z-index: 3; }
+.tool-on svg { width: 100%; height: 100%; }
+.plot { left: 140px; top: 180px; width: 400px; height: 340px; display: flex; align-items: center; justify-content: center; }
+.plot-art { width: 320px; height: 320px; transition: transform .4s; }
+.plot-art svg { width: 100%; height: 100%; }
+.plot-art.dug { transform: scaleY(.85); }
+.plot-art.wet { filter: saturate(1.4) brightness(.9); }
+/* 付錢 */
+.price { left: 60px; top: 40px; display: flex; align-items: center; gap: 16px; }
+.ptag-item { width: 130px; height: 130px; }
+.ptag-item svg { width: 100%; height: 100%; }
+.ptag { padding: 10px 26px; border-radius: 24px; background: #fff3c4; border: 6px dashed #ffb627; font: 900 84px/1 -apple-system, sans-serif; color: #8a5a10; }
+.ptag small { font-size: 38px; margin-left: 6px; }
+.paytray { left: 470px; top: 40px; width: 420px; height: 260px; border-radius: 40px; background: #e9eef3; box-shadow: inset 0 8px 0 rgba(0,0,0,.06); }
+.paycoins { position: absolute; left: 20px; right: 20px; top: 20px; bottom: 70px; display: flex; flex-wrap: wrap; gap: 4px; align-content: flex-start; }
+.paycoins .coin { width: 58px; height: 58px; }
+.paysum { position: absolute; left: 0; right: 0; bottom: 10px; text-align: center; font: 900 52px/1 -apple-system, sans-serif; color: #4a3b6b; }
+.paysum.over { color: #ff5b5b; }
+.coinbank { left: 60px; right: 60px; bottom: 40px; display: flex; gap: 40px; justify-content: center; }
+.coinbank .coin { width: 140px; height: 140px; filter: drop-shadow(0 6px 0 rgba(0,0,0,.12)); }
+.coin svg { width: 100%; height: 100%; }
+/* 溜滑梯排隊 */
+.slide-art { right: 60px; top: 70px; width: 360px; height: 360px; }
+.slide-art svg { width: 100%; height: 100%; }
+.slide-light { right: 400px; top: 80px; width: 70px; height: 70px; border-radius: 50%; border: 8px solid #4a3b6b; }
+.slide-light.green { background: #4cff8a; box-shadow: 0 0 24px #4cff8a; }
+.slide-light.red { background: #ff4a4a; box-shadow: 0 0 24px #ff4a4a; }
+.queue { left: 40px; bottom: 40px; display: flex; gap: 12px; flex-direction: row-reverse; align-items: flex-end; }
+.qkid { width: 120px; height: 140px; transition: transform .7s ease, opacity .5s; }
+.qkid svg { width: 100%; height: 100%; }
+.qkid.going { transform: translate(380px, -260px) scale(.8); }
+.qkid.sliding { transform: translate(560px, -20px) scale(.8) rotate(20deg); opacity: 0; transition-duration: 1.3s; }
+/* 身體部位 */
+.bodykid { left: 50%; top: 20px; width: 320px; height: 600px; margin-left: -160px; }
+.bodykid svg { width: 100%; height: 100%; }
+.touch-dot { position: absolute; width: 60px; height: 60px; margin: -30px 0 0 -30px; border-radius: 50%; border: 6px solid #ffd23f; box-shadow: 0 0 20px #ffd23f; animation: pulse .6s ease 2; }
+/* 小鎮 */
+.place-mark.here > .inner { background: radial-gradient(circle at 35% 30%, #fff, #c9ecff 60%, #6fb8ff); }
+.place-mark.target > .inner { box-shadow: 0 0 0 8px #ff5d73, 0 8px 0 rgba(0,0,0,.12); }
+.road-arrow { border-radius: 50%; background: rgba(62,168,224,.92); padding: 10px; border: 5px solid #fff; box-shadow: 0 0 0 3px rgba(0,0,0,.08); }
+.road-dot { border-radius: 50%; background: rgba(62,168,224,.45); }
+.road-arrow.glow { animation: rowglow 1s ease-in-out infinite; --c: #ffd23f; background: rgba(255,182,39,.95); }
+.road-arrow.shake { animation: shake .45s ease; }
+.streetlight .lamp { transition: filter 1s; }
+.night .streetlight .lamp { filter: drop-shadow(0 0 10px #fff36a) drop-shadow(0 0 20px #ffd23f); }
+.stopbtn { background: radial-gradient(circle at 35% 30%, #fff, #ffc0c0 60%, #ff5b5b); box-shadow: 0 8px 0 #c93c3c; }
+/* 安全帶 */
+.beltpanel2 { background: linear-gradient(#ffe9d6, #ffd9b8); }
+.seat { position: absolute; top: 60px; width: 300px; height: 520px; }
+.seat-back { position: absolute; left: 30px; top: 0; width: 240px; height: 500px; border-radius: 80px 80px 40px 40px; background: linear-gradient(#6b5ca5, #4a3b6b); }
+.seat-kid { position: absolute; left: 50px; top: 50px; width: 200px; height: 200px; }
+.seat-kid svg { width: 100%; height: 100%; }
+.belt-strap { position: absolute; left: 40px; top: 90px; width: 30px; height: 340px; border-radius: 10px; background: #2f2a44; transform-origin: 50% 0; transform: rotate(-8deg); transition: transform .4s; }
+.seat.buckled .belt-strap { transform: rotate(-38deg); }
+.buckle { position: absolute; left: 10px; top: 400px; width: 90px; height: 90px; z-index: 3; animation: glow2d 1.2s ease-in-out infinite; touch-action: none; }
+.buckle.dragging { animation: none; }
+.buckle svg { width: 100%; height: 100%; }
+.clasp { position: absolute; left: 200px; top: 420px; width: 70px; height: 60px; border-radius: 14px; background: #c9d3de; border: 5px dashed #ff5b5b; }
+.seat.buckled .clasp { border: 5px solid #4cd07d; background: #c8f5d6; }
+.seat.buckled .buckle { left: 190px !important; top: 405px !important; animation: none; }
+.riding [data-tap]:not(.road-arrow) { pointer-events: none; }
+.riding .place-mark:not(.target) { opacity: 0; }
+.riding .place-mark.target { pointer-events: none; }
+.riding .dio-sprite, .riding .dio-box { pointer-events: none; }

@@ -30,4 +30,9 @@ export const CHARACTERS = {
   gua: { id: 'gua', name: '呱呱', tts: { pitch: 1.45, rate: 1.05 } },   // 橡皮小鴨，廁所
   dong: { id: 'dong', name: '咚咚', tts: { pitch: 0.75, rate: 0.92 } },  // 小恐龍主廚，廚房
   bibi: { id: 'bibi', name: '嗶嗶', tts: { pitch: 1.0, rate: 0.95 } },   // 機器人老師，學堂
+  baba: { id: 'baba', name: '叭叭', tts: { pitch: 1.3, rate: 1.08 } },   // 遙控車，載大家去各個地方
+  dada: { id: 'dada', name: '達達', tts: { pitch: 1.1, rate: 1.0 } },    // 木頭小馬，農場
+  duoduo: { id: 'duoduo', name: '多多', tts: { pitch: 1.35, rate: 1.0 } },// 存錢筒小豬，超市
+  baobao: { id: 'baobao', name: '抱抱', tts: { pitch: 0.95, rate: 0.9 } },// 泰迪熊醫生，診所
+  jiujiu: { id: 'jiujiu', name: '啾啾', tts: { pitch: 1.7, rate: 1.1 } },  // 發條小鳥，公園
 };

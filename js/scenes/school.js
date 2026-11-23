@@ -21,6 +21,7 @@ export function mount(root, app) {
   return runRoom(root, app, {
     id: 'school',
     host: 'bibi',
+    back: 'town',
     build: buildSchool,
     music: () => 'school',
     lines: {

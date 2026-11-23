@@ -232,6 +232,38 @@ const TRACKS = {
     melody: seq('C5 D5 E5 . G5 . E5 . F5 E5 D5 . C5 . . .  E5 F5 G5 . C6 . A5 . G5 E5 D5 . C5 . . .'),
     bass: seq('C3 . G2 . C3 . G2 . F2 . C3 . G2 . . .  C3 . E3 . F2 . A2 . G2 . G2 . C3 . . .'),
   },
+  // 小鎮地圖：輕快的木琴
+  town: {
+    style: 'bg', bpm: 110, inst: 'marimba', gain: 0.24,
+    melody: seq('G4 C5 E5 G5 . E5 C5 . D5 F5 A5 . G5 . . .  E5 G5 C6 . B5 A5 G5 . F5 E5 D5 . C5 . . .'),
+    bass: seq('C3 . G2 . C3 . G2 . D3 . A2 . G2 . . .  C3 . E3 . F2 . A2 . G2 . G2 . C3 . . .'),
+  },
+  // 坐車：有點節奏感的玩具鋼琴
+  drive: {
+    style: 'song', bpm: 120, inst: 'toypiano', gain: 0.2,
+    melody: seq('C5 . C5 D5 E5 . E5 F5 G5 . G5 . E5 . . .  F5 . F5 E5 D5 . D5 C5 D5 . G4 . C5 . . .'),
+    bass: seq('C3 . G2 . C3 . G2 . C3 . G2 . C3 . G2 .  F2 . C3 . G2 . D3 . G2 . G2 . C3 . . .'),
+  },
+  market: {
+    style: 'bg', bpm: 104, inst: 'toypiano', gain: 0.18,
+    melody: seq('E5 D5 C5 D5 E5 E5 E5 . D5 D5 D5 . E5 G5 G5 .  E5 D5 C5 D5 E5 E5 E5 C5 D5 D5 E5 D5 C5 . . .'),
+    bass: seq('C3 . G2 . C3 . G2 . G2 . D3 . C3 . G2 .  C3 . G2 . C3 . A2 . G2 . G2 . C3 . . .'),
+  },
+  park: {
+    style: 'bg', bpm: 100, inst: 'musicbox', gain: 0.18,
+    melody: seq('G4 A4 B4 D5 . B4 D5 . E5 D5 B4 . A4 . . .  G4 A4 B4 D5 . E5 G5 . E5 D5 B4 A4 G4 . . .'),
+    bass: seq('G2 . D3 . G2 . D3 . C3 . G2 . D3 . . .  G2 . D3 . C3 . E3 . D3 . D3 . G2 . . .'),
+  },
+  clinic: {
+    style: 'quiet', bpm: 84, inst: 'musicbox', gain: 0.17,
+    melody: seq('C5 . E5 . G5 . E5 . F5 . D5 . C5 . . .  A4 . C5 . E5 . D5 . C5 . B4 . C5 . . .'),
+    bass: seq('C3 . . . G2 . . . F2 . . . C3 . . .  A2 . . . E3 . . . G2 . . . C3 . . .'),
+  },
+  farm: {
+    style: 'bg', bpm: 116, inst: 'marimba', gain: 0.24,
+    melody: seq('C5 C5 C5 G4 A4 A4 G4 . E5 E5 D5 D5 C5 . . .  G4 C5 C5 C5 G4 A4 A4 G4 E5 E5 D5 D5 C5 . . .'),
+    bass: seq('C3 . G2 . F2 . C3 . C3 . G2 . C3 . . .  C3 . G2 . F2 . C3 . G2 . G2 . C3 . . .'),
+  },
   // 晚晚說：很輕，讓小孩聽得清楚口令
   listen: {
     style: 'quiet', bpm: 76, inst: 'marimba', gain: 0.12,
