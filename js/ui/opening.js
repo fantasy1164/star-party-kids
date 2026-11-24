@@ -9,6 +9,7 @@ import { state, markSeen, save } from '../core/store.js';
 import { shanSvg, kidHead, bothHeads, starPolygon } from '../art/stars.js';
 import { ICON } from '../art/props.js';
 import { CAST } from '../data/cast.js';
+import { gestureTipDue, practice } from './gestures.js';
 import { backdrop } from './hud.js';
 import { roomTint } from '../core/clock.js';
 
@@ -101,6 +102,9 @@ export async function mount(root, app) {
     burst(app.stageCenter().x, 330, { n: 18, spread: 320 });
     await chorus(crowd.map((c) => c.id), 'hi_all', crowd.map((c) => sprites[c.id].el));
     if (!short) await speak('shan', 'intro', { node: shan.el });
+    // 每天第一次：跟閃閃練習手勢（家長頁可以關掉）
+    if (gestureTipDue()) await practice(root, dio, { node: shan.el, alive: () => app.alive() });
+    if (!app.alive()) return;
     markSeen('opening');
     greeted = true;
     showPicker();

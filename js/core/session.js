@@ -74,7 +74,8 @@ export function setupHints(stageEl) {
     if (!target || !target.isConnected) return;
     const r = stageRect(target);
     if (r.w === 0) return;
-    hand = div('hinthand', ICON.hand);
+    // 提示「轉一轉」（目標是畫面中間看不見的點）：手指改成左右滑的動作
+    hand = div(`hinthand${target.classList.contains('gest-anchor') ? ' swipe' : ''}`, ICON.hand);
     hand.style.left = `${r.x - 20}px`;
     hand.style.top = `${r.y - 10}px`;
     stageRoot.appendChild(hand);

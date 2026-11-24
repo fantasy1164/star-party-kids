@@ -99,7 +99,8 @@ export function openParent(root, onClose) {
     today: () => `<h2>今天</h2>${playState()}<div class="status sync-st">${syncText()}</div><div class="kids">${kidCard('yy')}${kidCard('kk')}</div>
       <h3>常用</h3>
       ${field('音樂大小', seg('musicVol', [['low', '小'], ['mid', '中'], ['high', '大']]))}
-      ${sw('quiet', '安靜模式', '關掉背景音樂和裝飾音效，只留角色說話和對錯的聲音')}`,
+      ${sw('quiet', '安靜模式', '關掉背景音樂和裝飾音效，只留角色說話和對錯的聲音')}
+      ${sw('gestureTip', '每天第一次打開時練習手勢', '大家歡迎完以後，跟閃閃練習：一指左右滑轉、上下滑抬頭低頭、兩指張開捏起拉近拉遠、兩指一起滑移動')}`,
     week: () => `<h2>這一週</h2>
       <table class="week"><tr><th>日期</th><th>${KIDS.yy.name}</th><th>${KIDS.kk.name}</th></tr>
       ${days.map((day) => `<tr><td class="day">${day.slice(5)}${day === today ? '<small>今天</small>' : ''}</td>${['yy', 'kk'].map((id) => `<td><div class="wstar">⭐ ${state.kids[id].stars[day] || 0}</div><div class="chips">${chips(state.kids[id].done[day])}</div></td>`).join('')}</tr>`).join('')}</table>`,
@@ -135,7 +136,7 @@ export function openParent(root, onClose) {
     dev: () => `<h2>進階</h2>
       ${sw('nolimit', '不限制每次遊玩時間')}
       ${field('假裝現在幾點', `<input id="thour" type="number" step="0.5" min="0" max="23.5" placeholder="例如 20.5" value="${test.hour ?? ''}"><button id="applyTest">套用並重新開啟</button><button id="clearTest" class="gray">回到真實時間</button>`)}
-      ${field('測試', '<button id="perf" class="gray">立體引擎效能測試</button><button id="guide" class="gray">看「加到主畫面」引導</button>')}
+      ${field('測試', '<button id="perf" class="gray">立體引擎效能測試</button><button id="guide" class="gray">看「加到主畫面」引導</button><button id="gestAgain" class="gray">下次打開再練習手勢</button>')}
       <p class="note">網址參數：?hour=20.5 假裝幾點、?notts=1 不出聲、?debug=1 顯示語音事件、?guide 看安裝引導。</p>
       <h3 class="danger-h">危險區</h3>
       <button id="wipe" class="danger">清除全部進度</button>`,
@@ -202,6 +203,7 @@ export function openParent(root, onClose) {
       $('clearTest').onclick = () => { localStorage.removeItem(TEST_KEY); location.reload(); };
       $('perf').onclick = () => { location.href = 'engine-test.html?spin=1'; };
       $('guide').onclick = () => { location.href = '?guide'; };
+      $('gestAgain').onclick = () => { delete state.seen.gestures; s.gestureTip = true; save(); $('gestAgain').textContent = '下次打開會練習 ✓'; };
       $('wipe').onclick = () => { if (confirm('確定清除全部進度？兩兄弟的星星、貼紙、乘法紀錄都會不見。')) { clearAll(); location.reload(); } };
     }
   }

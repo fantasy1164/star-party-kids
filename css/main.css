@@ -883,3 +883,32 @@ body.turn-kk .glowy > svg { filter: drop-shadow(0 0 10px #ff6a2b); }
 .fame-progress { position: absolute; top: 34px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; padding: 10px 16px; border-radius: 30px; background: rgba(255,255,255,.85); box-shadow: 0 6px 18px rgba(0,0,0,.12); z-index: 20; }
 .fame-progress i { width: 26px; height: 26px; clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); background: #d6cfc2; }
 .fame-progress i.on { background: var(--c); }
+
+/* ---- 手勢（11/24）：沒有按鈕了，改用指引手 ---- */
+.gest-anchor { position: absolute; left: 50%; top: 62%; width: 2px; height: 2px; pointer-events: none; }
+.hinthand.swipe { animation: swipeHint 1.6s ease-in-out infinite; }
+@keyframes swipeHint { 0% { transform: translateX(-120px); } 50% { transform: translateX(120px); } 100% { transform: translateX(-120px); } }
+.ghost { position: absolute; left: 50%; top: 58%; width: 0; height: 0; z-index: 41; pointer-events: none; }
+.ghost .gh { position: absolute; left: -55px; top: -20px; width: 110px; height: 110px; filter: drop-shadow(0 6px 10px rgba(0,0,0,.25)); }
+.ghost .trail { position: absolute; border-radius: 20px; background: rgba(255,255,255,.55); }
+.g-drag .gh1 { animation: gDrag 1.8s ease-in-out infinite; }
+.g-drag .trail { left: -170px; top: -6px; width: 340px; height: 14px; }
+@keyframes gDrag { 0%, 100% { transform: translateX(-150px); } 50% { transform: translateX(150px); } }
+.g-tilt .gh1 { animation: gTilt 1.8s ease-in-out infinite; }
+.g-tilt .trail { left: -7px; top: -120px; width: 14px; height: 240px; }
+@keyframes gTilt { 0%, 100% { transform: translateY(-110px); } 50% { transform: translateY(110px); } }
+.g-pinch .gh1 { animation: gPinch1 1.6s ease-in-out infinite; }
+.g-pinch .gh2 { animation: gPinch2 1.6s ease-in-out infinite; }
+@keyframes gPinch1 { 0%, 100% { transform: translate(-20px, 10px) scaleX(-1); } 50% { transform: translate(-150px, 90px) scaleX(-1); } }
+@keyframes gPinch2 { 0%, 100% { transform: translate(30px, -30px); } 50% { transform: translate(150px, -110px); } }
+.g-pan .gh1 { animation: gPan 1.8s ease-in-out infinite; left: -110px; }
+.g-pan .gh2 { animation: gPan 1.8s ease-in-out infinite; left: 0; }
+.g-pan .trail { left: -190px; top: 10px; width: 380px; height: 14px; }
+@keyframes gPan { 0%, 100% { transform: translateX(-110px); } 50% { transform: translateX(110px); } }
+/* 練習時：上方四個小圓點（現在練哪個、練好了的打勾）、右上角「跳過」 */
+.gest-steps { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); display: flex; gap: 16px; padding: 10px 18px; border-radius: 30px; background: rgba(255,255,255,.88); z-index: 41; }
+.gest-steps i { width: 30px; height: 30px; border-radius: 50%; background: #d8d0c2; transition: background .3s, transform .3s; }
+.gest-steps i.now { background: #ffb627; transform: scale(1.25); }
+.gest-steps i.ok { background: #4cd07d; }
+.gest-skip { position: absolute; right: 34px; top: 34px; width: 84px; height: 84px; border-radius: 50%; background: rgba(90,80,140,.55); z-index: 41; display: grid; place-items: center; }
+.gest-skip svg { width: 46px; height: 46px; }

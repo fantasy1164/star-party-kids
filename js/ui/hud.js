@@ -1,4 +1,5 @@
 // 各畫面共用的介面：背景、回家鈕、轉房間鈕、星星罐、飛星星。
+import { ghost } from './gestures.js';
 import { div, burst, stageRect, wait } from '../core/dom.js';
 import { sky, hour, isDark } from '../core/clock.js';
 import { starsToday } from '../core/store.js';
@@ -31,22 +32,27 @@ export function roundBtn(root, cls, icon, onTap) {
   return b;
 }
 export function homeBtn(root, onTap) { return roundBtn(root, 'btn-home', ICON.home, onTap); }
+// 轉向、放大的按鈕都拿掉了（11/24）：改用手勢（一根手指滑轉、兩根手指捏合拉近拉遠、兩根手指一起滑移動）。
+// 保留這個函式給原本的程式用：
+//   r／l：手指提示的目標（畫面中間一個看不見的點；手指提示看到它會改成「左右滑」的動作）
+//   pulse(true)：畫面上出現「一根手指左右滑」的指引手，提醒「轉一轉」
 export function rotateBtns(root, dio) {
-  const l = roundBtn(root, 'blue btn-rot-l', ICON.left, () => { sfx('whoosh'); dio.rotateBy(-90); });
-  const r = roundBtn(root, 'blue btn-rot-r', ICON.right, () => { sfx('whoosh'); dio.rotateBy(90); });
+  const spot = div('gest-anchor');
+  root.appendChild(spot);
+  let g = null, t = 0;
   return {
-    l, r,
-    pulse(on) { l.classList.toggle('pulse', on); r.classList.toggle('pulse', on); },
-    show(on) { l.style.display = r.style.display = on ? '' : 'none'; },
+    l: spot, r: spot,
+    pulse(on) {
+      clearTimeout(t);
+      g?.remove(); g = null;
+      if (on) { g = ghost(root, 'drag'); t = setTimeout(() => { g?.remove(); g = null; }, 4500); }
+    },
+    show() {},
   };
 }
+export function zoomBtns() { return []; }
 
 // 星星罐：一個人玩一個，一起玩兩個（各自的顏色）
-// 拉遠、拉近（也可以用兩隻手指捏合）
-export function zoomBtns(root, dio) {
-  const mk = (cls, sign, f) => roundBtn(root, cls, `<svg viewBox="0 0 100 100"><circle cx="44" cy="44" r="28" fill="none" stroke="#fff" stroke-width="10"/><path d="M64 64 L86 86" stroke="#fff" stroke-width="12" stroke-linecap="round"/><path d="M30 44 H58${sign === '+' ? ' M44 30 V58' : ''}" stroke="#fff" stroke-width="9" stroke-linecap="round"/></svg>`, () => dio.zoomBy(f));
-  return [mk('btn-zoom-in', '+', 1.35), mk('btn-zoom-out', '-', 1 / 1.35)];
-}
 export function jars(root, members) {
   const box = div('jars');
   const map = {};

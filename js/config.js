@@ -10,6 +10,7 @@ export const DEFAULT_SETTINGS = {
   musicVol: 'mid',  // 音樂大小：low、mid、high
   quiet: false,     // 安靜模式：關掉背景音樂和裝飾音效，只留角色說話和對錯的聲音
   nolimit: false,   // 測試用：不限制遊玩時間
+  gestureTip: true, // 每天第一次打開時，跟閃閃練習手勢（轉、拉近拉遠、移動）
 };
 
 // 兩兄弟。代表色（11/24）：岳岳喜歡藍色、白色；愷愷喜歡紅色、橘色、黃色。
