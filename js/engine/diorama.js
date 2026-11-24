@@ -14,7 +14,7 @@ export function shade(hex, k) {
   const f = (c) => Math.max(0, Math.min(255, Math.round(k >= 1 ? c + (255 - c) * (k - 1) : c * k)));
   return `#${[f(n >> 16), f((n >> 8) & 255), f(n & 255)].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 }
-function lit(hex, nx, ny, nz) {
+export function lit(hex, nx, ny, nz) {
   const d = nx * LIGHT[0] + ny * LIGHT[1] + nz * LIGHT[2];
   return shade(hex, d >= 0 ? 1 + d * 0.18 : 1 + d * 0.22);
 }
@@ -412,6 +412,13 @@ export function createDiorama(opt = {}) {
     };
     return sp;
   }
+  // 任意的平面三角形／四邊形（世界座標的點，例如斜切的屋頂、轉角的雨棚）：只有 WebGL 的大場景才畫得出來
+  function addPolygon({ pts, color = '#ffffff', tap = null }) {
+    if (!useGL()) return null;
+    const pick = proxy(tap);
+    glS.addPoly({ pts, color, oneSided: false, pick });
+    return { el: pick };
+  }
   // 建好不會動的部分以後呼叫：之後新加的東西（角色、車、箭頭）都用 CSS，才能動、能換表情
   function seal() { sealed = true; renderSoon(); }
 
@@ -613,7 +620,7 @@ export function createDiorama(opt = {}) {
   apply();
   const api = {
     el, cam, world, view, walls, floor, o,
-    addBox, addGable, addPanel, addSprite, addDecal, wallArt, alongWall, seal, groundAt, gl: !!glS,
+    addBox, addGable, addPanel, addSprite, addDecal, addPolygon, wallArt, alongWall, seal, groundAt, gl: !!glS,
     animateTo, rotateBy, faceQuadrant, quadrant, snap, apply, setTint, glow, zoomBy, view,
     onRotate(fn) { rotHooks.push(fn); },
     lock(on) { locked = on; },

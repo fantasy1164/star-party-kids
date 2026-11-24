@@ -6,7 +6,7 @@
 //   3. 路上的安全：紅燈、有人過斑馬線，要按「停」（岳岳的「先停一下」；按太晚叭叭也會自己停、不扣分）
 //   這次遊玩的第一趟走完整版，之後的路程走短版（繫安全帶＋自動開過去），轉場不會太長。
 // 一起玩：愷愷認路、岳岳煞車，兩個人同時有事做。
-import { createDiorama } from '../engine/diorama.js';
+import { createDiorama, lit } from '../engine/diorama.js';
 import { div, wait, burst, stageW, shuffle, pick, toStage, stageRect } from '../core/dom.js';
 import { speak } from '../core/voice.js';
 import { sfx, playMusic } from '../core/audio.js';
@@ -274,17 +274,18 @@ const BUILD = {
     }
   },
   // 診所：白色方方的、屋頂上一個大大的綠色十字（四面都看得到）
-  // 醫院（11/24，照清泉醫院的照片和空拍圖）：米色磁磚的十層大樓（三棟高低錯落，左邊一條圓弧玻璃窗、右邊樓頂綠色大看板），
-  // 每層一排深藍窗、窗下淡綠色窗台板；前面三層樓的寬大廳，咖啡紅色橫帶，正中間「清泉醫院」招牌、白色長遮雨棚、玻璃磚牆；
-  // 左邊是紅色招牌的急診室和救護車；門口兩棵圓圓的樹；東邊停車場、公車站牌
+  // 醫院（11/24，照清泉醫院的照片、空拍圖、街景）：
+  //  - 主大樓：正方形，面向路口（西南）的角從三樓以上整塊往內縮（L 形），兩面內縮的牆交成一條內凹的直線
+  //  - 一到三樓（大廳）：佔滿整個正方形，內縮下面那個角斜切 45 度，就是大門（玻璃門、兩邊玻璃磚牆）
+  //  - 「清泉醫院」招牌：45 度斜斜地立在大門外的汽車上下車雨棚上面
+  //  - 雨棚：從斜角大門往左沿著西牆一路延伸到急診室門口（招牌寫急診室），往右沿著南牆延伸到建築物邊線
   clinic(dio, p, tap) {
-    const CREAM = '#ebe3cf', WIN = '#3e5f8a', SILL = '#cfe0c4', MAROON = '#8a4a42';
-    const FL = 26;   // 一層樓高
-    // 大樓的一面：一層一排窗（兩兩一組）、窗下淡綠色窗台板
-    const towerFace = (w, h, { from = 0, bay = false } = {}) => {
+    const CREAM = '#ebe3cf', WIN = '#3e5f8a', SILL = '#cfe0c4', MAROON = '#8a6a5c';
+    const FL = 26;
+    const towerFace = (w, h, { bay = false } = {}) => {
       const n = Math.floor(h / FL);
       let a = '';
-      for (let f = from; f < n; f++) {
+      for (let f = 0; f < n; f++) {
         const y = h - (f + 1) * FL;
         const cols = Math.max(1, Math.floor((w - 10) / 34));
         for (let c = 0; c < cols; c++) {
@@ -293,69 +294,80 @@ const BUILD = {
           a += `<rect x="${x}" y="${y + 5}" width="${cw}" height="${FL * 0.5}" fill="${WIN}"/><rect x="${x + cw / 2 - 0.8}" y="${y + 5}" width="1.6" height="${FL * 0.5}" fill="${CREAM}"/><rect x="${x - 2}" y="${y + 5 + FL * 0.5}" width="${cw + 4}" height="${FL * 0.22}" fill="${SILL}"/>`;
         }
       }
-      // 圓弧玻璃窗（一條直的淡綠玻璃，中間亮一點）
-      if (bay) a += `<rect x="${w - 26}" y="${h - n * FL}" width="22" height="${n * FL - 3 * FL}" fill="#a9c9b8"/><rect x="${w - 19}" y="${h - n * FL}" width="6" height="${n * FL - 3 * FL}" fill="#d8ece0"/>${[...Array(n - 3)].map((_, k) => `<rect x="${w - 26}" y="${h - n * FL + k * FL}" width="22" height="2" fill="${CREAM}"/>`).join('')}`;
+      if (bay) a += `<rect x="${w - 30}" y="0" width="22" height="${h}" fill="#a9c9b8"/><rect x="${w - 23}" y="0" width="6" height="${h}" fill="#d8ece0"/>${[...Array(n)].map((_, k) => `<rect x="${w - 30}" y="${k * FL}" width="22" height="2.5" fill="${CREAM}"/>`).join('')}`;
       return face(w, h, a);
     };
+    // 大廳的牆：一層一排窗、窗下咖啡色橫帶
+    const podFace = (w, h, extra = '') => face(w, h, `${[0, 1, 2].map((r) => `<rect x="0" y="${r * FL + 4}" width="${w}" height="${FL * 0.45}" fill="${WIN}"/>${[...Array(Math.floor(w / 30))].map((_, k) => `<rect x="${k * 30 + 26}" y="${r * FL + 4}" width="3" height="${FL * 0.45}" fill="${CREAM}"/>`).join('')}<rect x="0" y="${r * FL + 4 + FL * 0.45}" width="${w}" height="${FL * 0.3}" fill="${MAROON}"/>`).join('')}${extra}`);
+
     const X = p.x, Y = p.y;
-    // ---- 主大樓：正方形，面向路口的那個角往內縮（L 形），兩面內縮的牆在中間交成一條內凹的直線 ----
-    // 照片從西南邊看：內縮的兩面牆一面朝南、一面朝西；左邊（西北塊）西牆有圓弧玻璃窗和直立「清泉醫院」招牌，
-    // 右邊（東南塊）南牆頂端是綠色大看板；內角後面有一座比較高的樓梯間／機房
-    const S = 230, N = 110, TH = 260;
-    const x0 = X - S / 2 + 10, y0 = Y - 260;
-    const northD = S - N;   // 北半邊（整排）的深度
-    const nb = { x: x0, y: y0, w: S, d: northD };
-    const se = { x: x0 + N, y: y0 + northD, w: S - N, d: N };
-    // 北半邊：南牆（只有西邊那段露出來，就是內縮的那面牆）、西牆有圓弧窗
-    dio.addBox({ x: nb.x, y: nb.y, w: nb.w, d: nb.d, h: TH, color: CREAM, tap,
-      faces: { s: towerFace(nb.w, TH, { from: 3 }), w: towerFace(nb.d, TH, { from: 3, bay: true }), n: towerFace(nb.w, TH, { from: 3 }), e: towerFace(nb.d, TH, { from: 3 }) } });
-    // 東南塊：往南突出；西牆就是另一面內縮的牆
-    dio.addBox({ x: se.x, y: se.y, w: se.w, d: se.d, h: TH, color: CREAM, tap,
-      faces: { s: towerFace(se.w, TH, { from: 3 }), w: towerFace(se.d, TH, { from: 3 }), e: towerFace(se.d, TH, { from: 3 }) } });
-    // 內角後面的樓梯間／機房（比主樓高兩層）
-    dio.addBox({ x: x0 + N - 10, y: y0 + northD - 70, z: TH, w: 70, d: 60, h: 52, color: '#e2dac4', tap,
-      faces: { s: towerFace(70, 52, {}), w: towerFace(60, 52, {}) } });
-    // 西北塊西牆頂端：直立的「清泉醫院」招牌（藍綠色字）
+    const S = 230, N = 110, PH = 3 * FL, TH = PH + 7 * FL, C = 64;   // 正方形邊長、內縮、大廳高、總高、斜角
+    const x0 = X - S / 2, y0 = Y - S + 40;
+    const yER = y0 + 26;   // 急診室門口（西牆北邊）
+
+    // ---- 大廳（一到三樓）：整個正方形，西南角斜切 ----
+    const westArt = `<rect x="8" y="${PH - 30}" width="56" height="30" fill="#6c7a8c"/><rect x="8" y="${PH - 38}" width="56" height="9" fill="#e53935"/>${[0, 1, 2].map((k) => `<rect x="${16 + k * 16}" y="${PH - 36}" width="8" height="5" rx="1" fill="#fff"/>`).join('')}`;
+    dio.addBox({ x: x0, y: y0, w: S, d: S - C, h: PH, color: CREAM, tap, faces: { w: podFace(S - C, PH, westArt), n: podFace(S, PH), e: podFace(S - C, PH), s: podFace(S, PH) } });
+    dio.addBox({ x: x0 + C, y: y0 + S - C, w: S - C, d: C, h: PH, color: CREAM, tap, faces: { s: podFace(S - C, PH), e: podFace(C, PH) } });
+    // 斜角大門：玻璃門、兩邊玻璃磚牆
+    const L = C * Math.SQRT2;
+    const glassBlock = (x, w) => `<rect x="${x}" y="${PH - 34}" width="${w}" height="34" fill="#e6eef2"/>${[...Array(4)].map((_, k) => `<path d="M${x + (k + 1) * w / 5} ${PH - 34} V${PH}" stroke="#c4d2da" stroke-width="1"/>`).join('')}${[...Array(4)].map((_, k) => `<path d="M${x} ${PH - 34 + (k + 1) * 7} H${x + w}" stroke="#c4d2da" stroke-width="1"/>`).join('')}`;
+    dio.addPanel({ x1: x0, y1: y0 + S - C, x2: x0 + C, y2: y0 + S, h: PH, css: CREAM, tap,
+      html: face(L, PH, `<rect x="0" y="4" width="${L}" height="${FL * 0.45}" fill="${WIN}"/><rect x="0" y="${4 + FL * 0.45}" width="${L}" height="${FL * 0.3}" fill="${MAROON}"/>${glassBlock(4, 18)}<rect x="24" y="${PH - 36}" width="${L - 48}" height="36" fill="#3a4250"/><rect x="28" y="${PH - 30}" width="${L - 56}" height="30" fill="#5d6b7e"/><rect x="28" y="${PH - 36}" width="${L - 56}" height="4" fill="#ff8a3d"/>${glassBlock(L - 22, 18)}`) });
+    // 斜角上方的屋頂（三角形）
+    dio.addPolygon({ pts: [[x0, y0 + S - C, PH], [x0 + C, y0 + S - C, PH], [x0 + C, y0 + S, PH]], color: lit(CREAM, 0, 0, 1), tap });
+
+    // ---- 主大樓（四到十樓）：北半邊整排＋東南塊，西南角內縮 ----
+    const nd = S - N;
+    dio.addBox({ x: x0, y: y0, z: PH, w: S, d: nd, h: TH - PH, color: CREAM, tap,
+      faces: { s: towerFace(S, TH - PH), w: towerFace(nd, TH - PH, { bay: true }), n: towerFace(S, TH - PH), e: towerFace(nd, TH - PH) } });
+    dio.addBox({ x: x0 + N, y: y0 + nd, z: PH, w: S - N, d: N, h: TH - PH, color: CREAM, tap,
+      faces: { s: towerFace(S - N, TH - PH), w: towerFace(N, TH - PH), e: towerFace(N, TH - PH) } });
+    // 內角後面的樓梯間／機房
+    dio.addBox({ x: x0 + N - 10, y: y0 + nd - 70, z: TH, w: 70, d: 60, h: 52, color: '#e2dac4', tap, faces: { s: towerFace(70, 52), w: towerFace(60, 52) } });
+    // 西牆頂端直立招牌、東南塊南牆頂端綠色大看板
     dio.addPanel({ x1: x0 - 1, y1: y0 + 14, x2: x0 - 1, y2: y0 + 54, z: TH - 120, h: 116, css: '#f4efe2', tap,
       html: `<svg viewBox="0 0 40 116" width="100%" height="100%">${['清', '泉', '醫', '院'].map((c, k) => `<text x="20" y="${26 + k * 27}" font-size="24" text-anchor="middle" fill="#2f8f9a" font-weight="700" font-family="sans-serif">${c}</text>`).join('')}</svg>` });
-    // 東南塊南牆頂端：綠色大看板
-    dio.addPanel({ x1: se.x + 4, y1: se.y + se.d + 1, x2: se.x + se.w - 4, y2: se.y + se.d + 1, z: TH - 56, h: 56, css: '#3fae5a', tap,
+    dio.addPanel({ x1: x0 + N + 4, y1: y0 + S + 1, x2: x0 + S - 4, y2: y0 + S + 1, z: TH - 56, h: 56, css: '#3fae5a', tap,
       html: `<svg viewBox="0 0 112 56" width="100%" height="100%">${[12, 26, 40].map((y, k) => `<rect x="8" y="${y - 4}" width="${62 + k * 6}" height="6" rx="3" fill="#fff" opacity=".9"/>`).join('')}<rect x="86" y="8" width="18" height="40" rx="3" fill="#ff5d73"/></svg>` });
-    // ---- 前面三層樓的大廳 ----
-    const pw = 320, pd = 150, ph = 78;
-    const px = X - pw / 2, py = Y - pd + 40;
-    const ec = pw / 2 - 60;   // 大門在內縮的那面牆正下方（照片）
-    const podium = face(pw, ph, `
-      ${[0, 1].map((r) => `<rect x="0" y="${r * 26 + 2}" width="${pw}" height="16" fill="${WIN}"/>${[...Array(10)].map((_, k) => `<rect x="${k * 32 + 30}" y="${r * 26 + 2}" width="3" height="16" fill="${CREAM}"/>`).join('')}<rect x="0" y="${r * 26 + 18}" width="${pw}" height="7" fill="${MAROON}"/>`).join('')}
-      <rect x="${ec - 50}" y="54" width="100" height="24" fill="#4a5060"/><rect x="${ec - 46}" y="57" width="92" height="21" fill="#6c7a8c"/>
-      <rect x="${ec + 56}" y="54" width="40" height="24" fill="#e6eef2"/>${[0, 1, 2, 3].map((k) => `<path d="M${ec + 56 + k * 10} 54 V78" stroke="#c4d2da" stroke-width="1"/>`).join('')}${[0, 1, 2].map((k) => `<path d="M${ec + 56} ${60 + k * 6} H${ec + 96}" stroke="#c4d2da" stroke-width="1"/>`).join('')}
-      ${[20, 70, pw - 90, pw - 40].map((x) => `<rect x="${x}" y="58" width="28" height="14" fill="${WIN}"/>`).join('')}`);
-    const podSide = face(pd, ph, `${[0, 1].map((r) => `<rect x="0" y="${r * 26 + 2}" width="${pd}" height="16" fill="${WIN}"/><rect x="0" y="${r * 26 + 18}" width="${pd}" height="7" fill="${MAROON}"/>`).join('')}<rect x="20" y="58" width="40" height="14" fill="${WIN}"/><rect x="${pd - 60}" y="58" width="40" height="14" fill="${WIN}"/>`);
-    dio.addBox({ x: px, y: py, w: pw, d: pd, h: ph, color: CREAM, tap, faces: { s: podium, e: podSide, w: podSide, n: podSide } });
-    // 「清泉醫院」大招牌（大廳正中間、往上突出一點）
-    dio.addBox({ x: X - 130, y: py + pd - 4, z: ph - 10, w: 140, d: 10, h: 44, color: '#f4efe2', tap,
-      faces: { s: `<svg viewBox="0 0 140 44" width="100%" height="100%" preserveAspectRatio="none"><rect x="3" y="3" width="134" height="38" fill="#f7f3e8" stroke="#d9d0bb" stroke-width="2"/><text x="70" y="33" font-size="26" text-anchor="middle" fill="#2f8f9a" font-weight="700" font-family="sans-serif" letter-spacing="6">清泉醫院</text></svg>` } });
-    // 白色長遮雨棚＋兩根柱子
-    dio.addBox({ x: X - 165, y: py + pd, z: 26, w: 190, d: 38, h: 7, color: '#ffffff', tap });
-    for (const cx of [X - 159, X + 15]) dio.addBox({ x: cx, y: py + pd + 30, w: 6, d: 6, h: 26, color: '#dfe3ea', tap });
-    // ---- 左邊：急診室（紅色招牌、白色雨棚）＋救護車 ----
-    const ex = px - 86, ey = py + 50;
-    dio.addBox({ x: ex, y: ey, w: 86, d: 100, h: 30, color: CREAM, tap, faces: { s: face(86, 30, `<rect x="0" y="0" width="86" height="11" fill="#e53935"/><rect x="10" y="2" width="9" height="7" fill="#fff"/><rect x="12.5" y="2" width="4" height="7" fill="#e53935"/><rect x="10" y="4" width="9" height="3" fill="#e53935"/><rect x="26" y="4" width="50" height="3" rx="1.5" fill="#fff"/><rect x="18" y="14" width="50" height="16" fill="#6c7a8c"/>`) } });
-    dio.addBox({ x: ex - 6, y: ey + 100, z: 22, w: 98, d: 30, h: 5, color: '#ffffff', tap });
-    const ambulance = `<svg viewBox="0 0 110 74"><rect x="4" y="16" width="74" height="42" rx="8" fill="#fff"/><path d="M78 26 H94 L106 42 V58 H78Z" fill="#fff"/><path d="M82 30 H93 L101 42 H82Z" fill="#bfe6ff"/><rect x="4" y="40" width="102" height="6" fill="#e53935"/><rect x="30" y="22" width="8" height="22" fill="#e53935"/><rect x="23" y="29" width="22" height="8" fill="#e53935"/><rect x="40" y="8" width="16" height="8" rx="3" fill="#ff4a4a"/><circle cx="24" cy="60" r="9" fill="#3a3550"/><circle cx="86" cy="60" r="9" fill="#3a3550"/></svg>`;
-    dio.addSprite({ x: ex + 20, y: ey + 160, w: 100, h: 68, shadow: 0.5, tap, html: ambulance });
-    dio.addSprite({ x: ex + 80, y: ey + 172, w: 100, h: 68, shadow: 0.5, tap, html: ambulance });
-    // 門口兩棵圓圓的樹（照片右下角）
+
+    // ---- 汽車上下車雨棚：西牆（急診室門口）→ 斜角大門 → 南牆（到建築物邊線） ----
+    const o = 46, cz = 34, ct = 8;   // 伸出去多遠、高度、厚度
+    const A = [x0, yER], P1 = [x0, y0 + S - C], P2 = [x0 + C, y0 + S], B = [x0 + S, y0 + S];
+    const A_ = [x0 - o, yER], P1_ = [x0 - o, y0 + S - C + 0.414 * o], P2_ = [x0 + C - 0.414 * o, y0 + S + o], B_ = [x0 + S, y0 + S + o];
+    const top = (a, b, c2, d2) => dio.addPolygon({ pts: [[...a, cz + ct], [...b, cz + ct], [...c2, cz + ct], [...d2, cz + ct]], color: '#ffffff', tap });
+    top(A, A_, P1_, P1); top(P1, P1_, P2_, P2); top(P2, P2_, B_, B);
+    const fascia = (a, b, html = '') => dio.addPanel({ x1: a[0], y1: a[1], x2: b[0], y2: b[1], z: cz, h: ct + 4, css: '#ffffff', html, tap });
+    const erLen = P1_[1] - A_[1];
+    fascia(A_, P1_, face(erLen, 12, `${['急', '診', '室'].map((c, k) => `<text x="${14 + k * 12}" y="10.5" font-size="10" fill="#e53935" font-weight="700" font-family="sans-serif">${c}</text>`).join('')}<text x="${erLen - 4}" y="10" font-size="8" text-anchor="end" fill="#e53935" font-weight="700" font-family="sans-serif">24</text>`));
+    fascia(P1_, P2_);
+    fascia(P2_, B_);
+    // 雨棚的白色圓柱（斜角大門前兩根、兩側各幾根）
+    for (const [cx, cy] of [[P1_[0] + 6, P1_[1] - 4], [P2_[0] + 4, P2_[1] - 6], [A_[0] + 6, A_[1] + 6], [x0 - o + 6, (yER + P1[1]) / 2], [B_[0] - 8, B_[1] - 6], [(P2[0] + B[0]) / 2, B_[1] - 6]]) {
+      dio.addBox({ x: cx - 3, y: cy - 3, w: 6, d: 6, h: cz, color: '#f4f6fa', tap });
+    }
+    // 「清泉醫院」大招牌：45 度斜立在斜角雨棚上面
+    const nx = -Math.SQRT1_2, ny = Math.SQRT1_2, off = 30, trim = 0.08;
+    const q1 = [P1[0] + nx * off + (P2[0] - P1[0]) * -trim, P1[1] + ny * off + (P2[1] - P1[1]) * -trim];
+    const q2 = [P2[0] + nx * off + (P2[0] - P1[0]) * trim, P2[1] + ny * off + (P2[1] - P1[1]) * trim];
+    const SL = Math.hypot(q2[0] - q1[0], q2[1] - q1[1]);
+    dio.addPanel({ x1: q1[0], y1: q1[1], x2: q2[0], y2: q2[1], z: cz + ct, h: 38, css: '#f4efe2', tap,
+      html: `<svg viewBox="0 0 ${SL} 38" width="100%" height="100%" preserveAspectRatio="none"><rect x="2" y="2" width="${SL - 4}" height="34" fill="#f7f3e8" stroke="#d9d0bb" stroke-width="2"/><text x="${SL / 2}" y="28" font-size="22" text-anchor="middle" fill="#2f8f9a" font-weight="700" font-family="sans-serif" letter-spacing="3">清泉醫院</text></svg>` });
+    // 招牌背面（從大樓那邊看也是招牌的樣子，不是透明的）
+    dio.addPanel({ x1: q2[0] + nx * -2, y1: q2[1] + ny * -2, x2: q1[0] + nx * -2, y2: q1[1] + ny * -2, z: cz + ct, h: 38, css: '#e2dac4', tap });
+
+    // ---- 急診室門口的救護車、門口的樹、東邊停車場、公車站牌 ----
+    const ambulance = `<svg viewBox="0 0 110 74"><rect x="4" y="16" width="74" height="42" rx="8" fill="#fff"/><path d="M78 26 H94 L106 42 V58 H78Z" fill="#fff"/><path d="M82 30 H93 L101 42 H82Z" fill="#bfe6ff"/><rect x="4" y="40" width="102" height="6" fill="#d4e157"/><rect x="30" y="22" width="8" height="22" fill="#e53935"/><rect x="23" y="29" width="22" height="8" fill="#e53935"/><rect x="40" y="8" width="16" height="8" rx="3" fill="#ff4a4a"/><circle cx="24" cy="60" r="9" fill="#3a3550"/><circle cx="86" cy="60" r="9" fill="#3a3550"/></svg>`;
+    dio.addSprite({ x: x0 - o - 40, y: yER + 40, w: 96, h: 64, shadow: 0.5, tap, html: ambulance });
     const roundTree = `<svg viewBox="0 0 80 110"><rect x="35" y="66" width="10" height="42" rx="4" fill="#7a5a3f"/><circle cx="40" cy="44" r="26" fill="#2f7a4a"/><circle cx="24" cy="56" r="16" fill="#2f7a4a"/><circle cx="56" cy="56" r="16" fill="#2f7a4a"/><circle cx="34" cy="34" r="9" fill="#4fa06a" opacity=".7"/></svg>`;
-    dio.addSprite({ x: X + 120, y: py + pd + 50, w: 78, h: 104, shadow: 0.5, html: roundTree });
-    dio.addSprite({ x: X + 176, y: py + pd + 34, w: 70, h: 94, shadow: 0.5, html: roundTree });
-    // ---- 東邊停車場、門口公車站牌 ----
-    const lx = px + pw + 24, ly = py - 30;
+    dio.addSprite({ x: B_[0] - 40, y: B_[1] + 40, w: 70, h: 94, shadow: 0.5, html: roundTree });
+    dio.addSprite({ x: B_[0] + 10, y: B_[1] + 26, w: 64, h: 86, shadow: 0.5, html: roundTree });
+    const lx = x0 + S + 24, ly = y0 + 20;
     dio.addDecal({ x: lx, y: ly, w: 170, h: 170, z: 1.1, css: 'background: repeating-linear-gradient(90deg, #fff 0 4px, transparent 4px 56px), #9aa0aa' });
     const car = (c) => `<svg viewBox="0 0 80 50"><rect x="6" y="20" width="68" height="20" rx="8" fill="${c}"/><path d="M18 20 Q24 6 40 6 Q56 6 62 20Z" fill="${c}"/><path d="M24 19 Q28 10 40 10 Q52 10 56 19Z" fill="#bfe6ff"/><circle cx="20" cy="42" r="7" fill="#3a3550"/><circle cx="60" cy="42" r="7" fill="#3a3550"/></svg>`;
     dio.addSprite({ x: lx + 30, y: ly + 70, w: 60, h: 38, shadow: 0.4, html: car('#b8c4d6') });
     dio.addSprite({ x: lx + 142, y: ly + 140, w: 60, h: 38, shadow: 0.4, html: car('#ffd23f') });
-    dio.addSprite({ x: X + 240, y: py + pd + 60, w: 40, h: 110, shadow: 0.3, html: `<svg viewBox="0 0 40 110"><rect x="18" y="30" width="4" height="80" fill="#8a8fa0"/><rect x="4" y="4" width="32" height="32" rx="6" fill="#2f7fe0"/><rect x="10" y="12" width="20" height="14" rx="3" fill="#fff"/><rect x="12" y="15" width="16" height="6" fill="#2f7fe0"/><circle cx="14" cy="28" r="2.5" fill="#fff"/><circle cx="26" cy="28" r="2.5" fill="#fff"/></svg>` });
+    dio.addSprite({ x: B_[0] + 70, y: B_[1] + 50, w: 40, h: 110, shadow: 0.3, html: `<svg viewBox="0 0 40 110"><rect x="18" y="30" width="4" height="80" fill="#8a8fa0"/><rect x="4" y="4" width="32" height="32" rx="6" fill="#2f7fe0"/><rect x="10" y="12" width="20" height="14" rx="3" fill="#fff"/><rect x="12" y="15" width="16" height="6" fill="#2f7fe0"/><circle cx="14" cy="28" r="2.5" fill="#fff"/><circle cx="26" cy="28" r="2.5" fill="#fff"/></svg>` });
   },
   // 警察局：深藍色、屋頂上有紅藍警示燈、門口一個大大的星星徽章、停著一台警車
   police(dio, p, tap) {
