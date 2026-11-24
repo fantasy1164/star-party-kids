@@ -160,6 +160,78 @@ function touHouse(dio, { x, y, w = 100, d = 100, floors = 4, style = 'brick', ta
   }
 }
 
+// ---- 醫院附近的街屋（11/24，參考清泉醫院周邊街景與空拍）：
+// 三、四層樓的店面透天：一樓騎樓＋店面、遮陽棚，樓上鐵窗和冷氣室外機，牆上伸出直立招牌，屋頂鐵皮加蓋；
+// 東北邊是社區大樓（金大城那樣的住宅大樓：一層一排陽台）；店門口停一排機車。
+// 招牌只用圖案（藥局綠十字、醫療用品紅十字、便當碗、理髮旋轉燈、早餐杯子、水果），不用字。
+const SIGN = {
+  pharmacy: { c: '#2fa65a', icon: '<rect x="13" y="6" width="10" height="28" rx="2" fill="#fff"/><rect x="4" y="15" width="28" height="10" rx="2" fill="#fff"/>' },
+  medical: { c: '#e53935', icon: '<rect x="13" y="6" width="10" height="28" rx="2" fill="#fff"/><rect x="4" y="15" width="28" height="10" rx="2" fill="#fff"/>' },
+  bento: { c: '#ff8a3d', icon: '<path d="M5 18 H31 Q30 34 18 34 Q6 34 5 18Z" fill="#fff"/><path d="M9 14 Q18 6 27 14" stroke="#fff" stroke-width="3" fill="none"/><path d="M24 4 L30 16 M28 3 L33 14" stroke="#fff" stroke-width="2"/>' },
+  salon: { c: '#3a6fd8', icon: '<rect x="12" y="4" width="12" height="32" rx="6" fill="#fff"/><path d="M12 10 L24 16 M12 18 L24 24 M12 26 L24 32" stroke="#e53935" stroke-width="3"/>' },
+  breakfast: { c: '#ffb627', icon: '<path d="M9 10 H27 L24 34 H12Z" fill="#fff"/><rect x="8" y="6" width="20" height="5" rx="2" fill="#fff"/><path d="M20 6 L24 0" stroke="#fff" stroke-width="2.5"/>' },
+  fruit: { c: '#7ac143', icon: '<circle cx="18" cy="22" r="12" fill="#fff"/><path d="M18 10 Q20 4 26 4" stroke="#fff" stroke-width="3" fill="none"/>' },
+};
+const AWNING = { pharmacy: '#2fa65a', medical: '#e53935', bento: '#ff8a3d', salon: '#3a6fd8', breakfast: '#ffd23f', fruit: '#7ac143' };
+// 一間店面透天。face：正面朝哪裡（'s' 朝南、'n' 朝北）
+function shopHouse(dio, { x, y, w = 80, d = 90, floors = 4, wall = '#f1e6d2', sign = 'bento', face: fc = 's', roof = '#5b8fd8', grill = '#d6dbe4' }) {
+  const FH = 36, h = floors * FH;
+  const S = SIGN[sign], aw = AWNING[sign];
+  let art = '';
+  // 樓上：每層一扇有鐵窗的窗、下面一台冷氣室外機、樓板線
+  for (let f = 1; f < floors; f++) {
+    const t = h - (f + 1) * FH;
+    art += `<rect x="0" y="${t + FH - 3}" width="${w}" height="3" fill="#00000014"/>`
+      + `<rect x="${w * 0.14}" y="${t + 6}" width="${w * 0.6}" height="${FH * 0.52}" fill="#8fb4d4"/>`
+      + `<rect x="${w * 0.12}" y="${t + 4}" width="${w * 0.64}" height="${FH * 0.58}" fill="none" stroke="${grill}" stroke-width="2.5"/>`
+      + [...Array(6)].map((_, k) => `<rect x="${w * 0.12 + (k + 1) * (w * 0.64 / 7)}" y="${t + 4}" width="1.6" height="${FH * 0.58}" fill="${grill}"/>`).join('')
+      + `<rect x="${w * 0.12}" y="${t + 4 + FH * 0.29}" width="${w * 0.64}" height="1.6" fill="${grill}"/>`
+      + `<rect x="${w * 0.8}" y="${t + FH * 0.5}" width="${w * 0.15}" height="${FH * 0.3}" rx="1.5" fill="#e8e8e8"/><circle cx="${w * 0.875}" cy="${t + FH * 0.65}" r="${FH * 0.1}" fill="#b8bcc6"/>`;
+  }
+  // 一樓：騎樓（暗暗的走廊）、兩邊柱子、裡面亮亮的店、遮陽棚的影子
+  const g = h - FH;
+  art += `<rect x="0" y="${g}" width="${w}" height="${FH}" fill="#4a4550"/><rect x="${w * 0.1}" y="${g + 8}" width="${w * 0.8}" height="${FH - 8}" fill="#fff6d8"/><rect x="${w * 0.14}" y="${g + 12}" width="${w * 0.32}" height="${FH * 0.4}" fill="${aw}" opacity=".35"/><rect x="${w * 0.54}" y="${g + 12}" width="${w * 0.32}" height="${FH * 0.4}" fill="${aw}" opacity=".25"/><rect x="0" y="${g}" width="${w * 0.07}" height="${FH}" fill="${wall}"/><rect x="${w * 0.93}" y="${g}" width="${w * 0.07}" height="${FH}" fill="${wall}"/>`;
+  const front = face(w, h, art);
+  const side = face(d, h, [...Array(floors - 1)].map((_, f) => `<rect x="0" y="${h - (f + 2) * FH + FH - 3}" width="${d}" height="3" fill="#00000014"/>`).join(''));
+  // 背面也不是一面白牆：每層鐵窗、冷氣、熱水器，一樓後門（從預設的鏡頭角度常常看到背面）
+  let backArt = '';
+  for (let f = 1; f < floors; f++) {
+    const t = h - (f + 1) * FH;
+    backArt += `<rect x="0" y="${t + FH - 3}" width="${w}" height="3" fill="#00000014"/><rect x="${w * 0.36}" y="${t + 7}" width="${w * 0.42}" height="${FH * 0.45}" fill="#8fb4d4"/><rect x="${w * 0.34}" y="${t + 5}" width="${w * 0.46}" height="${FH * 0.5}" fill="none" stroke="${grill}" stroke-width="2.2"/>${[...Array(4)].map((_, k) => `<rect x="${w * 0.34 + (k + 1) * (w * 0.46 / 5)}" y="${t + 5}" width="1.5" height="${FH * 0.5}" fill="${grill}"/>`).join('')}<rect x="${w * 0.08}" y="${t + FH * 0.45}" width="${w * 0.18}" height="${FH * 0.32}" rx="1.5" fill="#e8e8e8"/><circle cx="${w * 0.17}" cy="${t + FH * 0.61}" r="${FH * 0.1}" fill="#b8bcc6"/>`;
+  }
+  backArt += `<rect x="${w * 0.6}" y="${h - FH + 8}" width="${w * 0.22}" height="${FH - 8}" fill="#8a6f55"/><rect x="${w * 0.14}" y="${h - FH + 10}" width="${w * 0.3}" height="${FH * 0.36}" fill="#8fb4d4"/><rect x="${w * 0.88}" y="${h - FH * 2.2}" width="${w * 0.08}" height="${FH * 0.5}" rx="2" fill="#f4f6fa"/>`;
+  const back = face(w, h, backArt);
+  const faces = fc === 's' ? { s: front, n: back, e: side, w: side } : { n: front, s: back, e: side, w: side };
+  dio.addBox({ x, y, w, d, h, color: wall, faces });
+  // 遮陽棚（一樓上面伸出來一片）＋上面的店招（只有圖案）
+  const fy = fc === 's' ? y + d : y;
+  const out = fc === 's' ? 1 : -1;
+  dio.addBox({ x: x + 2, y: fc === 's' ? fy : fy - 16, z: FH - 6, w: w - 4, d: 16, h: 5, color: aw });
+  dio.addPanel(fc === 's'
+    ? { x1: x + 4, y1: fy + 16 * out + 0.5, x2: x + w - 4, y2: fy + 16 * out + 0.5, z: FH - 6, h: 12, css: aw, html: face(w - 8, 12, `<rect width="${w - 8}" height="12" fill="${aw}"/>${[...Array(Math.floor((w - 8) / 10))].map((_, k) => `<path d="M${k * 10} 12 Q${k * 10 + 5} 17 ${k * 10 + 10} 12" fill="${aw}"/>`).join('')}`) }
+    : { x1: x + w - 4, y1: fy - 16 - 0.5, x2: x + 4, y2: fy - 16 - 0.5, z: FH - 6, h: 12, css: aw });
+  // 牆上伸出來的直立招牌（兩面都有圖案）
+  const sx = x + w - 6;
+  const signHtml = `<svg viewBox="0 0 36 90" width="100%" height="100%" preserveAspectRatio="none"><rect width="36" height="90" rx="4" fill="${S.c}"/><rect x="3" y="3" width="30" height="84" rx="3" fill="none" stroke="#fff" stroke-width="2" opacity=".7"/><g transform="translate(0 6)">${S.icon}</g><g transform="translate(0 48)">${S.icon}</g></svg>`;
+  dio.addPanel({ x1: sx, y1: fy, x2: sx, y2: fy + 22 * out, z: FH + 8, h: FH * Math.min(2, floors - 1.5), css: S.c, html: signHtml, both: true });
+  // 屋頂：鐵皮加蓋
+  dio.addBox({ x: x + w * 0.1, y: y + d * 0.15, z: h, w: w * 0.8, d: d * 0.6, h: 22, color: roof });
+}
+// 社區住宅大樓：一層一排陽台，最下面兩層是石材、屋頂有一圈
+function condo(dio, { x, y, w = 150, d = 120, floors = 12, wall = '#efe6d8', rail = '#9aa3b5' }) {
+  const FH = 24, h = floors * FH;
+  const f = (W) => face(W, h, `${[...Array(floors - 2)].map((_, k) => { const t = k * FH; return `<rect x="6" y="${t + 4}" width="${W - 12}" height="${FH * 0.55}" fill="#8fb4d4"/>${[...Array(Math.floor(W / 40))].map((__, c) => `<rect x="${(c + 1) * 40 - 2}" y="${t + 4}" width="4" height="${FH * 0.55}" fill="${wall}"/>`).join('')}<rect x="2" y="${t + FH * 0.62}" width="${W - 4}" height="${FH * 0.3}" fill="${wall}" stroke="${rail}" stroke-width="1.2"/>`; }).join('')}<rect x="0" y="${h - 2 * FH}" width="${W}" height="${2 * FH}" fill="#c9c2b4"/>${[...Array(Math.floor(W / 30))].map((_, c) => `<rect x="${c * 30 + 8}" y="${h - 2 * FH + 8}" width="18" height="${FH * 1.4}" fill="#6c7a8c"/>`).join('')}`);
+  dio.addBox({ x, y, w, d, h, color: wall, faces: { s: f(w), n: f(w), e: f(d), w: f(d) } });
+  dio.addBox({ x: x + w * 0.2, y: y + d * 0.2, z: h, w: w * 0.6, d: d * 0.6, h: 30, color: '#d9cfbd' });
+  dio.addGable({ x: x + w * 0.2, y: y + d * 0.2, z: h + 30, w: w * 0.6, d: d * 0.6, h: 22, color: '#8a6a5c', ridge: 'x' });
+}
+const scooterSvg = (c) => `<svg viewBox="0 0 40 30"><circle cx="9" cy="24" r="5" fill="#3a3550"/><circle cx="31" cy="24" r="5" fill="#3a3550"/><path d="M8 20 H26 L30 10 H34" stroke="${c}" stroke-width="5" fill="none" stroke-linecap="round"/><rect x="10" y="12" width="14" height="6" rx="3" fill="#3a3550"/></svg>`;
+// 一排機車（停在騎樓前面）
+function scooters(dio, x0, y, n) {
+  const cs = ['#e53935', '#2f7fe0', '#ffffff', '#7ac143', '#ffb627', '#3a3550'];
+  for (let k = 0; k < n; k++) dio.addSprite({ x: x0 + k * 18, y, w: 26, h: 20, shadow: 0.3, html: scooterSvg(cs[(k * 7 + n) % cs.length]) });
+}
+
 const BUILD = {
   // 學堂：長長的兩層樓＋中間高高的鐘塔＋紅屋頂
   school(dio, p, tap) {
@@ -442,7 +514,7 @@ export function buildTown() {
     ...[[180, 1360], [300, 1360], [420, 1360], [180, 760], [300, 820]].map(([x, y], i) => ['tou', x, y, ['#fff3e6', '#e6f4e8', '#e6eeff', '#fff0f0', '#fff8d6'][i % 5]]),
     ...[[820, 900], [940, 900], [300, 1560], [420, 1560]].map(([x, y], i) => ['tou', x, y, ['#e6eeff', '#fff8d6', '#fff3e6', '#e6f4e8'][i % 4]]),
     // 市中心：公寓和店面
-    ...[[2200, 760], [2400, 780], [2560, 1180], [2560, 1420], [1820, 1520], [2080, 250], [1780, 300]].map(([x, y], i) => ['apt', x, y, ['#c9d6ea', '#e6d6c4', '#d6c8ff', '#c8f0d6', '#ffd6a0', '#ffe0a8', '#e6eeff'][i]]),
+    ...[[2200, 760], [2400, 780], [2560, 1180], [1820, 1520], [2080, 250], [1780, 300]].map(([x, y], i) => ['apt', x, y, ['#c9d6ea', '#e6d6c4', '#d6c8ff', '#ffd6a0', '#ffe0a8', '#e6eeff'][i]]),
     ...[[1820, 960], [2240, 1000]].map(([x, y], i) => ['shop', x, y, ['#ff8fbf', '#7ee06a'][i]]),
   ];
   const TOU_ORDER = ['stone', 'euro', 'modern', 'brick', 'euro', 'stone', 'brick', 'modern', 'euro'];
@@ -451,11 +523,22 @@ export function buildTown() {
     if (k === 'tou') {
       touHouse(dio, { x: x - 50, y: y - 50, w: 100, d: 100, floors: 3 + (touN % 2), style: TOU_ORDER[touN++ % TOU_ORDER.length] });
     } else if (k === 'apt') {
-      dio.addBox({ x: x - 60, y: y - 50, w: 120, d: 100, h: 230, color: c, faces: { s: `<svg viewBox="0 0 120 230" width="100%" height="100%" preserveAspectRatio="none">${[14, 58, 102, 146, 190].map((yy) => [12, 48, 84].map((xx) => `<rect x="${xx}" y="${yy}" width="24" height="26" rx="3" fill="#fff" opacity=".7"/>`).join('')).join('')}</svg>` } });
+      // 一般公寓也改成有陽台的住宅大樓（不再是一個盒子加幾格窗）
+      condo(dio, { x: x - 60, y: y - 50, w: 120, d: 100, floors: 9, wall: c });
     } else {
-      dio.addBox({ x: x - 60, y: y - 40, w: 120, d: 80, h: 80, color: '#fffaf0', faces: { s: `<svg viewBox="0 0 120 80" width="100%" height="100%" preserveAspectRatio="none"><rect width="120" height="22" fill="${c}"/><path d="M0 22 ${[...Array(6)].map((_, i) => `Q${i * 20 + 10} 34 ${i * 20 + 20} 22`).join(' ')}" fill="${c}"/><rect x="14" y="36" width="92" height="44" fill="#bfe6ff"/></svg>` } });
+      // 店面：三層樓店面透天，有騎樓、遮陽棚、直立招牌
+      shopHouse(dio, { x: x - 45, y: y - 45, w: 90, d: 90, floors: 3, wall: '#fffaf0', sign: c === '#ff8fbf' ? 'breakfast' : 'fruit', roof: '#9aa3b5' });
     }
   }
+  // ---- 醫院附近：北邊一排朝南的店面（藥局、醫療用品、便當、理髮…），南邊一排朝北的店面，東北邊社區大樓 ----
+  const H = PLACES.clinic;
+  const north = [['pharmacy', '#f1e6d2', '#5b8fd8', 4], ['medical', '#e8eef2', '#6fb27a', 3], ['bento', '#f4d9c4', '#9aa3b5', 4], ['salon', '#efe9f6', '#5b8fd8', 3]];
+  north.forEach(([sign, wall, roof, floors], k) => shopHouse(dio, { x: H.x - 230 + k * 82, y: H.y - 330, w: 80, d: 90, floors, wall, roof, sign, face: 's' }));
+  scooters(dio, H.x - 220, H.y - 222, 12);
+  const south = [['breakfast', '#f6efe0', '#6fb27a', 3], ['fruit', '#e9f3e4', '#5b8fd8', 4], ['pharmacy', '#f4e2d6', '#9aa3b5', 4], ['bento', '#eef0f6', '#6fb27a', 3], ['salon', '#f6eadf', '#5b8fd8', 4]];
+  south.forEach(([sign, wall, roof, floors], k) => shopHouse(dio, { x: H.x - 200 + k * 82, y: H.y + 190, w: 80, d: 90, floors, wall, roof, sign, face: 'n' }));
+  scooters(dio, H.x - 180, H.y + 172, 14);
+  condo(dio, { x: H.x + 120, y: H.y - 470, w: 150, d: 120, floors: 12 });
   // 路燈（晚上會亮）：每個路口旁邊一支
   for (const n of Object.values(NODES)) {
     dio.addSprite({ x: n.x + 70, y: n.y - 70, w: 40, h: 120, shadow: 0.3, cls: 'streetlight', html: `<svg viewBox="0 0 40 120"><rect x="17" y="20" width="6" height="98" fill="#4a3b6b"/><circle class="lamp" cx="20" cy="16" r="12" fill="#fff3a0"/></svg>` });
