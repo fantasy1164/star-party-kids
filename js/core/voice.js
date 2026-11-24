@@ -44,10 +44,13 @@ function pickTtsVoice() {
   return vs.find((v) => v.lang === 'zh-TW') || vs.find((v) => v.lang?.startsWith('zh')) || null;
 }
 
+let chorusSources = [];
 function stopCurrent() {
   token++;
   try { currentSource?.stop(); } catch { /* 已經停了 */ }
   currentSource = null;
+  chorusSources.forEach((x) => { try { x.stop(); } catch { /* 已經停了 */ } });
+  chorusSources = [];
   // 沒在說話時不要呼叫 cancel()：iOS 上多餘的 cancel 會讓下一句被吃掉
   try { if (synth && (synth.speaking || synth.pending)) synth.cancel(); } catch { /* 忽略 */ }
   if (activeDone) { const d = activeDone; activeDone = null; d(); }
@@ -146,6 +149,54 @@ export async function cheer(charId, lineId) {
     s.connect(getVoiceBus());
     s.start();
   } catch { /* 忽略 */ }
+}
+
+// 好幾個角色一起喊同一句（開場的「歡迎岳岳、愷愷！」）：同時播，每個稍微錯開一點，像一群人在喊。
+// 整體音量壓低（人多不要變很吵，岳岳對聲音敏感）。沒有語音檔的就略過；一個都沒有就由第一位用一般方式說。
+export async function chorus(chars, lineId, nodes = []) {
+  stopCurrent();
+  const my = token;
+  window.__said?.push(`chorus/${lineId}`);
+  const ctx = getCtx();
+  const keys = chars.map((c) => `${c}/${lineId}`).filter((k) => available.has(k));
+  if (!ctx || !keys.length || query.has('notts')) { await speak(chars[0], lineId, { node: nodes[0] }); return; }
+  speakingToken = my;
+  nodes.forEach((n) => n?.classList.add('talking'));
+  try { duck(true); } catch { /* 忽略 */ }
+  try {
+    const bufs = await Promise.all(keys.map(async (k) => {
+      let buf = buffers.get(k);
+      if (!buf) {
+        const r = await fetch(`assets/voice/${available.get(k)}`);
+        if (!r.ok) return null;
+        buf = await ctx.decodeAudioData(await r.arrayBuffer());
+        buffers.set(k, buf);
+      }
+      return buf;
+    }));
+    if (my !== token) return;
+    if (ctx.state !== 'running') await Promise.race([ctx.resume().catch(() => {}), new Promise((r) => setTimeout(r, 1000))]);
+    const g = ctx.createGain();
+    g.gain.value = 1.4 / Math.sqrt(keys.length);
+    g.connect(getVoiceBus());
+    const t0 = ctx.currentTime + 0.05;
+    let end = 0;
+    bufs.forEach((b, i) => {
+      if (!b) return;
+      const s = ctx.createBufferSource();
+      s.buffer = b;
+      s.connect(g);
+      chorusSources.push(s);
+      const at = t0 + i * 0.07;
+      s.start(at);
+      end = Math.max(end, at + b.duration - ctx.currentTime);
+    });
+    await new Promise((r) => { const iv = setInterval(() => { if (my !== token) { clearInterval(iv); r(); } }, 100); setTimeout(() => { clearInterval(iv); r(); }, end * 1000 + 100); });
+  } catch { /* 忽略 */ } finally {
+    nodes.forEach((n) => n?.classList.remove('talking'));
+    if (my === token) { try { duck(false); } catch { /* 忽略 */ } speakingToken = -1; }
+    lastSpokeAt = Date.now();
+  }
 }
 
 // 說一句台詞。回傳的 Promise 在說完（或被下一句打斷）時結束。

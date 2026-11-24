@@ -1,12 +1,14 @@
-// 開場：桌上一個會發光的玩具箱 → 點一下，蓋子打開，閃閃跳出來，玩具一個一個飛出來，標題一個字一個字跳出來 → 選人。
-// 每次開 app 都要先點玩具箱（iOS 規定聲音一定要在小孩觸碰之後才能開始）。第一次是長版，之後是短版。
+// 開場：桌上一個會發光的禮物盒 → 點一下，蓋子打開（盒子是空心的，看得到裡面在發光），
+// 閃閃和每個地方的明星一個一個跳出來圍成一圈 → 標題 → 隨機 3 位用自己的聲音歡迎、大家一起喊「歡迎岳岳、愷愷！」→ 選人。
+// 每次開 app 都要先點禮物盒（iOS 規定聲音一定要在小孩觸碰之後才能開始）。第一次多一段閃閃的自我介紹。
 import { createDiorama } from '../engine/diorama.js';
-import { div, wait, burst, longPress } from '../core/dom.js';
-import { speak, primeTts } from '../core/voice.js';
+import { div, wait, burst, longPress, shuffle } from '../core/dom.js';
+import { speak, primeTts, chorus } from '../core/voice.js';
 import { unlock, playMusic, sfx } from '../core/audio.js';
 import { state, markSeen, save } from '../core/store.js';
 import { shanSvg, kidHead, bothHeads, starPolygon } from '../art/stars.js';
-import { toySvg, ICON, TOY_IDS } from '../art/props.js';
+import { ICON } from '../art/props.js';
+import { CAST } from '../data/cast.js';
 import { backdrop } from './hud.js';
 import { roomTint } from '../core/clock.js';
 
@@ -15,24 +17,46 @@ const COLORS = ['#ff5d8f', '#ffb627', '#3ec7e0', '#7ee06a', '#a98bff', '#ff8a3d'
 
 export async function mount(root, app) {
   backdrop(root);
-  const dio = createDiorama({ w: 520, d: 520, walls: false, zoom: 1.05, cy: 0.66, base: '#c98b5e',
-    floorCss: 'background: radial-gradient(circle, #fff6e6 0 40%, #ffe2c2 40% 100%); border-radius: 20px' });
+  // 場地放大：盒子在中間，明星們圍成一圈
+  const S = 900, C = S / 2;
+  const dio = createDiorama({ w: S, d: S, walls: false, zoom: 0.7, cy: 0.55, base: '#c98b5e',
+    floorCss: 'background: radial-gradient(circle, #fff6e6 0 34%, #ffe2c2 34% 70%, #ffd2a8 70% 100%); border-radius: 50%' });
   root.appendChild(dio.el);
   app.onLeave(() => dio.destroy());
   dio.setTint(roomTint());
 
-  // 玩具箱：箱子＋可以打開的蓋子
-  const bx = 170, by = 170, bw = 180, bd = 180, bh = 140;
-  const star = `<svg viewBox="0 0 180 140" width="100%" height="100%"><polygon points="${starPolygon(90, 74, 40, 18)}" fill="#fff6b0" stroke="#fff6b0" stroke-width="10" stroke-linejoin="round"/></svg>`;
-  dio.addBox({ x: bx, y: by, w: bw, d: bd, h: bh, color: '#ff8fb8', cls: 'soft', faces: { s: star, e: star }, tap: 'box' });
+  // 禮物盒：四面牆有厚度、中間是空的（打開蓋子看得到裡面），裡面的底在發光
+  const bw = 200, bh = 150, T = 16, bx = C - bw / 2, by = C - bw / 2;
+  const star = (w) => `<svg viewBox="0 0 ${w} ${bh}" width="100%" height="100%"><polygon points="${starPolygon(w / 2, 78, 42, 19)}" fill="#fff6b0" stroke="#fff6b0" stroke-width="10" stroke-linejoin="round"/></svg>`;
+  const wall = { color: '#ff8fb8', tap: 'box' };
+  dio.addBox({ ...wall, x: bx, y: by, w: bw, d: T, h: bh, faces: { n: star(bw) } });
+  dio.addBox({ ...wall, x: bx, y: by + bw - T, w: bw, d: T, h: bh, faces: { s: star(bw) } });
+  dio.addBox({ ...wall, x: bx, y: by + T, w: T, d: bw - T * 2, h: bh, faces: { w: star(bw - T * 2) } });
+  dio.addBox({ ...wall, x: bx + bw - T, y: by + T, w: T, d: bw - T * 2, h: bh, faces: { e: star(bw - T * 2) } });
+  // 盒子裡面：深一點的粉紅底，打開後亮起來
+  dio.addDecal({ x: bx + T, y: by + T, w: bw - T * 2, h: bw - T * 2, z: 2, css: 'background:#d9608f' });
+  const inner = dio.addDecal({ x: bx + T, y: by + T, w: bw - T * 2, h: bw - T * 2, z: 3, cls: 'box-glow',
+    css: 'background: radial-gradient(circle, #fff8c0 0, #ffd23f 40%, rgba(255,210,63,0) 75%)' });
   const lidWrap = div('dio-box lid');
-  lidWrap.style.cssText = `left:${bx - 8}px;top:${by - 8}px;width:${bw + 16}px;height:${bd + 16}px;transform:translateZ(${bh}px)`;
+  lidWrap.style.cssText = `left:${bx - 8}px;top:${by - 8}px;width:${bw + 16}px;height:${bw + 16}px;transform:translateZ(${bh}px);--bh:${bh}px`;
   dio.world.appendChild(lidWrap);
-  dio.addBox({ x: 0, y: 0, w: bw + 16, d: bd + 16, h: 18, color: '#ffd23f', cls: 'soft', parent: lidWrap, tap: 'box',
-    faces: { t: `<svg viewBox="0 0 196 196" width="100%" height="100%"><polygon points="${starPolygon(98, 98, 50, 22)}" fill="#fff" opacity=".8"/></svg>` } });
+  dio.addBox({ x: 0, y: 0, w: bw + 16, d: bw + 16, h: 18, color: '#ffd23f', cls: 'soft', parent: lidWrap, tap: 'box',
+    faces: { t: `<svg viewBox="0 0 216 216" width="100%" height="100%"><polygon points="${starPolygon(108, 108, 56, 24)}" fill="#fff" opacity=".8"/></svg>` } });
 
-  const shan = dio.addSprite({ x: 260, y: 260, z: 0, w: 150, h: 170, html: shanSvg(), cls: 'gone', shadow: 0.7 });
-  const toys = TOY_IDS.map((t) => dio.addSprite({ x: 260, y: 260, z: 20, w: 72, h: 72, html: toySvg(t), cls: 'gone', shadow: 0.6 }));
+  // 明星們：一開始都躲在盒子裡；閃閃站在正前方，其他人圍成一圈（正前方留給閃閃和選人）
+  const shanC = CAST[0];
+  const shan = dio.addSprite({ x: C, y: C, z: 0, w: 150, h: 170, html: shanC.svg(), cls: 'gone', shadow: 0.7, tap: 'ch:shan' });
+  const others = CAST.slice(1);
+  // 「正前方」＝鏡頭那一邊（跟鏡頭一開始的角度有關）
+  const front = (Math.atan2(Math.cos((dio.view.a * Math.PI) / 180), Math.sin((dio.view.a * Math.PI) / 180)) * 180) / Math.PI;
+  const ring = others.map((c, i) => {
+    const th = ((front + 38 + (284 * i) / (others.length - 1)) * Math.PI) / 180;   // 從右前方繞一圈到左前方，正前方留空
+    return { c, x: C + Math.cos(th) * 330, y: C + Math.sin(th) * 330 };
+  });
+  const fr = (front * Math.PI) / 180;
+  const shanAt = { x: C + Math.cos(fr) * 175, y: C + Math.sin(fr) * 175 };
+  const sprites = { shan };
+  ring.forEach((r) => { sprites[r.c.id] = dio.addSprite({ x: C, y: C, z: 40, w: 104, h: 112, html: r.c.svg(), cls: 'gone', shadow: 0.6, tap: `ch:${r.c.id}` }); });
 
   const lock = div('lockbtn ui', ICON.lock);
   root.appendChild(lock);
@@ -48,28 +72,49 @@ export async function mount(root, app) {
     sfx('open');
     lidWrap.classList.add('off');
     await wait(300);
-    // 閃閃跳出來
+    inner.classList.add('on');
+    // 閃閃先跳出來，站到正前方
     shan.el.classList.remove('gone');
     sfx('boing');
-    jump(shan, 260, 260, 0, 260, 380, 0, 700, 260);
+    jump(shan, C, C, 40, shanAt.x, shanAt.y, 0, 700, 260);
     playMusic('party');
     burst(app.stageCenter().x, 380, { n: 26, spread: 260 });
-    // 玩具飛出來，散在周圍
-    const spots = [[90, 130], [430, 90], [70, 340], [470, 250], [190, 470], [290, 50]];
-    toys.forEach((t, i) => setTimeout(() => {
-      t.el.classList.remove('gone');
-      sfx('pop');
-      jump(t, 260, 260, 60, spots[i][0], spots[i][1], 0, 650, 220);
-    }, (short ? 120 : 260) * i + 300));
+    // 其他明星一個接一個跳出來，圍成一圈（「啵」不要每個都響，人多會太吵）
+    ring.forEach((r, i) => setTimeout(() => {
+      const sp = sprites[r.c.id];
+      sp.el.classList.remove('gone');
+      if (i % 3 === 0) sfx('pop');
+      jump(sp, C, C, 60, r.x, r.y, 0, 620, 240);
+    }, 300 + i * (short ? 70 : 110)));
     await wait(700);
     await showTitle(root, short);
-    // 每次都完整喊出「明星總動員！歡樂派對！」，等它說完才問「今天誰要來玩呢？」
+    // 每次都完整喊出「明星總動員！歡樂派對！」
     await speak('shan', 'title', { node: shan.el });
+    // 隨機 3 位明星用自己的聲音歡迎，再大家一起喊「歡迎岳岳、愷愷！」
+    for (const c of shuffle(others).slice(0, 3)) {
+      const sp = sprites[c.id];
+      hop(sp);
+      await speak(c.id, 'hi_open', { node: sp.el });
+    }
+    const crowd = [CAST[0], ...shuffle(others).slice(0, 5)];
+    crowd.forEach((c) => hop(sprites[c.id]));
+    burst(app.stageCenter().x, 330, { n: 18, spread: 320 });
+    await chorus(crowd.map((c) => c.id), 'hi_all', crowd.map((c) => sprites[c.id].el));
     if (!short) await speak('shan', 'intro', { node: shan.el });
     markSeen('opening');
+    greeted = true;
     showPicker();
   };
-  dio.onTap((name) => { if (name === 'box') open(); });
+  let greeted = false;
+  dio.onTap((name) => {
+    if (name === 'box') { open(); return; }
+    // 打完招呼以後，點明星：跳一下、說自己的歡迎詞
+    if (greeted && name.startsWith('ch:')) {
+      const id = name.slice(3);
+      hop(sprites[id]);
+      speak(id, 'hi_open', { node: sprites[id].el });
+    }
+  });
   // 沒點到箱子也可以（小孩可能點旁邊）
   root.addEventListener('click', (e) => { if (!opened && !e.target.closest('.lockbtn')) open(); });
 
@@ -100,6 +145,14 @@ export async function mount(root, app) {
     root.appendChild(p);
     await speak('shan', 'who', { node: shan.el });
   }
+}
+
+// 原地跳一下
+function hop(sp) {
+  if (!sp) return;
+  sp.el.classList.remove('hop');
+  void sp.el.offsetWidth;
+  sp.el.classList.add('hop');
 }
 
 // 拋物線跳過去（z 往上再落下）

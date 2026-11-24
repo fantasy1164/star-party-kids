@@ -17,6 +17,7 @@ function blank() {
     settings: { ...DEFAULT_SETTINGS },
     seen: {},   // 看過的東西（開場長版、規則說明）
     stickers: { owned: {}, placed: [] },   // 愷愷的貼紙：手上有幾張、貼在小鎮哪裡
+    met: { shan: 1 },   // 認識了哪些明星（第一次見到的時間）：名人堂的台座會亮
   };
 }
 function normalize(s) {
@@ -28,6 +29,7 @@ function normalize(s) {
     settings: { ...b.settings, ...(s.settings || {}) },
     seen: { ...(s.seen || {}) },
     stickers: { owned: { ...(s.stickers?.owned || {}) }, placed: [...(s.stickers?.placed || [])] },
+    met: { ...b.met, ...(s.met || {}) },
   };
 }
 function load() {
@@ -104,6 +106,12 @@ export function addStar(ids, game) {
 export function starsToday(id) { return state.kids[id]?.stars[dateKey()] || 0; }
 export function doneToday(ids, game) { return ids.every((id) => (state.kids[id]?.done[dateKey()] || {})[game]); }
 export function markSeen(key) { state.seen[key] = Date.now(); save(); }
+// 認識了新的明星：回傳這次新認識的
+export function meet(ids) {
+  const fresh = ids.filter((id) => !state.met[id]);
+  if (fresh.length) { fresh.forEach((id) => { state.met[id] = Date.now(); }); save(); }
+  return fresh;
+}
 
 export function clearAll() {
   try { localStorage.removeItem(SAVE); } catch { /* 忽略 */ }

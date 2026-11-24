@@ -135,4 +135,6 @@ export const PLACE_ICON = {
   beach: S(`<path d="M0 66 Q25 56 50 66 T100 66 V100 H0Z" fill="#3ec7e0"/><path d="M0 80 H100 V100 H0Z" fill="#f2dca6"/><path d="M50 70 L50 20" stroke="#a9744f" stroke-width="4"/><path d="M14 30 Q50 -6 86 30Z" fill="#ff5d73"/><path d="M38 30 Q50 6 62 30" fill="#fff"/>`),
   zoo: ZOO.panda,
   farm: null,
+  // 名人堂：金色獎盃上一顆星
+  fame: S(`<path d="M30 18 H70 V40 Q70 62 50 66 Q30 62 30 40Z" fill="#ffc93c"/><path d="M30 24 Q12 24 14 38 Q16 50 32 50" stroke="#ffc93c" stroke-width="7" fill="none"/><path d="M70 24 Q88 24 86 38 Q84 50 68 50" stroke="#ffc93c" stroke-width="7" fill="none"/><rect x="44" y="64" width="12" height="14" fill="#e0a800"/><rect x="30" y="76" width="40" height="12" rx="4" fill="#c98b5e"/><polygon points="50,26 54,36 65,36 56,42 59,53 50,46 41,53 44,42 35,36 46,36" fill="#fff6b0"/>`),
 };

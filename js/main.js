@@ -1,6 +1,8 @@
 // 進入點：舞台、聲音解鎖、畫面切換。
 import { setupStage, stage, div, stageW } from './core/dom.js';
-import { state } from './core/store.js';
+import { state, meet } from './core/store.js';
+import { CAST_OF_SCREEN } from './data/cast.js';
+import { mountFame } from './scenes/fame.js';
 import { unlock, setMusicVolume, setQuietMode, think } from './core/audio.js';
 import { loadVoiceManifest, primeTts, speak, hush } from './core/voice.js';
 import { setupTurns, turnsScene } from './core/turns.js';
@@ -25,7 +27,7 @@ import { openParent } from './ui/parent.js';
 import { needInstallGuide, showInstallGuide } from './ui/install.js';
 import { syncNow, setupSync } from './core/sync.js';
 
-const SCREENS = { opening, town: mountTown, ride: mountRide, house, bedroom, bath, kitchen, living, school, market: mountMarket, park: mountPark, clinic: mountClinic, farm: mountFarm, police: mountPolice, draw, world: mountWorld, trip: mountTrip, fire: mountFire, mrt: mountMrt, library: mountLibrary, post: mountPost, garbage: mountGarbage, aquarium: mountAquarium, beach: mountBeach, zoo: mountZoo, rest: mountRest, sleep: mountSleep };
+const SCREENS = { opening, town: mountTown, ride: mountRide, house, bedroom, bath, kitchen, living, school, market: mountMarket, park: mountPark, clinic: mountClinic, farm: mountFarm, police: mountPolice, draw, world: mountWorld, trip: mountTrip, fire: mountFire, mrt: mountMrt, library: mountLibrary, post: mountPost, garbage: mountGarbage, aquarium: mountAquarium, beach: mountBeach, zoo: mountZoo, fame: mountFame, rest: mountRest, sleep: mountSleep };
 const ROOMS = ['town', 'ride', 'house', 'bedroom', 'bath', 'kitchen', 'living', 'school', 'market', 'park', 'clinic', 'farm'];
 let current = null;
 
@@ -75,6 +77,7 @@ const app = {
     ctx.onLeave = (f) => ctx.leave.push(f);
     ctx.alive = () => !ctx.dead;
     current = ctx;
+    if (app.profile && CAST_OF_SCREEN[name]) meet(CAST_OF_SCREEN[name]);   // 到了這裡就認識這裡的明星（名人堂會亮）
     Promise.resolve(SCREENS[name](root, ctx)).catch((e) => console.error(e));
   },
 };

@@ -103,6 +103,8 @@ export const PLACES = {
   fire: { node: 'J', x: 880, y: 1640, screen: 'fire', icon: PLACE_ICON.fire, h: 190 },
   police: { node: 'J', x: 1330, y: 1640, screen: 'police', icon: badgeIcon(), h: 140 },
   clinic: { node: 'I', x: 2320, y: 1760, screen: 'clinic', icon: itemSvg('heal'), h: 140 },
+  // 名人堂（11/24）：河邊，認識明星小鎮的每一位明星
+  fame: { node: 'E', x: 1350, y: 770, screen: 'fame', icon: PLACE_ICON.fame, h: 170 },
 };
 export const PLACE_OF_SCREEN = Object.fromEntries(Object.entries(PLACES).map(([k, p]) => [p.screen, k]));
 
@@ -185,6 +187,15 @@ const BUILD = {
     const front = face(w, h, `${[14, 46, 96, 128].map((cx) => `<rect x="${cx - 6}" y="8" width="14" height="${h - 8}" fill="#fffaf0"/>`).join('')}<rect x="60" y="40" width="30" height="52" rx="4" fill="#a8693f"/>`);
     dio.addBox({ x, y, w, d, h, color: '#f1e2c4', tap, faces: { s: front, n: front } });
     dio.addGable({ x, y, w, d, z: h, h: 40, over: 8, color: '#c9a87a', wallColor: '#f1e2c4', ridge: 'x', tap, faces: { s: face(w, 40, `<rect x="${w / 2 - 22}" y="16" width="44" height="18" rx="3" fill="#ff5d73"/>`) } });
+  },
+  // 名人堂：白色大理石、金色屋頂、門口紅地毯、屋頂一顆大星星
+  fame(dio, p, tap) {
+    const w = 170, d = 110, h = 96;
+    const x = p.x - w / 2, y = p.y - d / 2;
+    const front = face(w, h, `${[12, 44, 112, 144].map((cx) => `<rect x="${cx}" y="10" width="14" height="${h - 10}" fill="#fff"/><rect x="${cx - 3}" y="6" width="20" height="8" rx="2" fill="#f0d98a"/>`).join('')}<rect x="66" y="34" width="38" height="62" rx="18" fill="#c9402f"/><rect x="72" y="40" width="26" height="56" rx="13" fill="#e0574a"/>`);
+    dio.addBox({ x, y, w, d, h, color: '#fbf4e6', tap, faces: { s: front, n: front } });
+    dio.addGable({ x, y, w, d, z: h, h: 44, over: 10, color: '#ffc93c', wallColor: '#fbf4e6', ridge: 'x', tap, faces: { s: face(w, 44, `<polygon points="${w / 2},8 ${w / 2 + 7},24 ${w / 2 + 24},24 ${w / 2 + 10},33 ${w / 2 + 15},44 ${w / 2},37 ${w / 2 - 15},44 ${w / 2 - 10},33 ${w / 2 - 24},24 ${w / 2 - 7},24" fill="#fff6b0"/>`) } });
+    dio.addDecal({ x: p.x - 20, y: y + d, w: 40, h: 70, z: 1.2, css: 'background:#d9473b' });   // 紅地毯
   },
   // 郵局：綠色房子，門口一紅一綠兩個郵筒
   post(dio, p, tap) {
@@ -316,7 +327,9 @@ export function buildTown() {
   const treeSvg = (c) => `<svg viewBox="0 0 80 110"><rect x="34" y="70" width="12" height="38" rx="5" fill="#a9744f"/><circle cx="40" cy="48" r="34" fill="${c}"/></svg>`;
   for (let y = 120; y < D; y += 260) {
     const rx = 1480 + (y / 2200) * 140;
-    dio.addSprite({ x: rx - 150, y, w: 80, h: 110, shadow: 0.6, html: treeSvg('#4fbf6e') });
+    // 名人堂門口不要種樹（會擋住門和紅地毯）
+    if (!(Math.abs(rx - 150 - PLACES.fame.x) < 130 && Math.abs(y - PLACES.fame.y) < 170))
+      dio.addSprite({ x: rx - 150, y, w: 80, h: 110, shadow: 0.6, html: treeSvg('#4fbf6e') });
     dio.addSprite({ x: rx + 160, y: y + 120, w: 80, h: 110, shadow: 0.6, html: treeSvg('#5fc76a') });
   }
   for (const [x, y] of [[80, 120], [100, 1900], [900, 2100], [2900, 200], [2880, 2000], [2700, 1700], [2950, 1100], [60, 900], [1300, 120], [700, 1980]]) {
