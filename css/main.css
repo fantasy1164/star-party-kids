@@ -1007,3 +1007,19 @@ body.turn-kk .glowy > svg { filter: drop-shadow(0 0 10px #ff6a2b); }
 .bv-spot.no { opacity: .35; box-shadow: 0 0 0 5px #ff5b5b; animation: none; pointer-events: none; }
 .bv-me { width: 80px; height: 80px; z-index: 3; animation: popin .35s cubic-bezier(.3,1.6,.5,1) both; }
 .bv-me svg { width: 100%; height: 100%; }
+
+/* ---------- ADHD：每次觸碰都有立刻的回饋（11/25） ---------- */
+.tap-ripple { position: absolute; z-index: 90; width: 70px; height: 70px; margin: -35px 0 0 -35px; border-radius: 50%; pointer-events: none;
+  border: 5px solid rgba(255, 210, 63, .9); animation: tapRipple .42s ease-out forwards; }
+@keyframes tapRipple { from { transform: scale(.3); opacity: 1; } to { transform: scale(1.25); opacity: 0; } }
+/* 回合進度：一排小圓點（做完的變星星色） */
+.round-dots { position: absolute; z-index: 26; left: 50%; top: 16px; transform: translateX(-50%); display: flex; gap: 10px; padding: 8px 14px; border-radius: 30px; background: rgba(255,255,255,.85); pointer-events: none; }
+.panel > .round-dots { top: 14px; }
+.round-dots i { width: 22px; height: 22px; border-radius: 50%; background: #e6e0f0; transition: background .3s, transform .3s; }
+.round-dots i.now { background: #fff; box-shadow: 0 0 0 4px #ffd23f; transform: scale(1.15); }
+.round-dots i.ok { background: #ffd23f; }
+.help-ring { position: absolute; z-index: 4; width: 90px; height: 90px; margin: -45px 0 0 -45px; border-radius: 50%; pointer-events: none;
+  border: 7px solid #ffd23f; box-shadow: 0 0 18px #ffd23f; animation: pulse 1s ease-in-out infinite; }
+.round-dots.tr { left: auto; right: 22px; transform: none; }
+.round-dots.bl { left: 22px; top: auto; bottom: 14px; transform: none; }
+.storypanel .sp.glowy-2d { opacity: .75; cursor: pointer; }

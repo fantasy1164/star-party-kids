@@ -83,7 +83,7 @@ async function penguinGame(R) {
     chk();
     await callTurn();
     chk();
-    let k = 0, lastWrong = 0;
+    let k = 0, lastWrong = 0, wrongs = 0;   // 錯兩次：對的企鵝發亮（岳岳也一樣）
     const want = () => pgs.find((p) => +p.dataset.i === order[k]);
     const glow = () => pgs.forEach((p) => p.classList.toggle('glowy-2d', levelNow(R.profile) === 'easy' && p === want()));
     glow();
@@ -92,7 +92,8 @@ async function penguinGame(R) {
       pgs.forEach((p) => p.addEventListener('pointerdown', (e) => {
         e.stopPropagation();
         if (p.classList.contains('lined')) return;
-        if (+p.dataset.i !== order[k]) { sfx('soft'); R.hop(p); if (Date.now() - lastWrong > 2500) { lastWrong = Date.now(); say('baibai', bigFirst ? 'aq_pg_wrong_big' : 'aq_pg_wrong_small'); } return; }
+        if (+p.dataset.i !== order[k]) { sfx('soft'); R.hop(p); if (Date.now() - lastWrong > 2500) { lastWrong = Date.now(); say('baibai', bigFirst ? 'aq_pg_wrong_big' : 'aq_pg_wrong_small'); } if (++wrongs >= 2) want().classList.add('glowy-2d'); return; }
+        wrongs = 0;
         sfx('pop');
         p.classList.add('lined');
         slots[k].appendChild(p);

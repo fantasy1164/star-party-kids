@@ -258,24 +258,13 @@ async function hopGame(R) {
   const answers = div('answers ui');
   root.appendChild(answers);
   try {
-    // 1. 閃閃示範：嗶嗶數倍數
+    // 1. 小孩點亮石頭，閃閃跳過去、嗶嗶數（11/25：拿掉原本閃閃自己跳完九格的示範——
+    //    岳岳要乾等將近 20 秒；改成一開始就自己點，一樣聽得到每一格的數字）
     await say('bibi', 'hop_go');
     chk();
     await jump(shan, STONES[0][0] - 60, STONES[0][1] + 40, 0, 500);
-    for (let i = 0; i < 9; i++) {
-      await hopTo(i);
-      reveal(i);
-      sfx('tick');
-      await say('bibi', `n_${stones[i].v}`);
-      chk();
-    }
-    await wait(400);
-    // 2. 換小孩點亮石頭
-    stones.forEach((_, i) => reveal(i, false));
-    await jump(shan, STONES[0][0] - 60, STONES[0][1] + 40, 0, 500);
     if (turnsOn()) { await callTurn(); chk(); }
-    await say('bibi', 'hop_you');
-    chk();
+    say('bibi', 'hop_you');
     for (let i = 0; i < 9; i++) {
       stones[i].st.classList.add('next');
       setHint(() => stones[i].num.el);

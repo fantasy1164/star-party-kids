@@ -7,6 +7,7 @@ import { isDark } from '../core/clock.js';
 import { streetWindow, stairDoor } from '../art/house.js';
 import { createDiorama } from '../engine/diorama.js';
 import { div, wait, burst, stageW, shuffle, pick } from '../core/dom.js';
+import { roundDots } from './kit.js';
 import { sfx, stopMusic, playMusic } from '../core/audio.js';
 import { turnsOn, callTurn, nextTurn, levelNow } from '../core/turns.js';
 import { setHint } from '../core/session.js';
@@ -110,7 +111,9 @@ async function tvGame(R) {
     set.screen.classList.add('on');
     await say('shan', 'tv_go');
     chk();
+    var tvDots = roundDots(root, n);   // 看得到還有幾次
     for (let i = 0; i < n; i++) {
+      tvDots.set(i);
       if (turnsOn()) { await callTurn(); chk(); }
       set.screen.classList.add('on');
       sfx('tick');
@@ -175,6 +178,7 @@ async function tvGame(R) {
     await say('shan', 'tv_done');
   } finally {
     remote.remove();
+    tvDots?.remove();
     set.screen.classList.add('on');
   }
 }
@@ -308,7 +312,9 @@ async function stageGame(R) {
     await say('shan', 'stage_go');
     chk();
     const moves = shuffle(MOVES).slice(0, 3);
+    var stDots = roundDots(root, 3);
     for (let r = 0; r < 3; r++) {
+      stDots.set(r);
       chk();
       if (turnsOn()) { await callTurn(); chk(); }
       // 1. 跟著做動作（真的站起來做）
@@ -348,6 +354,7 @@ async function stageGame(R) {
     await say('shan', 'drum_free_end');
   } finally {
     document.querySelector('.freedrums')?.remove();
+    stDots?.remove();
     spot.remove();
     lane.remove();
     drum.remove();

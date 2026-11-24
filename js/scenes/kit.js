@@ -9,6 +9,17 @@ import { numSvg } from '../art/more.js';
 import { turnsOn, callTurn, nextTurn, levelNow } from '../core/turns.js';
 import { setHint } from '../core/session.js';
 
+// ---------------- 回合進度（ADHD：看得到還剩幾題）----------------
+// 一排小圓點放在面板（或畫面）上方正中間：roundDots(容器, 幾題, 'tr'右上／'bl'左下) → { set(做到第幾題), done(), remove() }
+export function roundDots(box, n, where = '') {
+  const el = div(`round-dots ui ${where}`, '<i></i>'.repeat(n));
+  box.appendChild(el);
+  const ds = [...el.children];
+  const set = (i) => ds.forEach((d, k) => { d.classList.toggle('ok', k < i); d.classList.toggle('now', k === i); });
+  set(0);
+  return { set, done: () => set(n), remove: () => el.remove() };
+}
+
 // ---------------- 分類 ----------------
 // opt: { host, hostSvg, intro, bins: [{ id, html }], items: [{ k, bin, html }], wrong(item) → 台詞, done, placedLine?(item) }
 export async function sortGame(R, opt) {
@@ -51,6 +62,9 @@ export async function sortGame(R, opt) {
               sfx('soft');
               R.hop(bins[best].el, 'shake');
               if (Date.now() - lastVoice > 2500) { lastVoice = Date.now(); say(opt.host, opt.wrong(it)); }
+              // 同一個東西放錯兩次（岳岳也一樣）：之後拿起它，對的籃子會發亮；現在先亮 3 秒
+              it.wrongs = (it.wrongs || 0) + 1;
+              if (it.wrongs >= 2) { ie.dataset.help = '1'; bins[it.bin].el.classList.add('glowy-2d'); setTimeout(() => bins[it.bin].el.classList.remove('glowy-2d'), 3000); }
               return null;
             }
             const r = stageRect(bins[best].el);
@@ -84,7 +98,7 @@ export async function sortGame(R, opt) {
     chk();
     // 愷愷：拿起東西時，對的籃子會發亮
     const glow = (on, bin) => Object.values(bins).forEach((b) => b.el.classList.toggle('glowy-2d', on && b.el.dataset.bin === bin));
-    const onDown = (e) => { const s = e.target.closest('.sitem'); if (s && levelNow(R.profile) === 'easy') glow(true, s.dataset.bin); };
+    const onDown = (e) => { const s = e.target.closest('.sitem'); if (s && (levelNow(R.profile) === 'easy' || s.dataset.help)) glow(true, s.dataset.bin); };
     const onUp = () => glow(false);
     el.addEventListener('pointerdown', onDown, true);
     window.addEventListener('pointerup', onUp);
@@ -192,7 +206,10 @@ export async function stepsGame(R, opt) {
           if (w === s.t) { el.removeEventListener('pointerdown', dn); resolve(); return; }
           sfx('soft');
           if (Date.now() - lastWrong > 3500) { lastWrong = Date.now(); say(opt.host, opt.wrong); }
+          // 錯兩次（岳岳也一樣）：對的東西發亮
+          if (++wrongHere >= 2) target.classList.add('glowy-2d');
         };
+        let wrongHere = 0;
         el.addEventListener('pointerdown', dn);
       }));
       chk();

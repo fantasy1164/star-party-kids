@@ -100,6 +100,7 @@ export function openParent(root, onClose) {
       <h3>常用</h3>
       ${field('音樂大小', seg('musicVol', [['low', '小'], ['mid', '中'], ['high', '大']]))}
       ${sw('quiet', '安靜模式', '關掉背景音樂和裝飾音效，只留角色說話和對錯的聲音')}
+      ${sw('traffic', '城市裡有車在跑', '汽車、機車、公車、捷運、火車在城市裡慢慢開；覺得會讓孩子分心可以關掉')}
       ${sw('gestureTip', '每天第一次打開時練習手勢', '大家歡迎完以後，跟閃閃練習：一指左右滑轉、上下滑抬頭低頭、兩指張開捏起拉近拉遠、兩指一起滑移動')}`,
     week: () => `<h2>這一週</h2>
       <table class="week"><tr><th>日期</th><th>${KIDS.yy.name}</th><th>${KIDS.kk.name}</th></tr>

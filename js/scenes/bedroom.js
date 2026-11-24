@@ -6,6 +6,7 @@
 import { buildBedroom, TOY_SPOTS } from './bedroom-set.js';
 import { runRoom, ABORT } from './room-base.js';
 import { div, wait, burst, stageRect, toStage, stageW, shuffle, pick } from '../core/dom.js';
+import { roundDots } from './kit.js';
 import { sfx, playMusic } from '../core/audio.js';
 import { isDark } from '../core/clock.js';
 import { turnsOn, callTurn, nextTurn, whoseTurn, levelNow } from '../core/turns.js';
@@ -247,7 +248,7 @@ async function dressGame(R) {
   for (const id of members) {
     const big = id === 'yy';
     const sp = dio.addSprite({ x: spots[id].x, y: spots[id].y, w: big ? 120 : 104, h: big ? 226 : 192, html: kidSvg(id, []), cls: 'kid-sp', shadow: 0.6 });
-    kids[id] = { sp, worn: [], done: false, hard: KIDS[id].level === 'hard', items: {} };
+    kids[id] = { sp, worn: [], done: false, hard: KIDS[id].level === 'hard', items: {}, wrongs: 0 };
     sp.el.dataset.kid = id;
   }
   // 托盤：一人一份（一起玩時岳岳在左、愷愷在右）
@@ -352,9 +353,13 @@ async function dressGame(R) {
     const target = kidAt(e.clientX, e.clientY);
     const k = kids[d.id];
     if (target !== d.id) { backC(d); return; }
-    if (other.includes(d.item)) { backC(d); sfx('soft'); voice(mode === 'day' ? 'dress_not_day' : 'dress_not_night'); return; }
     const nx = want.find((w) => !k.worn.includes(w));
-    if (k.hard && d.item !== nx) { backC(d); sfx('soft'); voice('dress_order_wrong'); return; }
+    // 放錯兩次：下一件該穿的衣服發亮（岳岳也一樣，不讓他一直卡住）
+    const helpNext = () => { if (++k.wrongs >= 2) k.items[k.hard ? nx : want.find((w) => !k.worn.includes(w))]?.classList.add('glowy-2d'); };
+    if (other.includes(d.item)) { backC(d); sfx('soft'); voice(mode === 'day' ? 'dress_not_day' : 'dress_not_night'); helpNext(); return; }
+    if (k.hard && d.item !== nx) { backC(d); sfx('soft'); voice('dress_order_wrong'); helpNext(); return; }
+    k.wrongs = 0;
+    Object.values(k.items).forEach((x) => x.classList.remove('glowy-2d'));
     d.g.remove();
     k.worn.push(d.item);
     k.sp.el.querySelector('svg.kid').classList.add(`w-${d.item}`);
@@ -415,7 +420,9 @@ async function simonGame(R) {
     }
     if (!plan.some(Boolean)) plan[2] = true;
     let prev = null;
+    var siDots = roundDots(root, n);   // 看得到還有幾個口令
     for (let i = 0; i < n; i++) {
+      siDots.set(i);
       chk();
       if (turnsOn()) { await callTurn(); chk(); }
       const hard = levelNow(profile) === 'hard';
@@ -491,6 +498,7 @@ async function simonGame(R) {
       await say('wan', 'simon_done_day');
     }
   } finally {
+    siDots?.remove();
     clapBtn.style.display = 'none';
     set.shan.move(560, 420);
   }

@@ -14,6 +14,7 @@ import { isDark, roomTint, hour } from '../core/clock.js';
 import { turnsOn, turnsScene, whoseTurn, nextTurn, callTurn, levelNow } from '../core/turns.js';
 import { setHint, setPlaying, mountClock } from '../core/session.js';
 import { KIDS, NAMES } from '../config.js';
+import { state } from '../core/store.js';
 import { shanSvg, kidHead, starPolygon } from '../art/stars.js';
 import { personSvg } from '../art/more.js';
 import { babaSvg, itemSvg, ITEM } from '../art/town.js';
@@ -612,7 +613,7 @@ export async function mountTown(root, app) {
   placeBar(root, dio, PLACES, T.markers, app.trip.location, (id) => { if (!going) dio.el.dispatchEvent(new CustomEvent('tapname', { detail: `go:${id}` })); }, shan.el);
   setHint(() => document.querySelector('.placebar button'));
   // 路上的車、高架捷運、火車（11/25）：一直有車在跑，點車子閃閃會說是什麼車
-  startTraffic(dio, { NODES, neighbors, edgePts, along, MRT_LINE, TRAIN_LINE, PLACES }, { alive: () => app.alive() });
+  if (state.settings.traffic !== false) startTraffic(dio, { NODES, neighbors, edgePts, along, MRT_LINE, TRAIN_LINE, PLACES }, { alive: () => app.alive() });
   let lastVeh = 0;
 
   const onTapTown = async (name) => {

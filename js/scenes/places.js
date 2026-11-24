@@ -1,7 +1,7 @@
 // 小鎮的新地點：超市（多多）、公園（啾啾）、醫院（謝醫生＋護理師抱抱）、農場（達達）。每個地點三個短關卡。
 // 大部分用 kit.js 的三種玩法（分類、尋找、照步驟）組合；付錢、溜滑梯排隊、身體部位是各自的特別玩法。
 import { runRoom } from './room-base.js';
-import { sortGame, findGame, stepsGame } from './kit.js';
+import { sortGame, findGame, stepsGame, roundDots } from './kit.js';
 import { createDiorama } from '../engine/diorama.js';
 import { div, wait, burst, stageRect, toStage, shuffle, pick } from '../core/dom.js';
 import { sfx } from '../core/audio.js';
@@ -90,7 +90,9 @@ async function payGame(R) {
     await say('duoduo', 'mk_pay_go');
     chk();
     const rounds = 3;
+    const dots = roundDots(el, rounds, 'bl');
     for (let r = 0; r < rounds; r++) {
+      dots.set(r);
       if (turnsOn()) { await callTurn(); chk(); }
       const lvl = turnsOn() ? levelNow(R.profile) : hard ? 'hard' : 'easy';
       const price = lvl === 'hard' ? pick([17, 23, 28, 35, 42, 56, 63, 75]) : pick([3, 6, 7, 8, 12, 15]);
@@ -103,14 +105,26 @@ async function payGame(R) {
       await say('duoduo', 'mk_pay_price');
       chk();
       await race(new Promise((resolve) => {
-        let lastOver = 0;
+        let lastOver = 0, overs = 0, helping = false;
+        // 卡住的時候（付太多兩次，或 20 秒還沒付好）：下一個該放的硬幣會發亮（先放大的，再放小的）；付太多就是要拿回來的那個發亮
+        const helpCoin = () => {
+          el.querySelectorAll('.coin.glowy-2d').forEach((c) => c.classList.remove('glowy-2d'));
+          if (!helping || sum === price) return;
+          let c;
+          if (sum > price) c = [...trayCoins.querySelectorAll('.coin')].sort((a, b) => +a.dataset.v - +b.dataset.v).find((x) => sum - +x.dataset.v >= 0) || trayCoins.querySelector('.coin');
+          else c = el.querySelector(`.coinbank .coin[data-v="${coins.find((v) => v <= price - sum)}"]`);
+          c?.classList.add('glowy-2d');
+          if (c) setHint(() => c);
+        };
+        const stuck = setTimeout(() => { helping = true; helpCoin(); }, 20000);
         const update = () => {
           sumEl.textContent = sum;
           sumEl.classList.toggle('over', sum > price);
-          if (sum === price) { finish(); }
-          else if (sum > price && Date.now() - lastOver > 2500) { lastOver = Date.now(); sfx('soft'); say('duoduo', 'mk_pay_over'); }
+          if (sum === price) { finish(); return; }
+          if (sum > price && Date.now() - lastOver > 2500) { lastOver = Date.now(); sfx('soft'); say('duoduo', 'mk_pay_over'); if (++overs >= 2) helping = true; }
+          helpCoin();
         };
-        const finish = () => { el.removeEventListener('pointerdown', onDown); resolve(); };
+        const finish = () => { clearTimeout(stuck); el.querySelectorAll('.coin.glowy-2d').forEach((c) => c.classList.remove('glowy-2d')); el.removeEventListener('pointerdown', onDown); resolve(); };
         const onDown = (e) => {
           const c = e.target.closest('.coinbank .coin');
           const t = e.target.closest('.paycoins .coin');
@@ -140,6 +154,7 @@ async function payGame(R) {
       setHint(null);
       sfx('fanfare');
       R.burstAt(tray, { n: 20, stars: true, colors: ['#ffd23f', '#fff3a0'] });
+      if (r === rounds - 1) dots.done();
       await say('duoduo', r === rounds - 1 ? 'mk_pay_done' : 'mk_pay_good');
       chk();
       if (turnsOn() && r < rounds - 1) nextTurn({ say: false });
@@ -396,16 +411,29 @@ async function ouchGame(R) {
     const rounds = 6;
     const easy = shuffle(['belly', 'head', 'ear', 'nose', 'knee', 'hand']);
     const hard = shuffle(['throat', 'nose', 'eye', 'elbow', 'foot', 'ear']);
+    let dots = null;
     for (let r = 0; r < rounds; r++) {
       if (turnsOn()) { await callTurn(); chk(); }
       const id = whoseTurn() || R.members[0];
-      const part = (levelNow(R.profile) === 'hard' ? hard : easy)[r];
+      const isHard = levelNow(R.profile) === 'hard';
+      const part = (isHard ? hard : easy)[r];
       el.innerHTML = `<div class="bodykid">${kidSvg(id, ['shirt', 'pants'])}</div>`;
+      dots = roundDots(el, rounds, 'tr'); dots.set(r);
       const fig = el.querySelector('.bodykid');
       setHint(() => null);
-      await say('xie', `cl_ouch_${part}`);
-      chk();
-      let lastV = 0;
+      say('xie', `cl_ouch_${part}`);   // 不等說完：聽到就可以點（ADHD 不用等）
+      let lastV = 0, wrongs = 0;
+      // 錯一次（愷愷）／兩次（岳岳）：對的地方出現一個發亮的圈圈
+      const showHelp = () => {
+        if (el.querySelector('.help-ring')) return;
+        const svg = fig.querySelector('svg'), rr = svg.getBoundingClientRect(), q = el.getBoundingClientRect(), k = el.offsetWidth / q.width;
+        const [cx, cy] = PARTS[part][0];
+        const ring = div('help-ring');
+        ring.style.left = `${(rr.left - q.left + (cx / 160) * rr.width) * k}px`;
+        ring.style.top = `${(rr.top - q.top + (cy / 300) * rr.height) * k}px`;
+        el.appendChild(ring);
+        setHint(() => ring);
+      };
       await race(new Promise((resolve) => {
         const dn = (e) => {
           const svg = fig.querySelector('svg');
@@ -424,6 +452,7 @@ async function ouchGame(R) {
           } else {
             sfx('soft');
             if (Date.now() - lastV > 2500 && hit[1] < 1.6) { lastV = Date.now(); say('xie', `cl_is_${hit[0]}`); }
+            if (++wrongs >= (isHard ? 2 : 1)) showHelp();
           }
         };
         el.addEventListener('pointerdown', dn);
@@ -439,6 +468,7 @@ async function ouchGame(R) {
       chk();
       if (turnsOn() && r < rounds - 1) nextTurn({ say: false });
     }
+    dots?.done();
     sfx('fanfare');
     await say('xie', 'cl_ouch_done');
   } finally {
@@ -570,7 +600,9 @@ async function eyeGame(R) {
     const hardNow = () => levelNow(R.profile) === 'hard';
     const rounds = hardSolo(R) ? 7 : 6;
     let prev = null, saidSmall = false;
+    const dots = roundDots(el, rounds, 'tr');
     for (let r = 0; r < rounds; r++) {
+      dots.set(r);
       if (turnsOn()) { await callTurn(); chk(); }
       const dir = pick(Object.keys(DIRS).filter((d) => d !== prev));
       prev = dir;
@@ -580,7 +612,7 @@ async function eyeGame(R) {
       E.innerHTML = tumbleE(DIRS[dir]);
       R.hop(card, 'hop');
       sfx('whoosh');
-      if (!saidSmall && sz < 0.55) { saidSmall = true; await say('xie', 'cl_eye_small'); chk(); }
+      if (!saidSmall && sz < 0.55) { saidSmall = true; say('xie', 'cl_eye_small'); }   // 不等說完，邊聽邊可以滑
       setHint(() => null);
       let wrongs = 0, lastV = 0;
       await race(new Promise((resolve) => {
@@ -618,6 +650,7 @@ async function eyeGame(R) {
       chk();
       if (turnsOn() && r < rounds - 1) nextTurn({ say: false });
     }
+    dots.done();
     sfx('fanfare');
     await say('xie', 'cl_eye_done');
   } finally {
@@ -804,7 +837,9 @@ async function sirenGame(R) {
     chk();
     const order = shuffle(Object.keys(SIRENS));
     if (hardSolo(R)) order.push(pick(order.slice(0, 2)));
+    const dots = roundDots(el, order.length, 'tr');
     for (let r = 0; r < order.length; r++) {
+      dots.set(r);
       if (turnsOn()) { await callTurn(); chk(); }
       cur = order[r];
       // 1. 聽聲音、點是哪一台車
@@ -865,6 +900,7 @@ async function sirenGame(R) {
       if (turnsOn() && r < order.length - 1) nextTurn({ say: false });
     }
     cur = null;
+    dots.done();
     await say('shao', 'ps_siren_walk');
     chk();
     sfx('fanfare');
@@ -902,7 +938,9 @@ async function trafficGame(R) {
     await callTurn();
     chk();
     const rounds = hardSolo(R) ? 4 : 3;
+    const dots = roundDots(el, rounds);
     for (let r = 0; r < rounds; r++) {
+      dots.set(r);
       // 有人要過馬路
       const who = shuffle(['mom', 'dad', 'grandma', 'uncle', 'auntie']).slice(0, r % 2 ? 2 : 1);
       walkersEl.innerHTML = who.map((k, i) => `<div class="tr-w" style="left:${360 + i * 70}px">${personSvg(k)}</div>`).join('');

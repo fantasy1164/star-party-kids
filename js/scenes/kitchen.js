@@ -6,7 +6,7 @@
 import { runRoom } from './room-base.js';
 import { isDark } from '../core/clock.js';
 import { streetWindow, stairDoor } from '../art/house.js';
-import { askChoice } from './kit.js';
+import { askChoice, roundDots } from './kit.js';
 import { dumplingSvg, plateSvg as roundPlateSvg } from '../art/fun.js';
 import * as M from '../core/mult.js';
 import { numSvg } from '../art/more.js';
@@ -123,7 +123,7 @@ async function plateGame(R) {
     for (const k of real) needs[FOODS[k].cat] = (needs[FOODS[k].cat] || 0) + 1;
     const onPlate = [];
     let left = real.length;
-    let lastVoice = 0;
+    let lastVoice = 0, plateWrongs = 0;
     let done;
     const finished = new Promise((r) => { done = r; });
     const voice = (id) => { if (Date.now() - lastVoice > 2500) { lastVoice = Date.now(); say('dong', id); } };
@@ -159,7 +159,7 @@ async function plateGame(R) {
             let ang = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
             if (ang < 0) ang += 360;
             const sec = Object.keys(SECTORS).find((s) => ang >= SECTORS[s][0] && ang < SECTORS[s][1]);
-            if (sec !== cat) { sfx('soft'); voice(`plate_is_${cat}`); return null; }
+            if (sec !== cat) { sfx('soft'); voice(`plate_is_${cat}`); if (++plateWrongs >= 2 && !easyHints) wrap.innerHTML = plateSvg(true); return null; }   // 放錯兩次：餐盤上出現各區的小圖（岳岳也一樣）
             const slot = slotFor(cat, placed[cat]);
             placed[cat]++;
             return { x: q.r.left + slot.x / q.k, y: q.r.top + slot.y / q.k, slot };
@@ -224,6 +224,7 @@ async function tableGame(R) {
   // 托盤：一疊碗、一把把筷子、湯匙
   const tray = div('utray ui');
   const stacks = {};
+  let tableWrongs = 0;
   for (const k of kinds) {
     const st = div('stack', `${utensilSvg(k)}<span class="n">3</span>`);
     st.dataset.k = k;
@@ -243,7 +244,13 @@ async function tableGame(R) {
             if (dd < bd) { bd = dd; best = s; }
           }
           if (!best) return null;
-          if (best.k !== k) { sfx('soft'); if (Date.now() - (tableGame.lv || 0) > 2500) { tableGame.lv = Date.now(); say('dong', 'table_wrong'); } return null; }
+          if (best.k !== k) {
+            sfx('soft'); if (Date.now() - (tableGame.lv || 0) > 2500) { tableGame.lv = Date.now(); say('dong', 'table_wrong'); }
+            // 放錯兩次：還空著、可以放這個的位置發亮 3 秒（岳岳也一樣）
+            if (++tableWrongs >= 2) slots.filter((x) => !x.filled && x.k === k).forEach((x) => { x.d.classList.add('glowy-2d'); setTimeout(() => x.d.classList.remove('glowy-2d'), 3000); });
+            return null;
+          }
+          tableWrongs = 0;
           best.filled = true;
           const r = stageRect(best.d);
           pending = best;
@@ -316,7 +323,9 @@ async function safeGame(R) {
     await callTurn();
     chk();
     let skipGood = 0;
+    const dots = roundDots(el, seq.length);   // 看得到還有幾個
     for (let i = 0; i < seq.length; i++) {
+      dots.set(i);
       chk();
       const k = seq[i];
       const info = KITCHEN_ITEMS[k];
@@ -372,6 +381,7 @@ async function safeGame(R) {
       await wait(350);
     }
     setHint(null);
+    dots.done();
     await wait(500);
     await say('dong', 'safe_done');
   } finally {

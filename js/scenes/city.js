@@ -1,7 +1,7 @@
 // 城市裡的公共設施（11/24）：消防局、捷運站／公車站、圖書館、郵局、垃圾車停靠點。
 // 每個地方三關，盡量用共用的小遊戲（分類、尋找、照步驟），偶爾穿插英文。
 import { runRoom } from './room-base.js';
-import { sortGame, findGame, stepsGame, askChoice } from './kit.js';
+import { sortGame, findGame, stepsGame, askChoice, roundDots } from './kit.js';
 import { createDiorama } from '../engine/diorama.js';
 import { div, wait, shuffle, pick, stageRect, burst } from '../core/dom.js';
 import { sfx } from '../core/audio.js';
@@ -341,11 +341,19 @@ async function storyGame(R) {
     const sp = [...el.querySelectorAll('.sp')];
     await say('gugu', 'lb_story_go');
     chk();
+    // 自己點下一格才講（ADHD：不是一直坐著聽，每一格都要動手翻開）
     for (let i = 0; i < 3; i++) {
+      sp[i].classList.add('glowy-2d');
+      setHint(() => sp[i]);
+      if (i > 0) await race(new Promise((resolve) => sp[i].addEventListener('pointerdown', resolve, { once: true })));
+      chk();
+      sfx('pop');
+      sp[i].classList.remove('glowy-2d');
       sp[i].classList.add('on');
       await say('gugu', `lb_st${st.id}_${i + 1}`);
       chk();
     }
+    setHint(null);
     await callTurn();
     chk();
     const quiz = el.querySelector('.squiz');
@@ -355,6 +363,7 @@ async function storyGame(R) {
     quiz.innerHTML = shuffle(st.q).map(([k, h]) => `<button class="pk" data-k="${k}">${h}</button>`).join('');
     quiz.classList.add('show');
     if (levelNow(R.profile) === 'easy') quiz.querySelector(`[data-k="${st.a}"]`).classList.add('glowy-2d');
+    setHint(() => quiz.querySelector(`[data-k="${st.a}"]`));   // 8 秒沒動作：手指指向答案
     await race(new Promise((resolve) => {
       quiz.querySelectorAll('.pk').forEach((b) => b.addEventListener('pointerdown', (e) => {
         e.stopPropagation();
@@ -364,6 +373,7 @@ async function storyGame(R) {
       }));
     }));
     chk();
+    setHint(null);
     await say('gugu', 'lb_story_done');
     await wait(300);
   } finally { P.close(); }
@@ -531,12 +541,14 @@ async function bigGame(R) {
     for (let r = 0; r < rounds.length; r++) {
       if (turnsOn()) { await callTurn(); chk(); }
       const B = BIG[rounds[r]];
+      const dots = () => { const d = roundDots(el, rounds.length, 'tr'); d.set(r); };
       const hard = levelNow(R.profile) === 'hard';
       const who = whoseTurn() || R.members[0];
       el.innerHTML = `<svg class="bv-map" viewBox="0 0 940 640" width="940" height="640"><rect width="940" height="640" fill="#e3e6ec"/>${B.roads}
         <g class="bv-zones">${B.zones}</g>
         <g class="bv-move" style="transform-origin:${B.origin}"><g transform="translate(${B.truck[0]} ${B.truck[1]})">${truckTopSvg()}</g></g></svg>`;
       const zones = el.querySelector('.bv-zones'), mover = el.querySelector('.bv-move');
+      dots();
       const spots = B.spots.filter((sp) => hard || !sp[3]).map(([x, y, safe]) => {
         const b = div('bv-spot', '<svg viewBox="0 0 60 60" width="100%" height="100%"><ellipse cx="22" cy="40" rx="8" ry="12" fill="#ff8a3d"/><ellipse cx="38" cy="24" rx="8" ry="12" fill="#ff8a3d"/></svg>');
         b.style.left = `${x - 40}px`; b.style.top = `${y - 40}px`;

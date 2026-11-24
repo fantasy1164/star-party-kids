@@ -2,7 +2,7 @@
 // ADHD 的轉換最難：時間到不會中途打斷，而是先預告「再玩一個就休息」，等這一關做完才休息。
 import { state, save } from './store.js';
 import { quietFor } from './voice.js';
-import { div, stageRect } from './dom.js';
+import { div, stageRect, toStage } from './dom.js';
 import { ICON } from '../art/props.js';
 import { speak } from './voice.js';
 
@@ -64,6 +64,16 @@ let stageRoot = null;
 export function setupHints(stageEl) {
   stageRoot = stageEl;
   ['pointerdown', 'pointermove'].forEach((t) => document.addEventListener(t, () => { lastTouch = Date.now(); still = false; hideHand(); wake(); }, { capture: true, passive: true }));
+  // 每一次觸碰都有立刻看得到的回饋（ADHD：0.3 秒內要有反應）：手指下面冒出一圈小漣漪。
+  // 就算這時候角色還在說話、遊戲還沒開始收答案，小孩也知道「有點到」，不會以為壞掉而一直亂點。
+  document.addEventListener('pointerdown', (e) => {
+    const p = toStage(e.clientX, e.clientY);
+    const r = div('tap-ripple');
+    r.style.left = `${p.x}px`;
+    r.style.top = `${p.y}px`;
+    stageEl.appendChild(r);
+    setTimeout(() => r.remove(), 450);
+  }, { capture: true, passive: true });
   setInterval(() => {
     // 省電：沒人碰、也沒人在說話時，停掉一直重複的小動畫（標記上下飄、角色眨眼晃動、警車燈…）。
     // 畫面完全不動時 iPhone／iPad 就不用每秒重畫 60 次，比較不會發燙、降頻變鈍（11/24）。
