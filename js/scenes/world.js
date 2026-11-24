@@ -144,7 +144,7 @@ export async function mountZone(root, app) {
   const first = Object.keys(ZONE_PLACES[zone])[0];
   setHint(() => T.markers[first].el);
   let going = false;
-  placeBar(root, dio, ZONE_PLACES[zone], T.markers, app.trip.location, (id) => onTapZone(`go:${id}`));
+  placeBar(root, dio, ZONE_PLACES[zone], T.markers, app.trip.location, (id) => onTapZone(`go:${id}`), shan.el);
   const onTapZone = async (name) => {
     if (name.startsWith('go:')) {
       if (going) return;

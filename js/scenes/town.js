@@ -360,7 +360,7 @@ export async function mountTown(root, app) {
   worldBtn(root, app);
   let going = false;
   // 地點列：點一下鏡頭飛過去（標記會跳），再點一次就出發
-  placeBar(root, dio, PLACES, T.markers, app.trip.location, (id) => { if (!going) dio.el.dispatchEvent(new CustomEvent('tapname', { detail: `go:${id}` })); });
+  placeBar(root, dio, PLACES, T.markers, app.trip.location, (id) => { if (!going) dio.el.dispatchEvent(new CustomEvent('tapname', { detail: `go:${id}` })); }, shan.el);
   setHint(() => document.querySelector('.placebar button'));
 
   const onTapTown = async (name) => {
@@ -408,7 +408,7 @@ export async function mountTown(root, app) {
 }
 
 // ---- 地點列（城市比畫面大，不用到處找）：點一下鏡頭飛到那裡、標記跳一下；同一個再點一次就出發 ----
-export function placeBar(root, dio, places, markers, here, go) {
+export function placeBar(root, dio, places, markers, here, go, node = null) {
   const bar = div('placebar ui', Object.entries(places).map(([id, p]) => `<button data-id="${id}" class="${id === here ? 'here' : ''}">${p.icon}</button>`).join(''));
   root.appendChild(bar);
   let sel = null;
@@ -423,6 +423,7 @@ export function placeBar(root, dio, places, markers, here, go) {
     if (sel === id) { go(id); return; }
     sel = id;
     bar.querySelectorAll('button').forEach((x) => x.classList.toggle('sel', x === b));
+    speak('shan', `place_${id}`, { node });   // 說出地點的中文和英文
     const p = places[id];
     dio.animateTo({ px: p.x, py: p.y, z: Math.max(dio.view.z, 0.75) }, 700);
     const m = markers[id]?.el;
