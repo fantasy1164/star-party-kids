@@ -20,6 +20,15 @@ export function openParent(root, onClose) {
     'kitchen.plate': '我的餐盤', 'kitchen.table': '擺餐具', 'kitchen.safe': '什麼能摸',
     'living.tv': '關電視', 'living.door': '誰按電鈴', 'living.stage': '明星舞台',
     'school.robot': '修理機器人', 'school.blocks': '積木排排站', 'school.hop': '跳跳口訣',
+    'school.song': '口訣唱唱', 'school.abc': 'ABC', 'kitchen.dumpling': '分水餃',
+    'market.list': '購物清單', 'market.pay': '付錢', 'market.bag': '裝袋子', 'park.trash': '垃圾分類', 'park.animals': '找小動物', 'park.queue': '溜滑梯排隊', 'park.dino': '挖恐龍化石',
+    'clinic.checkup': '看醫生', 'clinic.body': '身體在哪裡', 'clinic.heal': '生病快點好', 'farm.feed': '餵動物', 'farm.eggs': '撿雞蛋', 'farm.grow': '種菜',
+    'police.traffic': '指揮交通', 'police.cross': '過馬路', 'police.lost': '走散了找誰',
+    'fire.call': '打119', 'fire.escape': '火災逃生', 'fire.spray': '消防車滅火', 'mrt.board': '進站上車', 'mrt.seat': '讓座', 'mrt.route': '看路線圖',
+    'library.voice': '小聲說話', 'library.story': '聽故事', 'library.shelf': '書放回書架', 'post.send': '寄卡片', 'post.color': '紅綠郵筒', 'post.deliver': '送信',
+    'garbage.steps': '倒垃圾步驟', 'garbage.trash': '垃圾車', 'garbage.recycle': '資源回收',
+    'aquarium.tunnel': '海底隧道', 'aquarium.penguin': '企鵝排隊', 'aquarium.rules': '海生館規則', 'beach.sun': '防曬', 'beach.shells': '撿貝殼', 'beach.safe': '海邊安全',
+    'zoo.find': '找動物', 'zoo.food': '餵動物吃什麼', 'zoo.rules': '動物園規則',
   };
   // 九九乘法：每一題的熟練度（顏色）與答錯次數
   const BOXC = ['#ffd0d0', '#ffe3c4', '#fff2b8', '#c8f5d6', '#9fe6b8', '#6fd99a'];

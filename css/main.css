@@ -649,3 +649,138 @@ body.turn-kk .glowy > svg { animation-name: glowyK; }
 .fdrum svg { width: 100%; height: 100%; }
 .fdrum.hit { animation: squishbtn .18s ease; }
 @keyframes squishbtn { 50% { transform: scale(.88); } }
+
+/* ======== 11/24 世界地圖、城市設施、海邊、山上、ABC ======== */
+.btn-world { right: 24px; top: 360px; background: radial-gradient(circle at 35% 30%, #e8fbff, #3ec7e0); box-shadow: 0 6px 0 #2a9ab0, 0 10px 18px rgba(0,0,0,.2); padding: 12px; }
+.gtruck .inner, .gtruck svg { animation: truckbob 1.2s ease-in-out infinite; }
+@keyframes truckbob { 50% { transform: translateY(-3px); } }
+/* 坐火車：刷卡、黃線、先下後上 */
+.boardpanel { position: absolute; z-index: 30; left: 50%; top: 50%; width: 900px; height: 600px; margin: -300px 0 0 -450px; border-radius: 40px; background: #eef3fa; box-shadow: 0 20px 50px rgba(0,0,0,.3); overflow: hidden; }
+.boardpanel > * { position: absolute; }
+.boardpanel .gate { left: 300px; top: 140px; width: 300px; height: 320px; }
+.boardpanel .reader { position: absolute; left: 110px; top: 0; width: 80px; height: 80px; border-radius: 16px; background: #3ea8e0; box-shadow: inset 0 0 0 8px #bfe6ff; cursor: pointer; }
+.boardpanel .gdoor { position: absolute; top: 120px; width: 140px; height: 160px; border-radius: 20px; background: #c9ced8; transition: transform .5s; }
+.boardpanel .gdoor.l { left: 0; } .boardpanel .gdoor.r { right: 0; }
+.boardpanel .gate.open .gdoor.l { transform: translateX(-120px); } .boardpanel .gate.open .gdoor.r { transform: translateX(120px); }
+.boardpanel .mycard { left: 640px; top: 380px; width: 160px; height: 160px; transition: all .4s; }
+.boardpanel .mycard.tapped { left: 380px; top: 110px; }
+.boardpanel .mycard svg { width: 100%; height: 100%; }
+.boardpanel .platform { inset: 0; background: #dde3ec; }
+.boardpanel .tracks { position: absolute; left: 0; right: 0; top: 0; height: 200px; background: repeating-linear-gradient(90deg, #8a6a4a 0 8px, #a9adb8 8px 40px); }
+.boardpanel .yline { position: absolute; left: 0; right: 0; top: 260px; height: 22px; background: #ffd23f; }
+.boardpanel .spot { position: absolute; width: 180px; height: 180px; border-radius: 50%; border: 6px dashed #8a8fa0; background: rgba(255,255,255,.5); padding: 10px; }
+.boardpanel .spot svg { width: 100%; height: 100%; }
+.boardpanel .spot.bad { left: 140px; top: 170px; } .boardpanel .spot.good { left: 560px; top: 340px; }
+.boardpanel .spot.me { border-color: #4cd07d; }
+.boardpanel .ptrain { position: absolute; left: 900px; top: 20px; width: 860px; height: 180px; border-radius: 40px; background: #f4f6fb; box-shadow: inset 0 -20px 0 #3ea8e0; animation: trainin 1.2s ease-out forwards; }
+@keyframes trainin { to { left: 20px; } }
+.boardpanel .pdoor { position: absolute; left: 380px; top: 20px; width: 110px; height: 150px; border-radius: 12px; background: #bfe6ff; }
+.boardpanel .pout { position: absolute; left: 400px; top: 20px; width: 70px; height: 140px; opacity: 0; }
+.boardpanel .pout svg { width: 100%; height: 100%; }
+.boardpanel .ptrain.off .pout { animation: getoff 2.2s ease forwards; animation-delay: calc(var(--i) * .55s); }
+@keyframes getoff { 0% { opacity: 1; transform: translate(0, 0); } 100% { opacity: 1; transform: translate(calc(-260px + var(--i) * 90px), 300px); } }
+/* 路程：看窗外 */
+.trip-scene { position: absolute; inset: 0; overflow: hidden; z-index: 5; }
+.trip-scene > div { position: absolute; left: 0; right: 0; }
+.tsky { top: 0; height: 60%; } .tfar { top: 46%; height: 20%; border-radius: 50% 50% 0 0 / 60% 60% 0 0; opacity: .8; }
+.tground { top: 60%; bottom: 0; } .troad { top: 74%; height: 90px; background: #8a8fa0; }
+.troad::after { content: ''; position: absolute; left: 0; right: 0; top: 42px; height: 6px; background: repeating-linear-gradient(90deg, #fff 0 40px, transparent 40px 80px); animation: roadrun .5s linear infinite; }
+.troad.train { background: repeating-linear-gradient(90deg, #8a6a4a 0 8px, #b9a98a 8px 36px); }
+.troad.train::after { top: 12px; height: 8px; background: #8a8fa0; box-shadow: 0 56px 0 #8a8fa0; animation: none; }
+@keyframes roadrun { to { background-position: -80px 0; } }
+.tthings { top: 0; bottom: 0; }
+.tthing { position: absolute; left: 100%; width: 150px; height: 150px; animation: passby 6s linear forwards; cursor: pointer; }
+.tthing svg { width: 100%; height: 100%; }
+.tthing.got { animation-play-state: paused; transform: scale(1.3); filter: drop-shadow(0 0 14px #fff3a0); }
+.tthing.nope { opacity: .5; }
+@keyframes passby { to { left: -200px; } }
+.tvehicle { left: 160px !important; right: auto !important; top: 62%; width: 230px; height: 190px; animation: bump .35s ease-in-out infinite; }
+.tvehicle svg { width: 100%; height: 100%; }
+.tvehicle.train { width: 300px; }
+@keyframes bump { 50% { transform: translateY(-4px); } }
+.tlook { left: auto !important; right: 30px !important; top: 120px; width: 170px; height: 170px; }
+.tlook .tl { width: 100%; height: 100%; border-radius: 30px; background: rgba(255,255,255,.9); padding: 14px; box-shadow: 0 0 0 6px #ffd23f; }
+.tlook .tl svg { width: 100%; height: 100%; }
+.tlook.pop { animation: popin .45s cubic-bezier(.3,1.6,.5,1); }
+/* 打 119 */
+.callpanel .phone { left: 300px; top: 30px; width: 340px; height: 580px; border-radius: 40px; background: #3a3550; padding: 24px; }
+.callpanel .pscreen { height: 90px; border-radius: 18px; background: #2a5a8a; display: flex; gap: 8px; padding: 10px 20px; }
+.callpanel .pscreen i { width: 60px; height: 70px; }
+.callpanel .pscreen svg { width: 100%; height: 100%; }
+.callpanel .keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 18px; }
+.callpanel .key { height: 92px; border: 0; border-radius: 22px; background: #fff; padding: 12px; }
+.callpanel .key:last-child { grid-column: 2; }
+.callpanel .key svg { width: 100%; height: 100%; }
+.callpanel .picks, .storypanel .squiz { right: 30px; top: 120px; display: none; flex-direction: column; gap: 16px; }
+.callpanel .picks.show, .storypanel .squiz.show { display: flex; }
+.pk { width: 150px; height: 130px; border: 0; border-radius: 26px; background: #fff; padding: 10px; box-shadow: 0 6px 0 #e0d6c8; }
+.pk svg { width: 100%; height: 100%; } .pk.gone { opacity: .25; }
+/* 滅火 */
+.spraypanel .burnhouse { left: 140px; top: 70px; width: 520px; height: 420px; border-radius: 20px; background: linear-gradient(#fff3e6 0 0) 0 120px / 100% 300px no-repeat, linear-gradient(135deg, transparent 50%, #c9503a 50%) 0 0 / 50% 120px no-repeat, linear-gradient(225deg, transparent 50%, #c9503a 50%) 100% 0 / 50% 120px no-repeat; }
+.spraypanel .flame { width: 100px; height: 120px; transition: transform .25s; transform-origin: 50% 100%; cursor: pointer; animation: flick .5s ease-in-out infinite alternate; }
+.spraypanel .flame svg { width: 100%; height: 100%; }
+.spraypanel .flame.out { opacity: 0; pointer-events: none; transition: opacity .4s; }
+@keyframes flick { to { filter: brightness(1.15); } }
+.spraypanel .ftruck { right: 10px; bottom: 10px; width: 240px; height: 200px; }
+.spraypanel .ftruck svg { width: 100%; height: 100%; }
+.spraypanel .stream { left: 0; top: 0; width: 940px; height: 640px; pointer-events: none; opacity: 0; }
+.spraypanel .stream.on { animation: spray .6s ease-out; }
+@keyframes spray { 0% { opacity: 1; } 100% { opacity: 0; } }
+.escapepanel .smoke { left: 0; right: 0; top: 0; height: 160px; background: linear-gradient(#8a8fa0, transparent); opacity: .5; }
+/* 捷運路線圖 */
+.routepanel .rline { left: 0; top: 0; width: 940px; height: 640px; }
+.routepanel .stn { width: 68px; height: 68px; border-radius: 50%; border: 10px solid #ff5d73; background: #fff; }
+.routepanel .stn.passed { background: #ffd6dc; }
+.routepanel .stn.goal { box-shadow: 0 0 0 8px #ffd23f; }
+.routepanel .rtrain { width: 100px; height: 100px; transition: left .5s, top .5s; }
+.routepanel .rdest { width: 100px; height: 100px; }
+.routepanel .rtrain svg, .routepanel .rdest svg { width: 100%; height: 100%; }
+/* 故事 */
+.storypanel .spanels { left: 30px; top: 60px; display: flex; flex-direction: column; gap: 14px; }
+.storypanel .sp { width: 560px; height: 160px; border-radius: 26px; background: #fff8ea; display: flex; align-items: center; justify-content: center; gap: 30px; opacity: .25; transition: opacity .4s; }
+.storypanel .sp.on { opacity: 1; }
+.storypanel .sp > svg, .storypanel .sp .withicon { width: 130px; height: 130px; }
+.storypanel .sp .emo { font-size: 90px; }
+.shelfbin { width: 100%; height: 100%; border-radius: 16px; background: var(--c); box-shadow: inset 0 -16px 0 rgba(0,0,0,.15); display: flex; align-items: center; justify-content: center; }
+.shelfbin b { font: 900 56px/1 -apple-system, sans-serif; color: #fff; }
+/* 郵局 */
+.sendpanel .bigcard { left: 260px; top: 120px; width: 400px; height: 280px; border-radius: 20px; background: #fff; box-shadow: 0 10px 20px rgba(0,0,0,.12); transition: all .7s; }
+.sendpanel .bigcard > div { position: absolute; }
+.sendpanel .heart { left: 40px; top: 60px; width: 150px; height: 150px; }
+.sendpanel .stampspot { right: 20px; top: 20px; width: 80px; height: 90px; border: 4px dashed #ffb627; border-radius: 8px; }
+.sendpanel .addr { right: 30px; bottom: 30px; width: 110px; height: 110px; }
+.sendpanel .bigcard svg { width: 100%; height: 100%; }
+.sendpanel .bigcard.mailed { left: 40px; top: 470px; transform: scale(.1); opacity: 0; }
+/* 垃圾車 */
+.rbin { width: 100%; height: 100%; border-radius: 16px; background: var(--c); }
+.withicon i { pointer-events: none; }
+/* 企鵝排隊 */
+.penguinpanel .ice { left: 0; right: 0; bottom: 0; height: 200px; background: #e6f4ff; }
+.penguinpanel .pgs { left: 60px; top: 60px; display: flex; gap: 20px; align-items: flex-end; height: 260px; }
+.penguinpanel .pg { width: var(--s); height: var(--s); border: 0; background: none; padding: 0; }
+.penguinpanel .pg svg { width: 100%; height: 100%; }
+.penguinpanel .pline { left: 60px; bottom: 40px; display: flex; gap: 20px; align-items: flex-end; height: 260px; }
+.penguinpanel .pslot { width: 140px; height: 220px; border-bottom: 8px solid #bfe6ff; display: flex; align-items: flex-end; justify-content: center; }
+/* 沙灘 */
+.bucketbin { position: relative; width: 100%; height: 100%; }
+.bucketbin > svg { width: 100%; height: 100%; }
+.bucketbin i { position: absolute; left: 25%; top: 35%; width: 50%; height: 50%; }
+.bucketbin i svg { width: 100%; height: 100%; }
+.sunpanel .sunball { right: 40px; top: 30px; width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(#fff3a0, #ffd23f); box-shadow: 0 0 40px #ffd23f; }
+/* ABC */
+.abcpanel .abcpic { left: 40px; top: 60px; width: 360px; height: 360px; border-radius: 40px; background: #fff8ea; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.abcpanel .abcpic b { font: 900 120px/1 -apple-system, sans-serif; color: #ff5d73; }
+.abcpanel .abcpic div { width: 180px; height: 180px; }
+.abcpanel .abcpic svg { width: 100%; height: 100%; }
+.abcpanel .abcpic.pop { animation: popin .45s cubic-bezier(.3,1.6,.5,1); }
+.abcpanel .abcopts { right: 50px; top: 70px; display: flex; flex-direction: column; gap: 18px; }
+.abcopt { width: 150px; height: 110px; border: 0; border-radius: 28px; background: #fff; font: 900 76px/1 -apple-system, sans-serif; color: #4a3b6b; box-shadow: 0 6px 0 #e0d6c8; animation: popin .4s cubic-bezier(.3,1.6,.5,1) both; }
+.abcopt.right { background: #c8f5d6; } .abcopt.gone { opacity: 0; transform: scale(.4); transition: all .3s; pointer-events: none; }
+.abcpanel .abcrow { left: 30px; right: 30px; bottom: 24px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.abcpanel .abcrow i { width: 52px; height: 52px; border-radius: 12px; background: rgba(255,255,255,.5); font: 900 30px/52px -apple-system, sans-serif; font-style: normal; text-align: center; color: #c9c2d6; }
+.abcpanel .abcrow i.known { background: #fff; color: #4a3b6b; }
+.abcpanel .abcrow i.flash { animation: popin .4s; }
+.abcpanel .abcrow i.sing { background: #ffd23f; color: #fff; transform: translateY(-6px); transition: all .15s; }
+/* 海底隧道的泡泡 */
+.bubble { animation: bubbleup 3s ease-in-out infinite; }
+@keyframes bubbleup { 50% { transform: translateY(-14px); } }

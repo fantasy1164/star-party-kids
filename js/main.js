@@ -17,10 +17,13 @@ import { mount as school } from './scenes/school.js';
 import { mountTown, mountRide } from './scenes/town.js';
 import { mountMarket, mountPark, mountClinic, mountFarm, mountPolice } from './scenes/places.js';
 import { mount as draw } from './scenes/fun.js';
+import { mountWorld, mountTrip } from './scenes/world.js';
+import { mountFire, mountMrt, mountLibrary, mountPost, mountGarbage } from './scenes/city.js';
+import { mountAquarium, mountBeach, mountZoo } from './scenes/nature.js';
 import { mountRest, mountSleep } from './ui/rest.js';
 import { openParent } from './ui/parent.js';
 
-const SCREENS = { opening, town: mountTown, ride: mountRide, house, bedroom, bath, kitchen, living, school, market: mountMarket, park: mountPark, clinic: mountClinic, farm: mountFarm, police: mountPolice, draw, rest: mountRest, sleep: mountSleep };
+const SCREENS = { opening, town: mountTown, ride: mountRide, house, bedroom, bath, kitchen, living, school, market: mountMarket, park: mountPark, clinic: mountClinic, farm: mountFarm, police: mountPolice, draw, world: mountWorld, trip: mountTrip, fire: mountFire, mrt: mountMrt, library: mountLibrary, post: mountPost, garbage: mountGarbage, aquarium: mountAquarium, beach: mountBeach, zoo: mountZoo, rest: mountRest, sleep: mountSleep };
 const ROOMS = ['town', 'ride', 'house', 'bedroom', 'bath', 'kitchen', 'living', 'school', 'market', 'park', 'clinic', 'farm'];
 let current = null;
 
@@ -34,12 +37,13 @@ function route() {
 const app = {
   profile: null,
   // 跨畫面共用的狀態（每個畫面拿到的 ctx 是 app 的分身，直接設 ctx.x 不會留到下一個畫面）
-  trip: { location: 'home', rides: 0, seenTown: false },
+  trip: { zone: 'city', location: 'home', rides: 0, seenTown: false },
   stageCenter() { return { x: stageW() / 2, y: 450 }; },
   nameInfo() { const id = app.profile?.id || 'yy'; return { name: NAMES[id], who: id }; },
   async choose(id, first, node) {
     app.profile = PROFILES[id];
-    app.trip.location = 'home';   // 每次選完人都從家出發
+    app.trip.location = 'home';   // 每次選完人都從家出發（在城市）
+    app.trip.zone = 'city';
     app.trip.rides = 0;           // 這次遊玩的第一趟車走完整版
     setupTurns(app.profile, first);
     await speak('shan', 'welcome', { name: NAMES[id], who: id, node });

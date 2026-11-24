@@ -37,4 +37,11 @@ export const CHARACTERS = {
   baobao: { id: 'baobao', name: '抱抱', tts: { pitch: 0.95, rate: 0.9 } },// 泰迪熊醫生，診所
   jiujiu: { id: 'jiujiu', name: '啾啾', tts: { pitch: 1.7, rate: 1.1 } },  // 發條小鳥，公園
   shao: { id: 'shao', name: '哨哨', tts: { pitch: 1.0, rate: 1.0 } },     // 玩具警察狗，警察局（原創角色）
+  huahua: { id: 'huahua', name: '嘩嘩', tts: { pitch: 0.9, rate: 1.0 } },   // 玩具消防栓，消防局
+  xiuxiu: { id: 'xiuxiu', name: '咻咻', tts: { pitch: 1.4, rate: 1.1 } },   // 玩具捷運車廂，捷運站
+  gugu: { id: 'gugu', name: '咕咕', tts: { pitch: 1.1, rate: 0.9 } },       // 戴眼鏡的貓頭鷹，圖書館
+  xinxin: { id: 'xinxin', name: '信信', tts: { pitch: 1.2, rate: 1.0 } },   // 綠色郵筒，郵局
+  baibai: { id: 'baibai', name: '白白', tts: { pitch: 1.4, rate: 1.0 } },   // 玩具白鯨，海生館
+  jiajia: { id: 'jiajia', name: '夾夾', tts: { pitch: 1.6, rate: 1.15 } },  // 玩具小螃蟹，沙灘
+  zhuzhu: { id: 'zhuzhu', name: '竹竹', tts: { pitch: 1.2, rate: 0.95 } },  // 玩具熊貓，動物園
 };

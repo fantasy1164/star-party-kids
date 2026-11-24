@@ -15,7 +15,9 @@ import { turnsOn, callTurn, nextTurn, whoseTurn, levelNow } from '../core/turns.
 import { setHint } from '../core/session.js';
 import { shanSvg, starPolygon, starIcon } from '../art/stars.js';
 import { bibiSvg, BIBI_PARTS, ICON2, numSvg } from '../art/more.js';
-import { rocketSvg, planetSvg } from '../art/fun.js';
+import { rocketSvg, planetSvg, VEHICLES, ANIMALS, shaoSvg } from '../art/fun.js';
+import { ABC_ART } from '../art/world.js';
+import { itemSvg, babaSvg } from '../art/town.js';
 import * as M from '../core/mult.js';
 import { roundBtn } from '../ui/hud.js';
 
@@ -38,6 +40,7 @@ export function mount(root, app) {
       { id: 'blocks', icon: ICON2.blocks, marker: { x: 312, y: 300, z: 200 }, run: blocksGame },
       { id: 'hop', icon: ICON2.hop, marker: { x: 560, y: 470, z: 200 }, run: hopGame },
       { id: 'song', icon: ICON2.song, marker: { x: 120, y: 470, z: 200 }, run: songGame },
+      { id: 'abc', icon: `<svg viewBox="0 0 100 100"><rect x="6" y="20" width="28" height="60" rx="8" fill="#ff5d73"/><rect x="36" y="20" width="28" height="60" rx="8" fill="#ffb627"/><rect x="66" y="20" width="28" height="60" rx="8" fill="#3ec7e0"/><text x="20" y="60" font-size="28" font-weight="900" fill="#fff" text-anchor="middle" font-family="-apple-system,sans-serif">A</text><text x="50" y="60" font-size="28" font-weight="900" fill="#fff" text-anchor="middle" font-family="-apple-system,sans-serif">B</text><text x="80" y="60" font-size="28" font-weight="900" fill="#fff" text-anchor="middle" font-family="-apple-system,sans-serif">C</text></svg>`, marker: { x: 330, y: 120, z: 220 }, run: abcGame },
     ],
     setup(R) {
       // 右上角的眼睛：從高處往下看（愷愷的空間視角），再按一次回來
@@ -514,6 +517,89 @@ async function robotGame(R) {
     P.close();
     setHint(null);
   }
+}
+
+// ---------------- ABC（11/24）----------------
+// 嗶嗶唸字母和單字（「A，apple，蘋果。哪一個是 A？」），點對的字母。
+// 一輪 5 題：新字母 2 個（岳岳）或 1 個（愷愷），其他複習學過的；錯一次少一個選項、錯兩次發亮。
+// 最後木琴彈 ABC 字母歌的旋律（傳統曲調，沒有著作權），學過的字母一個一個亮起來。
+const ABC = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+const ABC_PIC = () => ({
+  A: itemSvg('apple'), B: VEHICLES.bus, C: ABC_ART.cat, D: shaoSvg(), E: itemSvg('egg'), F: ABC_ART.fish, G: ABC_ART.giraffe,
+  H: ABC_ART.hat, I: itemSvg('icecream'), J: ABC_ART.juice, K: ABC_ART.kite, L: ABC_ART.lion, M: itemSvg('milk'), N: itemSvg('nest'),
+  O: ABC_ART.orange, P: ANIMALS.pig, Q: ABC_ART.queen, R: itemSvg('rabbit'), S: itemSvg('sun'), T: ANIMALS.turtle, U: ABC_ART.umbrella,
+  V: babaSvg(), W: itemSvg('water'), X: ABC_ART.xylophone, Y: itemSvg('yogurt'), Z: ABC_ART.zebra,
+});
+// 字母歌：一個字母一個音（LMNOP 比較快）
+const ABC_TUNE = [['C5', 1], ['C5', 1], ['G5', 1], ['G5', 1], ['A5', 1], ['A5', 1], ['G5', 2], ['F5', 1], ['F5', 1], ['E5', 1], ['E5', 1], ['D5', 0.5], ['D5', 0.5], ['D5', 0.5], ['D5', 0.5], ['C5', 2],
+  ['G5', 1], ['G5', 1], ['F5', 2], ['E5', 1], ['E5', 1], ['D5', 2], ['G5', 1], ['G5', 1], ['F5', 2], ['E5', 1]];
+async function abcGame(R) {
+  const { say, chk, race, members } = R;
+  const P = R.panel('abcpanel', { host: 'bibi', hostSvg: bibiSvg() });
+  const el = P.el;
+  const st = M.extra();
+  const next = st.abcNext || 0;
+  const yyIn = members.includes('yy');
+  const nNew = Math.min(26 - next, yyIn ? 2 : 1);
+  const fresh = ABC.slice(next, next + nNew);
+  const old = shuffle(ABC.slice(0, next)).slice(0, 5 - fresh.length);
+  let qs = [...fresh, ...old];
+  while (qs.length < 5) qs.push(pick(ABC.slice(0, Math.max(next + nNew, 3))));
+  // 新字母先出，複習的插在中間，最後一題是剛學的那個再出一次
+  qs = [fresh[0] || qs[0], ...shuffle(qs.slice(1, 4)), fresh[1] || fresh[0] || qs[4]];
+  const PIC = ABC_PIC();
+  try {
+    el.innerHTML = `<div class="abcpic"></div><div class="abcopts"></div><div class="abcrow">${ABC.map((L, i) => `<i class="${i < next ? 'known' : ''}">${L}</i>`).join('')}</div>`;
+    const pic = el.querySelector('.abcpic'), opts = el.querySelector('.abcopts');
+    await say('bibi', 'abc_go');
+    chk();
+    await callTurn();
+    chk();
+    for (const L of qs) {
+      pic.innerHTML = `<b>${L}</b><div>${PIC[L]}</div>`;
+      pic.classList.remove('pop'); void pic.offsetWidth; pic.classList.add('pop');
+      opts.innerHTML = '';
+      await say('bibi', `abc_${L}`);
+      chk();
+      const others = shuffle(ABC.filter((x) => x !== L)).slice(0, 2);
+      const easy = levelNow(R.profile) === 'easy';
+      opts.innerHTML = shuffle([L, ...others]).map((x) => `<button class="abcopt" data-l="${x}">${x}</button>`).join('');
+      if (easy) opts.querySelector(`[data-l="${L}"]`).classList.add('glowy-2d');
+      think(true);
+      let wrongs = 0;
+      await race(new Promise((resolve) => {
+        opts.querySelectorAll('.abcopt').forEach((b) => b.addEventListener('pointerdown', (e) => {
+          e.stopPropagation();
+          if (b.disabled) return;
+          if (b.dataset.l === L) { sfx('fanfare'); b.classList.add('right'); R.burstAt(b, { n: 14, stars: true }); think(false); resolve(); return; }
+          wrongs++; sfx('soft'); b.disabled = true; b.classList.add('gone');
+          if (wrongs === 1) say('bibi', 'abc_again');
+          else { opts.querySelector(`[data-l="${L}"]`).classList.add('glowy-2d'); say('bibi', 'try_tap'); }
+        }));
+      })).finally(() => think(false));
+      chk();
+      const tile = el.querySelectorAll('.abcrow i')[ABC.indexOf(L)];
+      tile.classList.add('known', 'flash');
+      await say('bibi', pick(['abc_right1', 'abc_right2', 'abc_right3']));
+      chk();
+      if (turnsOn()) nextTurn({ say: false });
+    }
+    st.abcNext = next + nNew;
+    M.saveExtra();
+    // 字母歌
+    await say('bibi', 'abc_song');
+    chk();
+    const tiles = [...el.querySelectorAll('.abcrow i')];
+    for (let i = 0; i < 26; i++) {
+      const [n, len] = ABC_TUNE[i];
+      playNote(n, 'musicbox', 0.28);
+      tiles[i].classList.add('sing');
+      await wait(330 * len);
+    }
+    sfx('fanfare');
+    await say('bibi', 'abc_done');
+    await wait(300);
+  } finally { P.close(); setHint(null); }
 }
 
 // ---------------- 口訣唱唱 ----------------

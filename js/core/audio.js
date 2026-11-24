@@ -291,6 +291,53 @@ const TRACKS = {
     melody: seq('C5 . E5 . G5 . E5 . F5 . D5 . C5 . . .  A4 . C5 . E5 . D5 . C5 . B4 . C5 . . .'),
     bass: seq('C3 . . . G2 . . . F2 . . . C3 . . .  A2 . . . E3 . . . G2 . . . C3 . . .'),
   },
+  // ---- 11/24 新地點 ----
+  // 垃圾車：〈給愛麗絲〉開頭（貝多芬，早就沒有著作權）——台灣的垃圾車都放這首
+  garbage: {
+    style: 'song', bpm: 150, inst: 'musicbox', gain: 0.22,
+    melody: seq('E5 D#5 E5 D#5 E5 B4 D5 C5 A4 . . C4 E4 A4 B4 . . E4 G#4 B4 C5 . . E4 E5 D#5 E5 D#5 E5 B4 D5 C5 A4 . . C4 E4 A4 B4 . . E4 C5 B4 A4 . . . . .'),
+    bass: seq('. . . . . . . . A2 E3 A3 . E2 E3 G#3 . A2 E3 A3 . . . . . . . . . . . . . A2 E3 A3 . E2 E3 G#3 . A2 E3 A3 . . . . .'),
+  },
+  fire: {
+    style: 'bg', bpm: 118, inst: 'toypiano', gain: 0.2,
+    melody: seq('C5 . E5 G5 . E5 C5 . D5 . F5 A5 . G5 . .  E5 . G5 C6 . B5 A5 . G5 F5 E5 D5 . C5 . .'),
+    bass: seq('C3 . G2 . C3 . G2 . D3 . A2 . G2 . . .  C3 . E3 . F2 . A2 . G2 . G2 . C3 . . .'),
+  },
+  mrt: {
+    style: 'bg', bpm: 112, inst: 'marimba', gain: 0.2,
+    melody: seq('E5 G5 C6 . G5 E5 . . D5 F5 B5 . F5 D5 . .  C5 E5 G5 . A5 G5 E5 . D5 . G5 . C5 . . .'),
+    bass: seq('C3 . . . G2 . . . G2 . . . D3 . . .  A2 . . . F2 . . . G2 . . . C3 . . .'),
+  },
+  library: {
+    style: 'quiet', bpm: 72, inst: 'musicbox', gain: 0.12,
+    melody: seq('E5 . G5 . A5 . G5 . E5 . . . D5 . . .  C5 . E5 . G5 . E5 . D5 . . . C5 . . .'),
+    bass: seq('C3 . . . . . . . G2 . . . . . . .  A2 . . . . . . . G2 . . . . . . .'),
+  },
+  post: {
+    style: 'bg', bpm: 104, inst: 'marimba', gain: 0.2,
+    melody: seq('G4 C5 E5 . D5 C5 A4 . G4 . C5 D5 E5 . . .  F5 E5 D5 . C5 A4 G4 . A4 C5 D5 . C5 . . .'),
+    bass: seq('C3 . G2 . F2 . C3 . C3 . G2 . C3 . . .  F2 . C3 . F2 . C3 . G2 . G2 . C3 . . .'),
+  },
+  sea: {
+    style: 'bg', bpm: 88, inst: 'musicbox', gain: 0.18,
+    melody: seq('C5 . E5 . G5 . . A5 G5 . E5 . . . . .  D5 . F5 . A5 . . G5 F5 . D5 . . . . .  C5 . E5 . G5 . C6 . B5 . A5 . G5 . . .  F5 . E5 . D5 . . . C5 . . . . . . .'),
+    bass: seq('C3 . . . G2 . . . C3 . . . G2 . . .  D3 . . . A2 . . . D3 . . . A2 . . .  C3 . . . E3 . . . F2 . . . G2 . . .  F2 . . . G2 . . . C3 . . . . . . .'),
+  },
+  zoo: {
+    style: 'bg', bpm: 116, inst: 'marimba', gain: 0.22,
+    melody: seq('G4 . B4 D5 . B4 G4 . A4 . C5 E5 . D5 . .  B4 . D5 G5 . F#5 E5 . D5 . C5 B4 A4 G4 . .'),
+    bass: seq('G2 . D3 . G2 . D3 . A2 . E3 . D3 . . .  G2 . B2 . C3 . A2 . D3 . D3 . G2 . . .'),
+  },
+  world: {
+    style: 'bg', bpm: 100, inst: 'toypiano', gain: 0.2,
+    melody: seq('C5 E5 G5 C6 . G5 E5 . F5 A5 C6 . A5 F5 . .  E5 G5 C6 E6 . C6 G5 . D5 . G5 . C5 . . .'),
+    bass: seq('C3 . . . G2 . . . F2 . . . C3 . . .  C3 . . . E3 . . . G2 . . . C3 . . .'),
+  },
+  trip: {
+    style: 'bg', bpm: 126, inst: 'marimba', gain: 0.2,
+    melody: seq('C5 . C5 E5 . E5 G5 . G5 E5 . C5 D5 . . .  D5 . D5 F5 . F5 A5 . G5 . E5 . C5 . . .'),
+    bass: seq('C3 G2 C3 G2 C3 G2 C3 G2 G2 D3 G2 D3 G2 D3 G2 D3  F2 C3 F2 C3 F2 C3 F2 C3 G2 D3 G2 D3 C3 G2 C3 G2'),
+  },
   farm: {
     style: 'bg', bpm: 116, inst: 'marimba', gain: 0.24,
     melody: seq('C5 C5 C5 G4 A4 A4 G4 . E5 E5 D5 D5 C5 . . .  G4 C5 C5 C5 G4 A4 A4 G4 E5 E5 D5 D5 C5 . . .'),
