@@ -68,16 +68,35 @@ export function createDiorama(opt = {}) {
   const rotHooks = [];
   let raf = 0;
 
-  function apply() {
-    cam.style.left = `${stageW() / 2}px`;
-    cam.style.top = `${900 * o.cy}px`;
+  // 轉動的效能（11/24 iPhone 轉地圖很鈍）：
+  // 1. 鏡頭本身每一格都更新（只動一個元素，很便宜）。
+  // 2. 看板角色面向鏡頭的角度（--ang）會讓幾百個看板全部重算，所以拖曳中每轉 10 度才更新一次（差 10 度肉眼看不出來），停下來再對準。
+  // 3. 手指移動事件（iPhone 一秒 120 次）先記下來，每個畫面格只套用一次。
+  const ANG_STEP = 10;
+  let shownAng = null, shownLean = null, camPos = '', pending = 0;
+  function apply(exact = true) {
+    const pos = `${stageW() / 2}|${o.cy}`;
+    if (pos !== camPos) {
+      camPos = pos;
+      cam.style.left = `${stageW() / 2}px`;
+      cam.style.top = `${900 * o.cy}px`;
+    }
     cam.style.transform = `scale(${view.z}) rotateX(${view.t}deg) rotateZ(${view.a}deg) translate3d(${-view.px}px,${-view.py}px,0)`;
-    world.style.setProperty('--ang', `${view.a}deg`);
+    if (shownAng === null || (exact ? shownAng !== view.a : Math.abs(view.a - shownAng) >= ANG_STEP)) {
+      shownAng = view.a;
+      world.style.setProperty('--ang', `${view.a}deg`);
+    }
     // 鏡頭往下看得更多時（學堂的「從高處看」），看板角色往後仰一點，才不會被壓扁
-    world.style.setProperty('--lean', `${o.tilt - view.t}deg`);
+    const lean = Math.round((o.tilt - view.t) * 2) / 2;
+    if (lean !== shownLean) { shownLean = lean; world.style.setProperty('--lean', `${lean}deg`); }
     rotHooks.forEach((f) => f(view.a));
   }
-  const offFit = onFit(apply);
+  // 拖曳、捏合時用：同一格畫面裡多次移動只套用一次
+  function applySoon() {
+    if (pending) return;
+    pending = requestAnimationFrame(() => { pending = 0; apply(false); });
+  }
+  const offFit = onFit(() => { camPos = ''; apply(); });
 
   function animateTo(target, ms = 700) {
     cancelAnimationFrame(raf);
@@ -88,7 +107,7 @@ export function createDiorama(opt = {}) {
         const k = Math.min(1, (now - t0) / ms);
         const e = 1 - Math.pow(1 - k, 3);
         for (const key of Object.keys(target)) view[key] = from[key] + (target[key] - from[key]) * e;
-        apply();
+        apply(k >= 1);
         if (k < 1) raf = requestAnimationFrame(step);
         else res();
       };
@@ -170,9 +189,9 @@ export function createDiorama(opt = {}) {
     view.py = pinch.py - (sx * Math.sin(a) + sy * Math.cos(a));
     clampP();
     lastDrag = Date.now();
-    apply();
+    applySoon();
   });
-  const endPt = (e) => { pts.delete(e.pointerId); if (pts.size < 2 && pinch) { pinch = null; lastDrag = Date.now(); } };
+  const endPt = (e) => { pts.delete(e.pointerId); if (pts.size < 2 && pinch) { pinch = null; lastDrag = Date.now(); apply(); } };
   window.addEventListener('pointerup', endPt);
   window.addEventListener('pointercancel', endPt);
 
@@ -199,7 +218,7 @@ export function createDiorama(opt = {}) {
     const dt = Math.max(1, now - drag.lt);
     drag.vx = 0.7 * drag.vx + 0.3 * (((e.clientX - drag.lx) / stageScale()) / dt);
     drag.lx = e.clientX; drag.lt = now;
-    apply();
+    applySoon();
   };
   const onUp = () => {
     if (!drag) return;
@@ -209,6 +228,7 @@ export function createDiorama(opt = {}) {
       lastDrag = Date.now();
       const glide = Math.max(-40, Math.min(40, -vx * 0.38 * 160));
       if (Math.abs(glide) > 1) animateTo({ a: view.a + glide }, 520);
+      else apply();   // 沒有順勢滑：看板馬上對準鏡頭
     }
   };
   window.addEventListener('pointermove', onMove);
@@ -417,6 +437,7 @@ export function createDiorama(opt = {}) {
     isLocked: () => locked,
     destroy() {
       cancelAnimationFrame(raf);
+      cancelAnimationFrame(pending);
       offFit();
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
