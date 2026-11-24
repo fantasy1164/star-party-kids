@@ -13,6 +13,8 @@
 //   node tools/gen-voice.mjs --convert    # 把現有的 wav 轉成 mp3（需要 ffmpeg，不呼叫 API）
 //   node tools/gen-voice.mjs --resplit    # 用 tools/voice-debug 裡存下來的原始語音重新切一次（不呼叫 API）
 //   node tools/gen-voice.mjs --sample mian --voices Achernar,Aoede   # 試聽不同聲音（存到 tools/voice-samples，不會 push）
+//   node tools/gen-voice.mjs --name-test                # 試聽「愷愷」的幾種唸法（A、B、C），存到 tools/voice-samples
+//   node tools/gen-voice.mjs --match 愷愷 --pron B      # 有「愷愷」的台詞全部用 B 唸法重做
 //
 // 金鑰只放在環境變數，不要寫進任何檔案。
 // 角色的聲音與說話風格在 tools/voice-config.json。
@@ -67,13 +69,28 @@ const TEXTS = existsSync(TEXTS_PATH) ? JSON.parse(readFileSync(TEXTS_PATH, 'utf8
 const stale = (j) => existing(j.key) && TEXTS[j.key] !== undefined && TEXTS[j.key] !== j.text;
 const remember = (j) => { TEXTS[j.key] = j.text; writeFileSync(TEXTS_PATH, JSON.stringify(TEXTS, Object.keys(TEXTS).sort(), 1) + '\n'); };
 
-async function synth({ charId, text }) {  // text 可以是很多句用停頓串起來
+// ---------- 名字的唸法（11/24：家裡叫「愷愷」是 ㄎㄞˇ ㄎㄞˊ，先三聲再二聲；TTS 原本兩個字都唸二聲）----------
+// 用說話風格（style）提醒模型怎麼唸；哪一種最有效要用耳朵聽（--name-test），選好寫進 voice-config.json 的 "pron"
+const PRON = {
+  A: '名字「愷愷」一定要唸成「ㄎㄞˇ ㄎㄞˊ」：第一個字是三聲（往下再往上），第二個字是二聲（往上揚），像家人叫小名那樣。絕對不要兩個字都唸成二聲。',
+  B: 'Pronunciation note: the child\'s name 愷愷 must be said as "kǎi kái" — the FIRST syllable in third tone (low dipping), the SECOND syllable in second tone (rising), like a family nickname. Never say both syllables in the second tone.',
+  C: '名字「愷愷」要唸成「ㄎㄞˇ ㄎㄞˊ」（kǎi kái）：第一個字三聲、第二個字二聲，像家人叫小名那樣，不要兩個字都唸二聲。Say 愷愷 as "kǎi kái": first syllable third tone (dipping), second syllable second tone (rising).',
+};
+const pronKey = () => opt('pron') || cfg.pron || 'C';
+function styleFor(c, text, key = pronKey()) {
+  let st = c.style;
+  if (text.includes('愷愷') && PRON[key]) st += PRON[key];
+  if (text.includes('<long pause>')) st += '每一行台詞之間要停頓大約兩秒，同一行裡的句子正常說。';
+  return st;
+}
+
+async function synth({ charId, text, pron }) {  // text 可以是很多句用停頓串起來
   const c = cfg.characters[charId];
   const body = {
     model: cfg.model,
     input: [{
       type: 'user_input',
-      content: [{ type: 'text', text, annotations: [{ type: 'speech_metadata', style: text.includes('<long pause>') ? `${c.style}每一行台詞之間要停頓大約兩秒，同一行裡的句子正常說。` : c.style }] }],
+      content: [{ type: 'text', text, annotations: [{ type: 'speech_metadata', style: styleFor(c, text, pron) }] }],
     }],
     response_format: { type: 'audio' },
     generation_config: { speech_config: [{ voice: c.voice }] },
@@ -347,6 +364,24 @@ function writeManifest() {
   return files.length;
 }
 
+// ---------- 試聽「愷愷」的唸法：同幾句話用 A、B、C 三種提醒各念一次 ----------
+if (flag('name-test')) {
+  if (!KEY) { console.error('請先設定環境變數 GEMINI_API_KEY'); process.exit(1); }
+  const charId = opt('char') || 'shan';
+  const text = ['愷愷，你好！', '岳岳和愷愷，一起來玩吧！', '愷愷好棒！'].join('<long pause>');
+  const dir = join(ROOT, 'tools', 'voice-samples');
+  mkdirSync(dir, { recursive: true });
+  for (const key of (opt('pron') || 'A,B,C').split(',')) {
+    console.log(`試聽唸法 ${key}（${charId}）…`);
+    const audio = await synth({ charId, text, pron: key });
+    const out = join(dir, `name-${key}.wav`);
+    writeFileSync(out, toWav(Buffer.from(audio.data, 'base64')));
+    console.log(`  → ${out}`);
+  }
+  console.log('聽完選最像「ㄎㄞˇ ㄎㄞˊ」的那個，再執行：node tools/gen-voice.mjs --match 愷愷 --pron 那個字母');
+  process.exit(0);
+}
+
 // ---------- 試聽：同一段話用不同的聲音各念一次，存到 tools/voice-samples（不會 push） ----------
 // node tools/gen-voice.mjs --sample mian --voices Achernar,Aoede,Despina [--style "說話風格"]
 // 不加 --style 用 voice-config.json 的 sampleStyle（有的話）或原本的 style
@@ -413,7 +448,14 @@ if (flag('resplit')) {
 }
 
 const all = jobs();
-const todo = all.filter((j) => flag('force') || !existing(j.key) || stale(j));
+const match = opt('match');   // 例如 --match 愷愷：台詞裡有這幾個字的全部重做
+const todo = all.filter((j) => flag('force') || (match && j.text.includes(match)) || !existing(j.key) || stale(j));
+if (match && opt('pron') && cfg.pron !== opt('pron')) {
+  // 記住選好的唸法，之後新的台詞也用同一種
+  cfg.pron = opt('pron');
+  writeFileSync(join(ROOT, 'tools', 'voice-config.json'), JSON.stringify(cfg, null, 2) + '\n');
+  console.log(`已記住唸法 ${cfg.pron}（寫進 tools/voice-config.json）`);
+}
 const nStale = all.filter(stale).length;
 console.log(`共 ${all.length} 句，這次要產生 ${todo.length} 句${nStale ? `（其中 ${nStale} 句是台詞改過要重做）` : ''}（模型 ${cfg.model}，${hasFfmpeg ? '輸出 mp3' : '找不到 ffmpeg，輸出 wav'}）`);
 
