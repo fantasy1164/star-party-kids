@@ -422,6 +422,7 @@ export async function mountTown(root, app) {
 
 // ---- 地點列（城市比畫面大，不用到處找）：點一下鏡頭飛到那裡、標記跳一下；同一個再點一次就出發 ----
 export function placeBar(root, dio, places, markers, here, go, node = null) {
+  root.classList.add('with-placebar');
   const bar = div('placebar ui', Object.entries(places).map(([id, p]) => `<button data-id="${id}" class="${id === here ? 'here' : ''}">${p.icon}</button>`).join(''));
   root.appendChild(bar);
   let sel = null;
