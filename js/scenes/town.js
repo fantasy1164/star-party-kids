@@ -411,7 +411,9 @@ export function placeBar(root, dio, places, markers, here, go) {
   const bar = div('placebar ui', Object.entries(places).map(([id, p]) => `<button data-id="${id}" class="${id === here ? 'here' : ''}">${p.icon}</button>`).join(''));
   root.appendChild(bar);
   let sel = null;
-  bar.addEventListener('pointerdown', (e) => {
+  // 不要讓按地點列時順便轉到小鎮；用 click（手指放開且沒滑動）才選，左右滑地點列時不會誤選
+  bar.addEventListener('pointerdown', (e) => e.stopPropagation());
+  bar.addEventListener('click', (e) => {
     e.stopPropagation();
     const b = e.target.closest('button');
     if (!b) return;

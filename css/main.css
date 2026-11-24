@@ -23,7 +23,8 @@ html, body {
   background: radial-gradient(ellipse at 50% 30%, rgba(255,255,255,.22), rgba(255,255,255,0) 60%); }
 .backdrop .twinkles { position: absolute; inset: 0; opacity: 0; transition: opacity 1s; }
 .backdrop.dark .twinkles { opacity: 1; }
-.twinkles i { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: #fff8c8; box-shadow: 0 0 8px #fff3a0; animation: tw 3s ease-in-out infinite; }
+.twinkles i { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: #fff8c8; box-shadow: 0 0 8px #fff3a0; }
+.backdrop.dark .twinkles i { animation: tw 3s ease-in-out infinite; }   /* 白天看不到星星，就不要讓它們一直閃 */
 @keyframes tw { 50% { opacity: .2; transform: scale(.6); } }
 
 /* ---------- 立體模型屋引擎 ---------- */
@@ -78,8 +79,9 @@ html, body {
 .dio-sprite.gone { visibility: hidden; }
 
 /* 點了會動的東西：亮亮的呼吸光 */
-.glowy > svg { animation: glowy 1.6s ease-in-out infinite; }
-@keyframes glowy { 50% { filter: drop-shadow(0 0 10px #fff6a0); transform: translateY(-3px); } }
+/* 發光是固定的（只畫一次），動的只有位置：濾鏡做成動畫每一格都要重畫，很耗電 */
+.glowy > svg { filter: drop-shadow(0 0 8px #fff6a0); animation: glowy 1.6s ease-in-out infinite; }
+@keyframes glowy { 50% { transform: translateY(-4px) scale(1.04); } }
 
 /* 漂浮的關卡標記 */
 .marker > .inner { width: 100%; height: 100%; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, #ffe9a8 60%, #ffc94d);
@@ -129,10 +131,8 @@ html, body {
 .tkid .cheer svg { width: 100%; height: 100%; }
 .mictoken { position: absolute; width: 74px; height: 74px; z-index: 19; pointer-events: none; transition: left .7s cubic-bezier(.5,-0.3,.4,1.3), top .7s; }
 .mictoken svg { width: 100%; height: 100%; animation: floaty 1.4s ease-in-out infinite; }
-body.turn-yy .glowy > svg { animation-name: glowyY; }
-body.turn-kk .glowy > svg { animation-name: glowyK; }
-@keyframes glowyY { 50% { filter: drop-shadow(0 0 12px #2f7fe0); transform: translateY(-3px); } }
-@keyframes glowyK { 50% { filter: drop-shadow(0 0 12px #ff6a2b); transform: translateY(-3px); } }
+body.turn-yy .glowy > svg { filter: drop-shadow(0 0 10px #2f7fe0); }
+body.turn-kk .glowy > svg { filter: drop-shadow(0 0 10px #ff6a2b); }
 
 /* 手指提示 */
 .hinthand { position: absolute; z-index: 40; width: 110px; height: 110px; pointer-events: none; animation: poke 1s ease-in-out infinite; }
@@ -264,8 +264,8 @@ body.turn-kk .glowy > svg { animation-name: glowyK; }
 .steps .s svg { width: 100%; height: 100%; }
 .steps .s.now { opacity: 1; box-shadow: 0 0 0 5px #ffd23f, 0 0 18px 6px #ffd23f; animation: pulse 1s infinite; }
 .steps .s.ok { opacity: 1; background: #c8f5d6; }
-.glowy-2d { animation: glow2d 1.2s ease-in-out infinite; }
-@keyframes glow2d { 50% { filter: drop-shadow(0 0 14px #ffd23f) drop-shadow(0 0 6px #fff); transform: scale(1.05); } }
+.glowy-2d { filter: drop-shadow(0 0 12px #ffd23f) drop-shadow(0 0 5px #fff); animation: glow2d 1.2s ease-in-out infinite; }
+@keyframes glow2d { 50% { transform: scale(1.06); } }
 .shake { animation: shake .45s ease; }
 @keyframes shake { 20%, 60% { transform: translateX(-12px); } 40%, 80% { transform: translateX(12px); } }
 .foam-bit { position: absolute; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, #e6f7ff 60%, #bfe9ff); pointer-events: none; animation: foam 1.4s ease-out forwards; }
@@ -477,7 +477,7 @@ body.turn-kk .glowy > svg { animation-name: glowyK; }
 .seat-kid svg { width: 100%; height: 100%; }
 .belt-strap { position: absolute; left: 40px; top: 90px; width: 30px; height: 340px; border-radius: 10px; background: #2f2a44; transform-origin: 50% 0; transform: rotate(-8deg); transition: transform .4s; }
 .seat.buckled .belt-strap { transform: rotate(-38deg); }
-.buckle { position: absolute; left: 10px; top: 400px; width: 90px; height: 90px; z-index: 3; animation: glow2d 1.2s ease-in-out infinite; touch-action: none; }
+.buckle { position: absolute; left: 10px; top: 400px; width: 90px; height: 90px; z-index: 3; filter: drop-shadow(0 0 12px #ffd23f) drop-shadow(0 0 5px #fff); animation: glow2d 1.2s ease-in-out infinite; touch-action: none; }
 .buckle.dragging { animation: none; }
 .buckle svg { width: 100%; height: 100%; }
 .clasp { position: absolute; left: 200px; top: 420px; width: 70px; height: 60px; border-radius: 14px; background: #c9d3de; border: 5px dashed #ff5b5b; }
@@ -609,7 +609,7 @@ body.turn-kk .glowy > svg { animation-name: glowyK; }
 .dinopanel .slot svg { width: 100%; height: 100%; }
 .dinopanel.building .slot { opacity: .4; }
 .dinopanel.building .slot:not(.filled)::after { content: ''; position: absolute; inset: -8px; border: 4px dashed #ff8a3d; border-radius: 50%; filter: brightness(1); }
-.dinopanel.building .slot.hintslot:not(.filled) { animation: glow2d 1.2s ease-in-out infinite; }
+.dinopanel.building .slot.hintslot:not(.filled) { filter: drop-shadow(0 0 12px #ffd23f) drop-shadow(0 0 5px #fff); animation: glow2d 1.2s ease-in-out infinite; }
 .dinopanel .slot.filled { opacity: 1; filter: none; }
 .dinopanel.building .sandbox { left: 20px; top: 120px; transform: scale(.7); transform-origin: 0 100%; }
 .dinopanel.building .dino-big { opacity: .1; transform: scale(1); filter: brightness(0); }
@@ -792,7 +792,8 @@ body.turn-kk .glowy > svg { animation-name: glowyK; }
 .horizon .inner, .horizon svg { opacity: .9; }
 .btn-zoom-in, .btn-zoom-out { right: 24px; width: 84px; height: 84px; padding: 14px; background: radial-gradient(circle at 35% 30%, #9fdcff, #3e8fd0); box-shadow: 0 6px 0 #2a6aa0, 0 10px 18px rgba(0,0,0,.2); }
 .btn-zoom-in { top: 470px; } .btn-zoom-out { top: 566px; }
-.placebar { position: absolute; z-index: 23; transform: translateZ(0); left: 16px; top: 108px; display: flex; flex-direction: column; gap: 6px; padding: 8px; border-radius: 32px; background: rgba(255,255,255,.85); box-shadow: 0 8px 24px rgba(0,0,0,.15); max-height: calc(100% - 230px); overflow-y: auto; }
+/* 地點列：畫面上方、家和星星罐下面橫的一排；右邊留給圓形按鈕。太多時可以左右滑 */
+.placebar { position: absolute; z-index: 23; transform: translateZ(0); left: 24px; top: 128px; display: flex; flex-direction: row; gap: 6px; padding: 8px; border-radius: 32px; background: rgba(255,255,255,.85); box-shadow: 0 8px 24px rgba(0,0,0,.15); max-width: calc(var(--sw) - 164px); overflow-x: auto; touch-action: pan-x; }
 .placebar button { flex: none; width: 62px; height: 62px; border: 0; border-radius: 18px; background: #fff7e0; padding: 6px; }
 .placebar button svg { width: 100%; height: 100%; }
 .placebar button.here { box-shadow: 0 0 0 4px #4cd07d; }

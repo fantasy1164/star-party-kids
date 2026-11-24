@@ -63,8 +63,11 @@ let hand = null;
 let stageRoot = null;
 export function setupHints(stageEl) {
   stageRoot = stageEl;
-  ['pointerdown', 'pointermove'].forEach((t) => document.addEventListener(t, () => { lastTouch = Date.now(); hideHand(); }, { capture: true, passive: true }));
+  ['pointerdown', 'pointermove'].forEach((t) => document.addEventListener(t, () => { lastTouch = Date.now(); hideHand(); wake(); }, { capture: true, passive: true }));
   setInterval(() => {
+    // 省電：沒人碰、也沒人在說話時，停掉一直重複的小動畫（標記上下飄、角色眨眼晃動、警車燈…）。
+    // 畫面完全不動時 iPhone／iPad 就不用每秒重畫 60 次，比較不會發燙、降頻變鈍（11/24）。
+    if (Date.now() - lastTouch > STILL_MS && quietFor() > 1500) rest(); else wake();
     if (!hintFn || hand) return;
     if (Date.now() - lastTouch < 8000 || quietFor() < 3000) return;
     const target = hintFn();
@@ -78,6 +81,21 @@ export function setupHints(stageEl) {
     setTimeout(hideHand, 4000);
     lastTouch = Date.now();
   }, 1000);
+}
+const STILL_MS = 5000;
+const paused = new Set();
+function rest() {
+  for (const a of document.getAnimations()) {
+    if (a.playState !== 'running' || a.effect?.getTiming?.().iterations !== Infinity) continue;
+    if (a.effect.target?.closest?.('.hinthand')) continue;   // 手指提示要繼續動
+    a.pause();
+    paused.add(a);
+  }
+}
+function wake() {
+  if (!paused.size) return;
+  for (const a of paused) { try { a.play(); } catch { /* 元素已經不在了 */ } }
+  paused.clear();
 }
 // 設定「下一步要點什麼」：回傳一個元素（或 null）
 export function setHint(fn) { hintFn = fn; lastTouch = Date.now(); hideHand(); }
