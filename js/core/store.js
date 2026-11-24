@@ -1,5 +1,5 @@
-// 遊戲進度：存在這台 iPad 的 localStorage（key 是 spk-save，不會跟 toon-fun-party 打架）。
-// 之後要接 Google 雲端硬碟同步時，從 exportData／importData 接。
+// 遊戲進度：存在這台裝置的 localStorage（key 是 spk-save，不會跟 toon-fun-party 打架）。
+// 有設定雲端同步時，由 sync.js 另外上傳到家長的 Google 雲端硬碟（11/24）。
 import { KEY, DEFAULT_SETTINGS } from '../config.js';
 import { dateKey } from './clock.js';
 
@@ -48,8 +48,45 @@ function prune() {
     for (const map of [k.stars, k.done]) for (const day of Object.keys(map)) if (!keep.has(day)) delete map[day];
   }
 }
+// 「有沒有新進度」不算遊玩計時（usedMs 每幾秒就變，不用為了它一直上傳）
+const progressOf = (st) => JSON.stringify({ ...st, session: { restUntil: st.session?.restUntil || 0 } });
+let lastProgress = progressOf(state);
 export function save() {
   try { localStorage.setItem(SAVE, JSON.stringify(state)); } catch { /* 空間滿了也不要讓遊戲壞掉 */ }
+  const pj = progressOf(state);
+  if (pj !== lastProgress) { lastProgress = pj; savedHooks.forEach((f) => { try { f(); } catch { /* 忽略 */ } }); }
+}
+
+// ---------- 雲端同步用 ----------
+const savedHooks = [];
+export function onSaved(fn) { savedHooks.push(fn); }
+export const SYNC_META_KEY = `${KEY}-sync-meta`;
+export const SYNC_CFG_KEY = `${KEY}-sync`;
+// 清除全部進度後：雲端要改成以這台為準（不然下次同步又把舊進度載回來）
+function forceCloudFromHere() {
+  let m = {};
+  try { m = JSON.parse(localStorage.getItem(SYNC_META_KEY) || '{}') || {}; } catch { m = {}; }
+  try { localStorage.setItem(SYNC_META_KEY, JSON.stringify({ ...m, force: true, dirty: true, at: Date.now() })); } catch { /* 忽略 */ }
+}
+// 用另一份進度（雲端的或合併後的）取代目前的。保留原本的物件，只換內容：拿著 state.kids.yy 的程式也會看到新資料
+export function replaceState(next) {
+  const n = normalize(next);
+  for (const k of Object.keys(state)) if (!(k in n)) delete state[k];
+  for (const [k, v] of Object.entries(n)) {
+    if (k === 'kids') {
+      for (const id of Object.keys(v)) {
+        const kid = state.kids[id] || (state.kids[id] = {});
+        for (const kk of Object.keys(kid)) if (!(kk in v[id])) delete kid[kk];
+        Object.assign(kid, v[id]);
+      }
+    } else state[k] = v;
+  }
+  lastProgress = progressOf(state);
+  try { localStorage.setItem(SAVE, JSON.stringify(state)); } catch { /* 忽略 */ }
+}
+export function hasProgress(st) {
+  return Object.values(st.kids || {}).some((k) => (k.total || 0) > 0) || Object.keys(st.mult?.facts || {}).length > 0
+    || Object.keys(st.stickers?.owned || {}).length > 0 || (st.stickers?.placed || []).length > 0;
 }
 prune();
 
@@ -71,6 +108,7 @@ export function markSeen(key) { state.seen[key] = Date.now(); save(); }
 export function clearAll() {
   try { localStorage.removeItem(SAVE); } catch { /* 忽略 */ }
   Object.assign(state, blank());
+  forceCloudFromHere();
 }
 export function exportData() { return JSON.stringify(state); }
-export function importData(text) { Object.assign(state, normalize(JSON.parse(text))); save(); }
+export function importData(text) { replaceState(JSON.parse(text)); }

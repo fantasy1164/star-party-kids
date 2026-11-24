@@ -23,6 +23,7 @@ import { mountAquarium, mountBeach, mountZoo } from './scenes/nature.js';
 import { mountRest, mountSleep } from './ui/rest.js';
 import { openParent } from './ui/parent.js';
 import { needInstallGuide, showInstallGuide } from './ui/install.js';
+import { syncNow, setupSync } from './core/sync.js';
 
 const SCREENS = { opening, town: mountTown, ride: mountRide, house, bedroom, bath, kitchen, living, school, market: mountMarket, park: mountPark, clinic: mountClinic, farm: mountFarm, police: mountPolice, draw, world: mountWorld, trip: mountTrip, fire: mountFire, mrt: mountMrt, library: mountLibrary, post: mountPost, garbage: mountGarbage, aquarium: mountAquarium, beach: mountBeach, zoo: mountZoo, rest: mountRest, sleep: mountSleep };
 const ROOMS = ['town', 'ride', 'house', 'bedroom', 'bath', 'kitchen', 'living', 'school', 'market', 'park', 'clinic', 'farm'];
@@ -42,6 +43,7 @@ const app = {
   stageCenter() { return { x: stageW() / 2, y: 450 }; },
   nameInfo() { const id = app.profile?.id || 'yy'; return { name: NAMES[id], who: id }; },
   async choose(id, first, node) {
+    await bootSync;   // 開機時去抓的雲端進度（通常早就好了；最多等 6 秒）
     app.profile = PROFILES[id];
     app.trip.location = 'home';   // 每次選完人都從家出發（在城市）
     app.trip.zone = 'city';
@@ -90,6 +92,9 @@ document.addEventListener('pointerup', () => { unlock(); primeTts(); }, { captur
 document.addEventListener('gesturestart', (e) => e.preventDefault());
 document.addEventListener('dblclick', (e) => e.preventDefault());
 
+// 雲端進度：開機就去抓（沒網路就先用這台的，之後再合併）；離開很久回來，別台玩過的話重新載入
+const bootSync = syncNow({ timeout: 6000 });
+setupSync({ onReplaced: () => location.reload() });
 // 一般瀏覽器打開時，先給爸媽看「加到主畫面」的步驟（已是 App 就直接開始）
 if (needInstallGuide()) await showInstallGuide();
 app.go('opening');

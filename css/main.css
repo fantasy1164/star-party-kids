@@ -268,6 +268,11 @@ body.turn-kk .glowy > svg { filter: drop-shadow(0 0 10px #ff6a2b); }
 .parent table.week th { background: #efe5d2; }
 .parent table.week .day { white-space: nowrap; font-weight: 600; width: 120px; }
 .parent .wstar { font-weight: 700; }
+.parent input.wide, .parent input#syDev { font-size: 20px; padding: 10px 12px; border-radius: 10px; border: 1px solid #ccb; background: #fff; }
+.parent input.wide { width: min(620px, 100%); }
+.parent .btnrow { margin: 18px 0 6px; }
+.parent b.ok { color: #1a8a3a; } .parent b.bad { color: #c9462c; }
+.parent .pbody button.armed { background: #d9473b; }
 
 /* ---------- 臥室細節 ---------- */
 .prop.sil { opacity: .42; }

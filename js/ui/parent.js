@@ -7,6 +7,7 @@ import { clearRest, resting, restLeftMs, remainingMs } from '../core/session.js'
 import { TEST_KEY, testSettings, dateKey } from '../core/clock.js';
 import { KIDS } from '../config.js';
 import * as M from '../core/mult.js';
+import { syncConfig, setSyncConfig, syncNow, syncStatus, onSyncStatus, configured, deviceName, pingCloud } from '../core/sync.js';
 
 const NAMES = {
   'bedroom.toys': '收玩具', 'bedroom.dress': '換衣服', 'bedroom.simon': '晚晚說',
@@ -34,6 +35,7 @@ const TABS = [
   ['mult', '✖️', '九九乘法'],
   ['time', '⏰', '時間與作息'],
   ['sound', '🔊', '聲音'],
+  ['sync', '☁️', '雲端同步'],
   ['dev', '🛠️', '進階'],
 ];
 const TAB_KEY = 'spk-parent-tab';
@@ -41,6 +43,21 @@ const BOXC = ['#ffd0d0', '#ffe3c4', '#fff2b8', '#c8f5d6', '#9fe6b8', '#6fd99a'];
 const hm = (v) => `${Math.floor(v)}:${v % 1 ? '30' : '00'}`;
 const mins = (ms) => Math.ceil(ms / 60000);
 const chips = (done) => Object.entries(done || {}).map(([g, n]) => `<span class="chip">${NAMES[g] || g}${n > 1 ? ` ×${n}` : ''}</span>`).join('') || '<span class="none">還沒玩</span>';
+
+const attr = (v) => String(v || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+function syncText(st = syncStatus()) {
+  const hm = (t) => new Date(t).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+  const last = st.last ? `（上次同步 ${new Date(st.last).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' })} ${hm(st.last)}）` : '';
+  if (!configured()) return '☁️ 雲端同步還沒設定：進度只存在這台。';
+  switch (st.kind) {
+    case 'test': return '☁️ 測試模式中，暫停同步（回到真實時間後繼續）。';
+    case 'busy': return '☁️ 同步中…';
+    case 'ok': return `☁️ <b class="ok">✓ 已同步</b>${last}`;
+    case 'dirty': return `☁️ 有新進度，稍後自動上傳${last}`;
+    case 'error': return `☁️ <b class="bad">✗ 同步失敗：${st.msg}</b>，有網路時會自動再試${last}`;
+    default: return `☁️ 已設定${last}`;
+  }
+}
 
 export function openParent(root, onClose) {
   const s = state.settings;
@@ -79,7 +96,7 @@ export function openParent(root, onClose) {
     ${M.table().map((row, i) => `<tr><th>${i + 2}</th>${row.map((f) => `<td style="background:${BOXC[f.box]}">${f.bad ? `✕${f.bad}` : ''}</td>`).join('')}</tr>`).join('')}</table>`;
 
   const PAGES = {
-    today: () => `<h2>今天</h2>${playState()}<div class="kids">${kidCard('yy')}${kidCard('kk')}</div>
+    today: () => `<h2>今天</h2>${playState()}<div class="status sync-st">${syncText()}</div><div class="kids">${kidCard('yy')}${kidCard('kk')}</div>
       <h3>常用</h3>
       ${field('音樂大小', seg('musicVol', [['low', '小'], ['mid', '中'], ['high', '大']]))}
       ${sw('quiet', '安靜模式', '關掉背景音樂和裝飾音效，只留角色說話和對錯的聲音')}`,
@@ -100,6 +117,21 @@ export function openParent(root, onClose) {
       ${field('音樂大小', seg('musicVol', [['low', '小'], ['mid', '中'], ['high', '大']]))}
       ${sw('quiet', '安靜模式', '關掉背景音樂和裝飾音效，只留角色說話和對錯的聲音')}
       <p class="note">要動腦的題目出現時，音樂會自動淡到幾乎聽不到；一起玩時，等待的人按拍手會等答完才出聲。</p>`,
+    sync: () => {
+      const c = syncConfig();
+      return `<h2>雲端同步</h2>
+      <div class="status sync-st">${syncText()}</div>
+      <p class="note">進度存到你的 Google 雲端硬碟「明星總動員存檔」資料夾（spk.json），每台裝置打開遊戲時自動載入最新進度；玩的時候、離開 app 時自動上傳。
+        跟歡樂派對共用同一個雲端網址和家庭密碼，檔案分開不會互相蓋掉。第一次要先部署雲端程式，步驟在 GitHub 的 tools/sync/README.md。</p>
+      ${field('雲端網址', `<input class="wide" id="syUrl" value="${attr(c.url)}" placeholder="https://script.google.com/macros/s/……/exec" autocomplete="off" autocapitalize="off" spellcheck="false">`)}
+      ${field('家庭密碼', `<input class="wide" id="syKey" type="password" value="${attr(c.key)}" autocomplete="off" autocapitalize="off" spellcheck="false">`)}
+      ${field('這台的名字', `<input id="syDev" value="${attr(c.dev || deviceName())}" autocomplete="off">`, '雲端記錄是哪台上傳的')}
+      <div class="btnrow"><button id="sySave">儲存並同步</button><button id="syNow" class="gray">立即同步</button><button id="syPing" class="gray">測試連線</button></div>
+      <h3>其他</h3>
+      <button id="syPull" class="gray">用雲端進度覆蓋這台</button>
+      <p class="note">兩台在沒網路時各自玩過，連上後會合併：每天的星星、玩過的關卡取多的；乘法每一題取最近一次作答的熟練度；貼紙取比較多的那一邊。
+        「用雲端進度覆蓋這台」：這台的進度不要了、直接換成雲端的（例如這台之前拿來測試）。雲端硬碟的「舊版本」資料夾每天留一份，可以找回以前的進度。畫畫板的圖不同步。</p>`;
+    },
     dev: () => `<h2>進階</h2>
       ${sw('nolimit', '不限制每次遊玩時間')}
       ${field('假裝現在幾點', `<input id="thour" type="number" step="0.5" min="0" max="23.5" placeholder="例如 20.5" value="${test.hour ?? ''}"><button id="applyTest">套用並重新開啟</button><button id="clearTest" class="gray">回到真實時間</button>`)}
@@ -135,6 +167,31 @@ export function openParent(root, onClose) {
     // 開關
     body.querySelectorAll('.switch input').forEach((c) => c.addEventListener('change', () => { s[c.dataset.key] = c.checked; apply(); }));
     bindRest();
+    if ($('sySave')) {
+      const msg = (h) => { const st = body.querySelector('.sync-st'); if (st) st.innerHTML = h; };
+      const run = (mode) => syncNow({ mode }).then(({ changed }) => {
+        // 進度換成雲端的（或合併了）：重新開始，畫面才會是新的
+        if (changed) { msg('☁️ 已載入雲端進度，重新開始…'); setTimeout(() => location.reload(), 800); }
+      });
+      $('sySave').onclick = () => {
+        setSyncConfig({ url: $('syUrl').value, key: $('syKey').value, dev: $('syDev').value });
+        if (!configured()) { msg('<b class="bad">網址要是 https://script.google.com/macros/s/……/exec，家庭密碼至少 8 碼。</b>'); return; }
+        run('auto');
+      };
+      $('syNow').onclick = () => run('auto');
+      $('syPing').onclick = async () => {
+        setSyncConfig({ url: $('syUrl').value, key: $('syKey').value, dev: $('syDev').value });
+        if (!configured()) { msg('<b class="bad">網址要是 https://script.google.com/macros/s/……/exec，家庭密碼至少 8 碼。</b>'); return; }
+        msg('☁️ 測試中…');
+        const err = await pingCloud();
+        msg(err ? `<b class="bad">✗ ${err}</b>` : '<b class="ok">✓ 連得上，密碼也對</b>');
+      };
+      $('syPull').onclick = (e) => {
+        // 按兩次才執行，避免誤按
+        if (!e.target.classList.contains('armed')) { e.target.classList.add('armed'); e.target.textContent = '確定？再按一次'; msg('☁️ 這台的進度會被雲端的取代。確定的話，再按一次同一個按鈕。'); return; }
+        run('pull');
+      };
+    }
     $('recheck') && ($('recheck').onclick = () => { state.mult = { ...(state.mult || {}), checked: false }; save(); $('recheck').textContent = '下次進學堂會重新檢查 ✓'; });
     if ($('applyTest')) {
       $('applyTest').onclick = () => {
@@ -149,7 +206,8 @@ export function openParent(root, onClose) {
     }
   }
   p.querySelector('.ptabs').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) show(b.dataset.tab); });
-  p.querySelector('.close').onclick = () => { apply(); p.remove(); onClose?.(); };
+  const offSync = onSyncStatus((st) => { const el = body.querySelector('.sync-st'); if (el) el.innerHTML = syncText(st); });
+  p.querySelector('.close').onclick = () => { apply(); offSync(); p.remove(); onClose?.(); };
   p.addEventListener('pointerdown', (e) => e.stopPropagation());
   root.appendChild(p);
   show(tab);
