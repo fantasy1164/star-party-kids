@@ -63,13 +63,9 @@ export async function mount(root, app) {
     }, (short ? 120 : 260) * i + 300));
     await wait(700);
     await showTitle(root, short);
-    if (!short) {
-      await speak('shan', 'title', { node: shan.el });
-      await speak('shan', 'intro', { node: shan.el });
-    } else {
-      speak('shan', 'short_hi', { node: shan.el });
-      await wait(1200);
-    }
+    // 每次都完整喊出「明星總動員！歡樂派對！」，等它說完才問「今天誰要來玩呢？」
+    await speak('shan', 'title', { node: shan.el });
+    if (!short) await speak('shan', 'intro', { node: shan.el });
     markSeen('opening');
     showPicker();
   };

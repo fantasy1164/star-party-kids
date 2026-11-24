@@ -65,7 +65,11 @@ async function playFile(key, my) {
   }
   if (my !== token) return true;
   // 聲音引擎被系統暫停（例如 iOS 播 YouTube 影片後）時，onended 永遠不會來：先試著恢復，並設保險時間，絕不卡住
-  if (ctx.state !== 'running') ctx.resume().catch(() => {});
+  if (ctx.state !== 'running') {
+    // 先等聲音引擎真的醒來再開始算時間，不然保險時間會先到、下一句把這句蓋掉
+    await Promise.race([ctx.resume().catch(() => {}), new Promise((r) => setTimeout(r, 1000))]);
+    if (my !== token) return true;
+  }
   await new Promise((res) => {
     const s = ctx.createBufferSource();
     s.buffer = buf;
