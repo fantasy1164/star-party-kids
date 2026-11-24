@@ -7,12 +7,13 @@ import { div, wait, shuffle, pick, stageRect, burst } from '../core/dom.js';
 import { sfx } from '../core/audio.js';
 import { turnsOn, callTurn, nextTurn, whoseTurn, levelNow } from '../core/turns.js';
 import { setHint } from '../core/session.js';
-import { shanSvg, kidSvg } from '../art/stars.js';
+import { shanSvg, kidSvg, kidHead } from '../art/stars.js';
 import { personSvg, numSvg, ICON2 } from '../art/more.js';
 import { itemSvg } from '../art/town.js';
 import { VEHICLES, DINOS } from '../art/fun.js';
 import { huahuaSvg, xiuxiuSvg, guguSvg, xinxinSvg, ZOO, ABC_ART, MISC, PLACE_ICON, garbageTruckSvg, recycleTruckSvg, trashBagSvg } from '../art/world.js';
 import { boardTrain } from './world.js';
+import { truckTopSvg, postScooterSvg } from '../art/traffic.js';
 
 const tree = () => `<svg viewBox="0 0 80 110"><rect x="34" y="70" width="12" height="38" rx="5" fill="#a9744f"/><circle cx="40" cy="48" r="34" fill="#4fbf6e"/></svg>`;
 const outdoor = (w, d, css) => createDiorama({ w, d, walls: false, zoom: 0.92, cy: 0.6, base: '#8fbf6a', rim: 24, skirt: '#a6d987', horizon: 'town', floorCss: css || 'background: radial-gradient(circle at 40% 35%, #c4ee9f 0, #a3dc84 70%, #95d277 100%)' });
@@ -382,6 +383,7 @@ export function mountPost(root, app) {
       [[60, 120, 0, 2], [200, 120, 1, 5], [340, 120, 2, 3], [480, 120, 3, 1], [620, 120, 0, 4], [60, 470, 1, 7], [200, 470, 2, 6], [340, 470, 3, 8], [480, 470, 1, 2], [620, 470, 2, 9]].forEach(([x, y, c, n]) => dio.addSprite({ x, y, w: 110, h: 120, shadow: 0.5, html: houseSvg(HOUSE_C[c], n) }));
       const xinxin = dio.addSprite({ x: 700, y: 360, w: 90, h: 100, html: xinxinSvg(), shadow: 0.5, tap: 'xinxin' });
       dio.addSprite({ x: 640, y: 360, w: 60, h: 80, html: MISC.mailRed, shadow: 0.4 });
+      dio.addSprite({ x: 560, y: 350, w: 74, h: 70, html: postScooterSvg(), shadow: 0.4 });   // 郵差的綠色機車
       const shan = dio.addSprite({ x: 120, y: 360, w: 90, h: 104, html: shanSvg(), shadow: 0.7, tap: 'shan' });
       return { dio, chars: { xinxin, shan } };
     },
@@ -490,10 +492,108 @@ export function mountGarbage(root, app) {
         ];
         return sortGame(R, { host: 'shan', hostSvg: shanSvg(), intro: yy ? 'gb_rec_go_yy' : 'gb_rec_go', bins, items: shuffle(items), wrong: (it) => `gb_rec_${it.bin}`, done: 'gb_rec_done' });
       } },
+      { id: 'big', icon: `<svg viewBox="0 0 220 90" width="100%" height="100%"><g transform="translate(10 5)">${truckTopSvg()}</g></svg>`, marker: { x: 360, y: 120, z: 230 }, run: bigGame },
     ],
     playful(name, R) {
       if (name === 'gtruck' || name === 'rtruck') { sfx('ding'); R.say('shan', name === 'gtruck' ? 'gb_truck_en' : 'gb_rtruck_en'); return true; }
       return false;
     },
   });
+}
+
+// ---- 大車旁邊哪裡安全（11/25）：從上面看路口和垃圾車，點一個地方站 ----
+//   轉彎：大車右轉時後輪往裡面切（內輪差），路口轉角會被壓到 → 站在人行道裡面、離路口遠一點
+//   司機看得到嗎：車頭前面很近、右邊、後面都是死角 → 站遠一點、看得到司機的臉
+//   倒車（岳岳）：司機看不到車子後面 → 離車子遠遠的，站在旁邊的人行道上
+// 選到危險的地方：紅色的範圍出現、車子動給你看，再選一次（不扣分）。
+const BIG = {
+  turn: { line: 'gb_big_turn', bad: 'gb_big_turn_bad', ok: 'gb_big_turn_ok', truck: [270, 330], move: 'rotate(90deg)', origin: '470px 520px',
+    roads: '<rect x="0" y="200" width="940" height="220" fill="#8a8fa0"/><rect x="520" y="420" width="200" height="220" fill="#8a8fa0"/><path d="M0 310 H520 M620 420 V640" stroke="#fff" stroke-width="5" stroke-dasharray="30 26"/>',
+    zones: '<path d="M470 520 L330 420 A170 170 0 0 1 640 520 Z" fill="#ff3b3b" opacity=".45"/>',
+    spots: [[505, 448, 0], [250, 560, 1], [420, 452, 0, 'hard']] },
+  see: { line: 'gb_big_see', bad: 'gb_big_see_bad', ok: 'gb_big_see_ok', truck: [330, 300], move: '', origin: '0 0',
+    roads: '<rect x="0" y="200" width="940" height="220" fill="#8a8fa0"/><path d="M0 310 H940" stroke="#fff" stroke-width="5" stroke-dasharray="30 26"/>',
+    zones: '<path d="M545 250 L940 120 L940 260 Z" fill="#4cd07d" opacity=".35"/><rect x="530" y="290" width="110" height="110" fill="#ff3b3b" opacity=".45"/><rect x="320" y="382" width="230" height="80" fill="#ff3b3b" opacity=".45"/><rect x="200" y="290" width="128" height="110" fill="#ff3b3b" opacity=".45"/>',
+    spots: [[585, 345, 0], [430, 428, 0], [770, 228, 1], [265, 345, 0, 'hard']] },
+  back: { line: 'gb_big_back', bad: 'gb_big_back_bad', ok: 'gb_big_back_ok', truck: [420, 300], move: 'translateX(-130px)', origin: '0 0',
+    roads: '<rect x="0" y="200" width="940" height="220" fill="#8a8fa0"/><path d="M0 310 H940" stroke="#fff" stroke-width="5" stroke-dasharray="30 26"/>',
+    zones: '<rect x="150" y="290" width="270" height="110" fill="#ff3b3b" opacity=".45"/>',
+    spots: [[300, 345, 0], [560, 540, 1], [380, 430, 0, 'hard']] },
+};
+async function bigGame(R) {
+  const { say, chk, race } = R;
+  const P = R.panel('bigpanel', { host: 'shan', hostSvg: shanSvg() });
+  const el = P.el;
+  try {
+    await say('shan', 'gb_big_go');
+    chk();
+    const rounds = hardSolo(R) ? ['turn', 'see', 'back'] : ['turn', 'see'];
+    for (let r = 0; r < rounds.length; r++) {
+      if (turnsOn()) { await callTurn(); chk(); }
+      const B = BIG[rounds[r]];
+      const hard = levelNow(R.profile) === 'hard';
+      const who = whoseTurn() || R.members[0];
+      el.innerHTML = `<svg class="bv-map" viewBox="0 0 940 640" width="940" height="640"><rect width="940" height="640" fill="#e3e6ec"/>${B.roads}
+        <g class="bv-zones">${B.zones}</g>
+        <g class="bv-move" style="transform-origin:${B.origin}"><g transform="translate(${B.truck[0]} ${B.truck[1]})">${truckTopSvg()}</g></g></svg>`;
+      const zones = el.querySelector('.bv-zones'), mover = el.querySelector('.bv-move');
+      const spots = B.spots.filter((sp) => hard || !sp[3]).map(([x, y, safe]) => {
+        const b = div('bv-spot', '<svg viewBox="0 0 60 60" width="100%" height="100%"><ellipse cx="22" cy="40" rx="8" ry="12" fill="#ff8a3d"/><ellipse cx="38" cy="24" rx="8" ry="12" fill="#ff8a3d"/></svg>');
+        b.style.left = `${x - 40}px`; b.style.top = `${y - 40}px`;
+        b.dataset.safe = safe;
+        el.appendChild(b);
+        return b;
+      });
+      await say('shan', B.line);
+      chk();
+      if (rounds[r] === 'back') { sfx('beepbeep'); setTimeout(() => sfx('beepbeep'), 500); }
+      // 選一個地方；危險的話：紅色範圍出現、車子動給你看，再選一次
+      for (;;) {
+        const pickEl = await race(new Promise((resolve) => {
+          const dn = (e) => { const b = e.target.closest('.bv-spot'); if (!b || b.classList.contains('no')) return; el.removeEventListener('pointerdown', dn); resolve(b); };
+          el.addEventListener('pointerdown', dn);
+        }));
+        chk();
+        sfx('pop');
+        const me = div('bv-me', kidHead(who, 90));
+        me.style.left = pickEl.style.left; me.style.top = pickEl.style.top;
+        el.appendChild(me);
+        pickEl.classList.add('gone');
+        await wait(300);
+        zones.classList.add('show');
+        if (B.move) { if (rounds[r] === 'back') { sfx('beepbeep'); setTimeout(() => sfx('beepbeep'), 500); } else sfx('horn'); mover.style.transform = B.move; }
+        await wait(B.move ? 2000 : 700);
+        chk();
+        if (pickEl.dataset.safe === '1') {
+          sfx('fanfare');
+          R.burstAt(me, { n: 16, stars: true, colors: ['#ffd23f', '#fff3a0', '#4cd07d'] });
+          await say('shan', B.ok);
+          chk();
+          break;
+        }
+        sfx('soft');
+        me.classList.add('shake');
+        await say('shan', B.bad);
+        chk();
+        // 重來：車子回原位、紅色範圍收起來，這個地方打叉
+        me.remove();
+        pickEl.classList.remove('gone');
+        pickEl.classList.add('no');
+        zones.classList.remove('show');
+        mover.style.transition = 'none'; mover.style.transform = ''; void mover.getBoundingClientRect(); mover.style.transition = '';
+        const safeEl = spots.find((b) => b.dataset.safe === '1');
+        if (!hard) safeEl.classList.add('glowy-2d');
+        setHint(() => safeEl);
+        await say('shan', 'gb_big_again');
+        chk();
+      }
+      setHint(null);
+      if (turnsOn() && r < rounds.length - 1) nextTurn({ say: false });
+    }
+    sfx('fanfare');
+    await say('shan', 'gb_big_done');
+  } finally {
+    setHint(null);
+    P.close();
+  }
 }

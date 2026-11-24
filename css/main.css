@@ -961,3 +961,49 @@ body.turn-kk .glowy > svg { filter: drop-shadow(0 0 10px #ff6a2b); }
 .eye-pad.down { left: 410px; top: 440px; }
 .eye-pad.left { left: 190px; top: 220px; }
 .eye-pad.right { left: 630px; top: 220px; }
+
+/* ---------- 城市裡的車（11/25） ---------- */
+.dio-sprite > .veh { width: 100%; height: 100%; }
+.dio-sprite > .veh > svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.dio-sprite.vehicle { transition: opacity .6s; }
+.dio-sprite.vehicle.gone { visibility: visible; opacity: 0; pointer-events: none; }
+.riding .dio-sprite.vehicle { pointer-events: none; }
+/* 聽警笛、讓路 */
+.panel.sirenpanel { background: linear-gradient(#e8f6ff, #fff6e6); }
+.sr-play { left: 400px; top: 26px; width: 140px; height: 140px; border: none; border-radius: 50%; background: #ffe27a; padding: 14px; box-shadow: 0 8px 0 #e0b030; cursor: pointer; }
+.sr-play svg { width: 100%; height: 100%; }
+.sr-play.ringing { box-shadow: 0 8px 0 #e0b030, 0 0 0 10px rgba(255,210,63,.45), 0 0 0 22px rgba(255,210,63,.2); }
+.sr-cards { left: 60px; right: 60px; top: 230px; display: flex; justify-content: space-around; opacity: 0; pointer-events: none; transition: opacity .3s; }
+.sr-cards.show { opacity: 1; pointer-events: auto; }
+.sr-card { width: 220px; height: 170px; border: none; border-radius: 30px; background: #fff; padding: 18px; box-shadow: 0 8px 0 rgba(0,0,0,.08); cursor: pointer; }
+.sr-card svg { width: 100%; height: 100%; }
+.sr-card.right { background: #c8f5d6; box-shadow: 0 0 0 6px #4cd07d; }
+.sr-road { left: 0; right: 0; top: 200px; height: 300px; opacity: 0; pointer-events: none; transition: opacity .3s;
+  background: linear-gradient(#a6d987 0 40px, #c9ced8 40px 52px, #8a8fa0 52px 248px, #c9ced8 248px 260px, #a6d987 260px); }
+.sr-road.show { opacity: 1; pointer-events: auto; }
+.sr-lane { position: absolute; left: 0; right: 0; top: 148px; height: 6px; background: repeating-linear-gradient(90deg, #fff 0 40px, transparent 40px 80px); }
+.sr-me { position: absolute; left: 520px; top: 110px; width: 170px; height: 140px; transition: transform .5s cubic-bezier(.3,1.3,.5,1); cursor: pointer; }
+.sr-me.aside { transform: translate(30px, 62px) rotate(4deg); }
+.sr-em { position: absolute; left: -260px; top: 66px; width: 210px; height: 130px; transition: left 1.6s ease-in; }
+.sr-em.near { left: 40px; transition-duration: 1.2s; }
+.sr-em.pass { left: 1000px; transition-duration: 1.6s; }
+.sr-me svg, .sr-em svg { width: 100%; height: 100%; }
+/* 坐公車 */
+.panel.buspanel { background: linear-gradient(#cfeaff 0 62%, #c9ced8 62% 66%, #8a8fa0 66%); }
+.bus-side { left: 250px; top: 150px; width: 340px; height: 300px; opacity: .9; }
+.bus-side svg { width: 100%; height: 100%; }
+.panel.bellpanel { background: linear-gradient(#fff6e6, #ffe9c8); }
+.bus-bell { left: 360px; top: 170px; width: 220px; height: 220px; cursor: pointer; border-radius: 50%; }
+.bus-bell svg { width: 100%; height: 100%; }
+.bus-bell.pressed { transform: scale(.9); transition: transform .15s; }
+/* 大車旁邊哪裡安全 */
+.panel.bigpanel { background: #e3e6ec; }
+.bv-map { left: 0; top: 0; }
+.bv-zones { opacity: 0; transition: opacity .5s; }
+.bv-zones.show { opacity: 1; }
+.bv-move { transition: transform 1.8s ease-in-out; transform-box: view-box; }
+.bv-spot { width: 80px; height: 80px; border-radius: 50%; background: rgba(255,255,255,.85); box-shadow: 0 0 0 5px #ffd23f; padding: 6px; cursor: pointer; animation: pulse 1.4s infinite; }
+.bv-spot.gone { visibility: hidden; }
+.bv-spot.no { opacity: .35; box-shadow: 0 0 0 5px #ff5b5b; animation: none; pointer-events: none; }
+.bv-me { width: 80px; height: 80px; z-index: 3; animation: popin .35s cubic-bezier(.3,1.6,.5,1) both; }
+.bv-me svg { width: 100%; height: 100%; }

@@ -10,9 +10,10 @@ import { setHint } from '../core/session.js';
 import { KIDS } from '../config.js';
 import { shanSvg, kidSvg, starPolygon } from '../art/stars.js';
 import { guaSvg, dongSvg, bibiSvg, personSvg } from '../art/more.js';
-import { duoduoSvg, jiujiuSvg, baobaoSvg, dadaSvg, itemSvg } from '../art/town.js';
+import { duoduoSvg, jiujiuSvg, baobaoSvg, dadaSvg, babaSvg, itemSvg } from '../art/town.js';
 import { shaoSvg, VEHICLES, signSvg, DINOS, boneSvg, skullSvg, ANIMALS } from '../art/fun.js';
 import { xieSvg } from '../art/doctor.js';
+import { ambulanceSvg, speakerSvg } from '../art/traffic.js';
 
 const hardSolo = (R) => R.members.includes('yy') && !turnsOn();
 const tree = (s = 1) => `<svg viewBox="0 0 80 110"><rect x="34" y="70" width="12" height="38" rx="5" fill="#a9744f"/><circle cx="40" cy="48" r="34" fill="#4fbf6e"/><circle cx="28" cy="36" r="10" fill="#8fe39a" opacity=".7"/></svg>`;
@@ -778,10 +779,102 @@ export function mountPolice(root, app) {
           bins: [{ id: 'good', html: itemSvg('good') }, { id: 'bad', html: itemSvg('bad') }],
           items: all.map(([k, html, bin]) => ({ k, bin, html })), wrong: (it) => `pl_lost_${it.k}`, done: 'pl_lost_done' });
       } },
+      { id: 'siren', icon: speakerSvg(), marker: { x: 430, y: 470, z: 170 }, run: sirenGame },
     ],
     playful(name, R) { if (name === 'shao') { sfx('ding'); R.hop(R.set.chars.shao.el); R.say('shao', 'shao_hi'); return true; } return false; },
   });
 }
+
+// ---- 聽警笛、讓路（11/25）：先只聽聲音，猜是救護車、消防車還是警車；再點我們的車靠邊停，讓它先過 ----
+// 岳岳是聽覺型：三種警笛聲做得很不一樣（救護車高低兩個音輪流、消防車慢慢拉高再降、警車很快上下滑），音量放小。
+const SIRENS = { amb: { sfx: 'sirenAmb', art: () => ambulanceSvg() }, fire: { sfx: 'sirenFire', art: () => VEHICLES.fire }, police: { sfx: 'sirenPolice', art: () => VEHICLES.police } };
+async function sirenGame(R) {
+  const { say, chk, race } = R;
+  const P = R.panel('sirenpanel', { host: 'shao', hostSvg: shaoSvg() });
+  const el = P.el;
+  try {
+    el.innerHTML = `<button class="sr-play">${speakerSvg()}</button><div class="sr-cards"></div>
+      <div class="sr-road"><div class="sr-lane"></div><div class="sr-me">${babaSvg()}</div><div class="sr-em"></div></div>`;
+    const play = el.querySelector('.sr-play'), cardsBox = el.querySelector('.sr-cards');
+    const road = el.querySelector('.sr-road'), me = el.querySelector('.sr-me'), em = el.querySelector('.sr-em');
+    let cur = null;
+    const hear = () => { if (!cur) return; sfx(SIRENS[cur].sfx); R.hop(play, 'hop'); play.classList.add('ringing'); setTimeout(() => play.classList.remove('ringing'), 2400); };
+    play.addEventListener('pointerdown', (e) => { e.stopPropagation(); hear(); });
+    await say('shao', 'ps_siren_go');
+    chk();
+    const order = shuffle(Object.keys(SIRENS));
+    if (hardSolo(R)) order.push(pick(order.slice(0, 2)));
+    for (let r = 0; r < order.length; r++) {
+      if (turnsOn()) { await callTurn(); chk(); }
+      cur = order[r];
+      // 1. 聽聲音、點是哪一台車
+      road.classList.remove('show');
+      me.classList.remove('aside');
+      em.classList.remove('pass');
+      cardsBox.innerHTML = shuffle(Object.keys(SIRENS)).map((k) => `<button class="sr-card" data-k="${k}">${SIRENS[k].art()}</button>`).join('');
+      cardsBox.classList.add('show');
+      await say('shao', 'ps_siren_listen');
+      chk();
+      hear();
+      setHint(() => play);
+      let wrongs = 0, lastV = 0;
+      await race(new Promise((resolve) => {
+        const dn = (e) => {
+          const c = e.target.closest('.sr-card');
+          if (!c || c.disabled) return;
+          if (c.dataset.k === cur) { cardsBox.removeEventListener('pointerdown', dn); c.classList.add('right'); resolve(); return; }
+          wrongs++;
+          sfx('soft');
+          R.hop(c, 'shake');
+          if (Date.now() - lastV > 2600) { lastV = Date.now(); say('shao', 'ps_siren_wrong').then(hear); }
+          // 錯兩次（愷愷錯一次）：對的車發亮
+          if (wrongs >= (levelNow(R.profile) === 'hard' ? 2 : 1)) cardsBox.querySelector(`[data-k="${cur}"]`).classList.add('glowy-2d');
+        };
+        cardsBox.addEventListener('pointerdown', dn);
+      }));
+      chk();
+      sfx('sparkle');
+      R.burstAt(cardsBox.querySelector('.right'), { n: 14, stars: true, colors: ['#ffd23f', '#fff3a0'] });
+      await say('shao', `ps_siren_${cur}`);
+      chk();
+      // 2. 讓路：它從後面開過來，點我們的車靠邊停
+      cardsBox.classList.remove('show');
+      em.innerHTML = SIRENS[cur].art();
+      road.classList.add('show');
+      await wait(400);
+      sfx(SIRENS[cur].sfx);
+      em.classList.add('near');
+      me.classList.add('glowy-2d');
+      setHint(() => me);
+      if (r === 0) say('shao', 'ps_siren_yield');
+      await race(new Promise((resolve) => me.addEventListener('pointerdown', resolve, { once: true })));
+      chk();
+      setHint(null);
+      me.classList.remove('glowy-2d');
+      me.classList.add('aside');
+      sfx('click');
+      await wait(500);
+      em.classList.remove('near');
+      em.classList.add('pass');
+      sfx(SIRENS[cur].sfx);
+      await wait(1800);
+      sfx('fanfare');
+      R.burstAt(me, { n: 16, stars: true, colors: ['#ffd23f', '#fff3a0', '#4cd07d'] });
+      await say('shao', 'ps_siren_yield_ok');
+      chk();
+      if (turnsOn() && r < order.length - 1) nextTurn({ say: false });
+    }
+    cur = null;
+    await say('shao', 'ps_siren_walk');
+    chk();
+    sfx('fanfare');
+    await say('shao', 'ps_siren_done');
+  } finally {
+    setHint(null);
+    P.close();
+  }
+}
+
 function crossIcon(k) {
   if (k === 'walk') return `<svg viewBox="0 0 100 100" width="100%" height="100%"><path d="M20 70 H80 M20 50 H80 M20 30 H80" stroke="#fff" stroke-width="10"/><circle cx="56" cy="20" r="9" fill="#ffd9b8"/><path d="M56 30 V56 L44 76 M56 56 L66 76 M56 38 L40 30" stroke="#2f7fe0" stroke-width="7" stroke-linecap="round" fill="none"/></svg>`;
   const flip = k === 'right' ? 'transform="scale(-1 1) translate(-100 0)"' : '';

@@ -63,11 +63,12 @@ let hand = null;
 let stageRoot = null;
 export function setupHints(stageEl) {
   stageRoot = stageEl;
-  ['pointerdown', 'pointermove'].forEach((t) => document.addEventListener(t, () => { lastTouch = Date.now(); hideHand(); wake(); }, { capture: true, passive: true }));
+  ['pointerdown', 'pointermove'].forEach((t) => document.addEventListener(t, () => { lastTouch = Date.now(); still = false; hideHand(); wake(); }, { capture: true, passive: true }));
   setInterval(() => {
     // 省電：沒人碰、也沒人在說話時，停掉一直重複的小動畫（標記上下飄、角色眨眼晃動、警車燈…）。
     // 畫面完全不動時 iPhone／iPad 就不用每秒重畫 60 次，比較不會發燙、降頻變鈍（11/24）。
-    if (Date.now() - lastTouch > STILL_MS && quietFor() > 1500) rest(); else wake();
+    still = Date.now() - lastTouch > STILL_MS && quietFor() > 1500;
+    if (still) rest(); else wake();
     if (!hintFn || hand) return;
     if (Date.now() - lastTouch < 8000 || quietFor() < 3000) return;
     const target = hintFn();
@@ -84,6 +85,9 @@ export function setupHints(stageEl) {
   }, 1000);
 }
 const STILL_MS = 5000;
+// 畫面現在是不是「沒人碰、沒人說話」的省電狀態（路上的車、捷運這種自己寫的動畫也跟著停）
+let still = false;
+export const stillNow = () => still;
 const paused = new Set();
 function rest() {
   for (const a of document.getAnimations()) {

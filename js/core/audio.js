@@ -183,6 +183,15 @@ const SFX = {
   beep: (t) => tone(2600, t, 0.12, { type: 'triangle', gain: 0.12 }),
   breathIn: (t) => { noise(t, 2.4, { freq: 500, to: 1400, q: 0.5, gain: 0.08 }); [523, 587, 659, 784].forEach((f, i) => INST.musicbox(ctx, sfxBus, f / 2, t + i * 0.55, 0.12)); },
   breathOut: (t) => { noise(t, 2.2, { freq: 1300, to: 380, q: 0.5, gain: 0.08 }); [784, 659, 587, 523].forEach((f, i) => INST.musicbox(ctx, sfxBus, f / 2, t + i * 0.5, 0.1)); },
+  // 交通工具（11/25）：汽車喇叭、機車喇叭；三種警笛都不一樣（音量放小，岳岳對聲音敏感）
+  horn: (t) => { [0, 0.22].forEach((d) => { tone(392, t + d, 0.16, { type: 'square', gain: 0.05, lp: 1400 }); tone(494, t + d, 0.16, { type: 'square', gain: 0.04, lp: 1400 }); }); },
+  beepbeep: (t) => { [0, 0.16].forEach((d) => tone(880, t + d, 0.1, { type: 'square', gain: 0.04, lp: 2400 })); },
+  // 救護車：高低兩個音輪流（喔咿喔咿）
+  sirenAmb: (t) => { for (let i = 0; i < 6; i++) tone(i % 2 ? 660 : 880, t + i * 0.42, 0.4, { type: 'triangle', gain: 0.09, attack: 0.02, release: 0.05 }); },
+  // 消防車：慢慢往上拉高、再慢慢降下來（嗚——）
+  sirenFire: (t) => { tone(500, t, 1.3, { type: 'sawtooth', to: 1150, gain: 0.05, lp: 2000, attack: 0.1, release: 0.05 }); tone(1150, t + 1.3, 1.2, { type: 'sawtooth', to: 520, gain: 0.05, lp: 2000, attack: 0.02, release: 0.3 }); },
+  // 警車：很快的上下滑（喔喔喔喔）
+  sirenPolice: (t) => { for (let i = 0; i < 9; i++) tone(700, t + i * 0.27, 0.26, { type: 'square', to: 1500, gain: 0.035, lp: 2600, attack: 0.01, release: 0.04 }); },
   drum: (t) => { kick(ctx, sfxBus, t, 0.9); noise(t, 0.08, { freq: 1800, q: 0.8, gain: 0.25 }); },
 };
 export function sfx(name) {

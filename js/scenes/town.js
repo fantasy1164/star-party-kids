@@ -13,13 +13,15 @@ import { sfx, playMusic } from '../core/audio.js';
 import { isDark, roomTint, hour } from '../core/clock.js';
 import { turnsOn, turnsScene, whoseTurn, nextTurn, callTurn, levelNow } from '../core/turns.js';
 import { setHint, setPlaying, mountClock } from '../core/session.js';
-import { KIDS } from '../config.js';
+import { KIDS, NAMES } from '../config.js';
 import { shanSvg, kidHead, starPolygon } from '../art/stars.js';
 import { personSvg } from '../art/more.js';
 import { babaSvg, itemSvg, ITEM } from '../art/town.js';
 import { VEHICLES, helmetSvg, shaoSvg } from '../art/fun.js';
 import { PLACE_ICON, MISC, garbageTruckSvg, recycleTruckSvg } from '../art/world.js';
 import { mountZone, worldBtn } from './world.js';
+import { startTraffic } from './traffic.js';
+import { stepsGame } from './kit.js';
 
 // 垃圾車來的時間（台灣通常傍晚到晚上）：16:00～21:00 在小區路口
 export const garbageTime = () => hour() >= 16 && hour() < 21;
@@ -41,6 +43,9 @@ const EDGES = [
 ];
 // 河：從北邊彎到南邊
 const RIVER = 'M1480 -60 Q1620 500 1520 1000 T1640 2260';
+// 高架捷運的軌道（東西向一直線）與火車的鐵軌（火車站後面往東）
+const MRT_LINE = { y: 1212, x0: 1260, x1: 2190, z: 128 };
+const TRAIN_LINE = { y: 500, stop: 2975, far: 3260 };   // 停在車站東邊的月台（停在車站正後面會被畫到屋頂上）
 Object.entries(NODES).forEach(([id, n]) => { n.id = id; });
 const qpt = (p0, c, p1, t) => ({ x: (1 - t) ** 2 * p0.x + 2 * (1 - t) * t * c[0] + t * t * p1.x, y: (1 - t) ** 2 * p0.y + 2 * (1 - t) * t * c[1] + t * t * p1.y });
 // 一條馬路的折線（a → b 方向），以及各點的累積長度
@@ -508,6 +513,17 @@ export function buildTown() {
   }
   // 火車站後面的鐵軌，往東邊一直延伸出去（去郊區、海邊、山上）
   dio.addDecal({ x: 2560, y: 480, w: 1400, h: 40, z: 0.9, css: 'background:repeating-linear-gradient(90deg,#8a6a4a 0 8px,transparent 8px 26px),linear-gradient(#bfc4cf 0 18%,transparent 18% 82%,#bfc4cf 82%)' });
+  // 高架捷運（11/25）：沿著市中心大馬路的南邊、跨過河；捷運站就在下面，月台有藍色屋頂
+  {
+    const { y: MY, x0, x1, z: MZ } = MRT_LINE;
+    for (let x = x0 + 30; x <= x1 - 20; x += 116) dio.addBox({ x: x - 9, y: MY - 9, w: 18, d: 18, h: MZ, color: '#d8dde6' });
+    dio.addBox({ x: x0, y: MY - 17, w: x1 - x0, d: 34, h: 12, z: MZ, color: '#e8ecf2', top: '#c9ced8' });
+    const mp = PLACES.mrt;
+    [[-66, -24], [62, -24], [-66, 20], [62, 20]].forEach(([dx, dy]) => dio.addBox({ x: mp.x + dx, y: MY + dy, w: 6, d: 6, h: 58, z: MZ + 12, color: '#3ea8e0' }));
+    dio.addBox({ x: mp.x - 72, y: MY - 30, w: 144, d: 60, h: 6, z: MZ + 70, color: '#3ea8e0', top: '#5fbbe8' });
+  }
+  // 火車停靠的月台（車站東邊），月台邊一條黃線
+  dio.addDecal({ x: TRAIN_LINE.stop - 120, y: TRAIN_LINE.y + 22, w: 240, h: 30, z: 1, css: 'background:linear-gradient(#ffd23f 0 4px,#d8dde6 4px)' });
   // 一般的房子、店、公寓：讓城鎮有「有人住」的感覺（不能點）
   const filler = [
     // 住宅區：一排一排透天
@@ -595,8 +611,19 @@ export async function mountTown(root, app) {
   // 地點列：點一下鏡頭飛過去（標記會跳），再點一次就出發
   placeBar(root, dio, PLACES, T.markers, app.trip.location, (id) => { if (!going) dio.el.dispatchEvent(new CustomEvent('tapname', { detail: `go:${id}` })); }, shan.el);
   setHint(() => document.querySelector('.placebar button'));
+  // 路上的車、高架捷運、火車（11/25）：一直有車在跑，點車子閃閃會說是什麼車
+  startTraffic(dio, { NODES, neighbors, edgePts, along, MRT_LINE, TRAIN_LINE, PLACES }, { alive: () => app.alive() });
+  let lastVeh = 0;
 
   const onTapTown = async (name) => {
+    if (name.startsWith('veh:')) {
+      if (going || Date.now() - lastVeh < 1500) return;
+      lastVeh = Date.now();
+      const kind = name.slice(4);
+      sfx(kind === 'mrt' || kind === 'train' ? 'ding' : kind === 'scooter' || kind === 'post' ? 'beepbeep' : 'horn');
+      speak('shan', `veh_${kind}`, { node: shan.el });
+      return;
+    }
     if (name.startsWith('go:')) {
       if (going) return;
       const to = name.slice(3);
@@ -734,6 +761,7 @@ export async function mountRide(root, app) {
   try {
     // 1. 繫安全帶
     if (vehicle === 'bike') await helmet(root, app, () => alive);
+    else if (vehicle === 'bus') await busBoard(root, app, full, () => alive);   // 公車沒有安全帶：排隊、招手、刷卡、坐好
     else await seatbelt(root, app, full, () => alive);
     chk();
     // 2. 開車
@@ -770,11 +798,19 @@ export async function mountRide(root, app) {
         await chooseDirection(a, b);
         chk();
       }
+      // 坐公車：快到的時候按下車鈴
+      if (vehicle === 'bus' && i === segs - 1) {
+        stopBtn.style.visibility = 'hidden';
+        await busBell(root, app, () => alive);
+        chk();
+        stopBtn.style.visibility = '';
+      }
       const ev = events[i];
       await drive(a, b, ev);
       chk();
     }
     stopBtn.remove();
+    if (vehicle === 'bus') { await say('baba', 'bus_off', car.el); chk(); }
     // 3. 到了
     sfx('fanfare');
     burst(stageW() / 2, 400, { n: 24, spread: 220 });
@@ -937,6 +973,82 @@ function lightSvg(state) {
 }
 
 // ---- 騎腳踏車：先把安全帽拖到頭上 ----
+// ---- 坐公車（11/25）：在站牌排隊 → 看清楚是哪一路再招手 → 上車刷卡 → 坐好、抓好扶手；快到了按下車鈴、等車停好再一個一個下車 ----
+// 用 kit.js 的「照步驟」玩法；這裡不是房間，所以自己做一個小小的 R。
+function rideR(root, app, alive) {
+  const nodeOv = {};
+  const id = app.profile.id;
+  const R = {
+    profile: app.profile, members: app.profile.members,
+    say: (ch, line) => (alive() ? speak(ch, line, { name: NAMES[id], who: id, node: nodeOv[ch] || null }) : Promise.resolve()),
+    chk: () => { if (!alive()) throw new Error('left'); },
+    race: (p) => Promise.race([p, new Promise((_, rej) => { const t = setInterval(() => { if (!alive()) { clearInterval(t); rej(new Error('left')); } }, 400); Promise.resolve(p).finally(() => clearInterval(t)); })]),
+    hop(el, cls = 'hop') { if (!el) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); },
+    burstAt(el, opt) { const r = stageRect(el); burst(r.x, r.y, opt); },
+    panel(cls = '', { host = null, hostSvg = '' } = {}) {
+      const scrim = div('scrim'), pnl = div(`panel ${cls}`);
+      root.append(scrim, pnl);
+      let face = null;
+      if (host) { face = div('panel-host', hostSvg); root.appendChild(face); nodeOv[host] = face; }
+      return { el: pnl, close() { scrim.remove(); pnl.remove(); face?.remove(); delete nodeOv[host]; } };
+    },
+  };
+  return R;
+}
+const BUS_ART = {
+  line: `<svg viewBox="0 0 100 100" width="100%" height="100%"><rect x="46" y="20" width="8" height="78" fill="#8a8fa0"/><rect x="26" y="6" width="48" height="36" rx="8" fill="#2f7fe0"/><rect x="34" y="14" width="32" height="20" rx="4" fill="#fff"/><rect x="38" y="19" width="24" height="10" fill="#ffb627"/>${[0, 1, 2].map((i) => `<ellipse cx="${22 + i * 0}" cy="${62 + i * 13}" rx="7" ry="5" fill="#ff8a3d"/><ellipse cx="${34}" cy="${66 + i * 13}" rx="7" ry="5" fill="#ff8a3d"/>`).join('')}</svg>`,
+  wave: `<svg viewBox="0 0 100 100" width="100%" height="100%"><circle cx="50" cy="50" r="46" fill="#fff3c4"/><path d="M38 80 V44 Q38 38 44 38 Q50 38 50 44 V34 Q50 28 56 28 Q62 28 62 34 V40 Q62 34 68 34 Q74 34 74 40 V62 Q74 82 56 84 H48 Q38 84 34 74 L24 58 Q22 52 28 50 Q32 49 36 54Z" fill="#ffd9b8" stroke="#e0a07a" stroke-width="3"/><path d="M16 30 Q10 40 16 50 M84 30 Q90 40 84 50" stroke="#ff8a3d" stroke-width="5" fill="none" stroke-linecap="round"/></svg>`,
+  card: `<svg viewBox="0 0 100 100" width="100%" height="100%"><rect x="30" y="8" width="44" height="84" rx="8" fill="#4a3b6b"/><rect x="36" y="16" width="32" height="22" rx="4" fill="#7fe3a0"/><circle cx="52" cy="62" r="14" fill="#ffd23f" opacity=".8"/><rect x="8" y="46" width="44" height="30" rx="6" fill="#ff8fb8" transform="rotate(-15 30 61)"/><circle cx="20" cy="62" r="5" fill="#fff" transform="rotate(-15 30 61)"/></svg>`,
+  seat: `<svg viewBox="0 0 100 100" width="100%" height="100%"><rect x="20" y="20" width="44" height="50" rx="10" fill="#2f7fe0"/><rect x="16" y="62" width="56" height="16" rx="6" fill="#1f5fb8"/><rect x="24" y="78" width="8" height="18" fill="#8a8fa0"/><rect x="56" y="78" width="8" height="18" fill="#8a8fa0"/><rect x="78" y="6" width="6" height="90" rx="3" fill="#ffd23f"/><path d="M70 20 H92" stroke="#ffd23f" stroke-width="6" stroke-linecap="round"/></svg>`,
+};
+async function busBoard(root, app, full, alive) {
+  const R = rideR(root, app, alive);
+  if (!full) {
+    // 短版：只要刷卡
+    return stepsGame(R, { host: 'baba', hostSvg: babaSvg(), cls: 'buspanel', intro: 'bus_short', wrong: 'bus_wrong', done: 'bus_ready',
+      scene: `<div class="bus-side">${VEHICLES.bus}</div>`,
+      steps: [{ t: 'card', icon: BUS_ART.card, line: 'bus_card' }],
+      targets: [{ id: 'card', x: 600, y: 230, w: 170, h: 170, html: BUS_ART.card }] }).catch(() => {});
+  }
+  return stepsGame(R, { host: 'baba', hostSvg: babaSvg(), cls: 'buspanel', intro: 'bus_go', wrong: 'bus_wrong', done: 'bus_ready',
+    scene: `<div class="bus-side">${VEHICLES.bus}</div>`,
+    steps: [
+      { t: 'line', icon: BUS_ART.line, line: 'bus_line' },
+      { t: 'wave', icon: BUS_ART.wave, line: 'bus_wave' },
+      { t: 'card', icon: BUS_ART.card, line: 'bus_card' },
+      { t: 'seat', icon: BUS_ART.seat, line: 'bus_seat' },
+    ],
+    targets: [
+      { id: 'card', x: 620, y: 130, w: 150, h: 150, html: BUS_ART.card },
+      { id: 'line', x: 60, y: 140, w: 150, h: 150, html: BUS_ART.line },
+      { id: 'seat', x: 620, y: 330, w: 150, h: 150, html: BUS_ART.seat },
+      { id: 'wave', x: 60, y: 340, w: 150, h: 150, html: BUS_ART.wave },
+    ],
+    fx: async (i, t) => { sfx(['tap', 'boing', 'ding', 'pop'][i]); await wait(300); },
+  }).catch(() => {});
+}
+// 下車鈴：一顆大大的紅色按鈕，按下去「叮咚」
+async function busBell(root, app, alive) {
+  const R = rideR(root, app, alive);
+  const P = R.panel('bellpanel', { host: 'baba', hostSvg: babaSvg() });
+  try {
+    const bell = div('bus-bell glowy-2d', `<svg viewBox="0 0 100 100" width="100%" height="100%"><circle cx="50" cy="50" r="46" fill="#ffd23f"/><circle cx="50" cy="50" r="32" fill="#e53935"/><circle cx="42" cy="40" r="9" fill="#fff" opacity=".5"/></svg>`);
+    P.el.appendChild(bell);
+    setHint(() => bell);
+    R.say('baba', 'bus_bell');
+    await R.race(new Promise((resolve) => bell.addEventListener('pointerdown', resolve, { once: true })));
+    setHint(null);
+    bell.classList.remove('glowy-2d');
+    bell.classList.add('pressed');
+    sfx('doorbell');
+    R.burstAt(bell, { n: 14, stars: true, colors: ['#ffd23f', '#fff3a0'] });
+    await wait(900);
+  } catch (e) { /* 離開了 */ } finally {
+    setHint(null);
+    P.close();
+  }
+}
+
 async function helmet(root, app, alive) {
   const id = app.profile.members[0];
   const scrim = div('scrim');
