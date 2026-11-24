@@ -35,7 +35,8 @@ export const CHARACTERS = {
   baba: { id: 'baba', name: '叭叭', tts: { pitch: 1.3, rate: 1.08 } },   // 遙控車，載大家去各個地方
   dada: { id: 'dada', name: '達達', tts: { pitch: 1.1, rate: 1.0 } },    // 木頭小馬，農場
   duoduo: { id: 'duoduo', name: '多多', tts: { pitch: 1.35, rate: 1.0 } },// 存錢筒小豬，超市
-  baobao: { id: 'baobao', name: '抱抱', tts: { pitch: 0.95, rate: 0.9 } },// 泰迪熊醫生，診所
+  baobao: { id: 'baobao', name: '抱抱', tts: { pitch: 0.95, rate: 0.9 } },// 泰迪熊護理師，醫院（謝醫生的小幫手）
+  xie: { id: 'xie', name: '謝醫生', tts: { pitch: 0.85, rate: 0.9 } },      // 小兒科醫生，醫院裡唯一的人類角色
   jiujiu: { id: 'jiujiu', name: '啾啾', tts: { pitch: 1.7, rate: 1.1 } },  // 發條小鳥，公園
   shao: { id: 'shao', name: '哨哨', tts: { pitch: 1.0, rate: 1.0 } },     // 玩具警察狗，警察局（原創角色）
   huahua: { id: 'huahua', name: '嘩嘩', tts: { pitch: 0.9, rate: 1.0 } },   // 玩具消防栓，消防局

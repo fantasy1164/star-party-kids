@@ -15,7 +15,7 @@
 //   back           → 左上角回家鈕要回哪裡（家裡的房間回 'house'，小鎮的地點回 'town'）
 //   setup(R)       → 房間自己的初始化（可省略）
 //   playful(name, R) → 沒在玩關卡時點到東西的反應，處理了就回傳 true（可省略）
-import { div, wait, burst, stageRect, toStage, stageW } from '../core/dom.js';
+import { div, wait, burst, stageRect, toStage, stageW, onFit } from '../core/dom.js';
 import { speak } from '../core/voice.js';
 import { playMusic, sfx } from '../core/audio.js';
 import { state, addStar, doneToday } from '../core/store.js';
@@ -167,6 +167,19 @@ export async function runRoom(root, app, spec) {
     steps[g.id] = b;
   }
   root.appendChild(plan);
+  // 關卡多（醫院有五個）時按鈕小一點；兩兄弟一起玩、左上有兩個星星罐時，流程條往右讓開，不要蓋住罐子
+  if (spec.games.length > 4) plan.classList.add('many');
+  const placePlan = () => {
+    plan.style.setProperty('--plan-dx', '0px');
+    const jb = root.querySelector('.jars');
+    if (!jb || plan.classList.contains('hide')) return;
+    const a = stageRect(jb), b = stageRect(plan);
+    const need = a.left + a.w + 14 - b.left;
+    if (need > 0) plan.style.setProperty('--plan-dx', `${Math.min(need, Math.max(0, stageW() - 150 - (b.left + b.w)))}px`);
+  };
+  requestAnimationFrame(placePlan);
+  const offFit = onFit(placePlan);
+  app.onLeave(offFit);
   const markers = {};
   for (const g of spec.games) {
     markers[g.id] = dio.addSprite({ ...g.marker, w: 100, h: 100, html: `<div class="inner">${g.icon}</div>`, cls: 'marker', shadow: 0, tap: `game:${g.id}` });
@@ -183,6 +196,7 @@ export async function runRoom(root, app, spec) {
   }
   function showHub(on) {
     plan.classList.toggle('hide', !on);
+    if (on) requestAnimationFrame(placePlan);
     for (const m of Object.values(markers)) m.el.classList.toggle('gone', !on);
     if (on) {
       const nx = nextGame();

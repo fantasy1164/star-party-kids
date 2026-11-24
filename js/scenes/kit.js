@@ -164,7 +164,7 @@ export async function findGame(R, opt) {
 }
 
 // ---------------- 照步驟 ----------------
-// opt: { host, hostSvg, intro, scene: 背景 html, targets: [{ id, html, x, y, w, h }], steps: [{ t, icon, line }], wrong, done, fx(i, el, panel) }
+// opt: { host, hostSvg, intro, scene: 背景 html, targets: [{ id, html, x, y, w, h }], steps: [{ t, icon, line, who? }], wrong, done, fx(i, el, panel) }
 export async function stepsGame(R, opt) {
   const { say, chk, race } = R;
   const P = R.panel(`stepspanel ${opt.cls || ''}`, { host: opt.host, hostSvg: opt.hostSvg });
@@ -184,7 +184,7 @@ export async function stepsGame(R, opt) {
       const target = el.querySelector(`[data-w="${s.t}"]`);
       if (levelNow(R.profile) === 'easy') target.classList.add('glowy-2d');
       setHint(() => target);
-      say(opt.host, s.line);
+      say(s.who || opt.host, s.line);
       await race(new Promise((resolve) => {
         const dn = (e) => {
           const w = e.target.closest('[data-w]')?.dataset.w;

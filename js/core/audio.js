@@ -179,6 +179,10 @@ const SFX = {
   door: (t) => { tone(180, t, 0.4, { to: 260, type: 'sawtooth', gain: 0.05, lp: 900 }); noise(t + 0.3, 0.1, { freq: 400, q: 1, gain: 0.2 }); },
   tvoff: (t) => { tone(1600, t, 0.15, { to: 80, gain: 0.12 }); noise(t, 0.06, { freq: 3000, q: 1, gain: 0.15 }); },
   tick: (t) => { tone(1500, t, 0.04, { gain: 0.15 }); },
+  // 醫院（11/24）：耳溫槍嗶一聲；深呼吸（吸氣慢慢往上、吐氣慢慢往下，柔柔的風聲＋音樂盒）
+  beep: (t) => tone(2600, t, 0.12, { type: 'triangle', gain: 0.12 }),
+  breathIn: (t) => { noise(t, 2.4, { freq: 500, to: 1400, q: 0.5, gain: 0.08 }); [523, 587, 659, 784].forEach((f, i) => INST.musicbox(ctx, sfxBus, f / 2, t + i * 0.55, 0.12)); },
+  breathOut: (t) => { noise(t, 2.2, { freq: 1300, to: 380, q: 0.5, gain: 0.08 }); [784, 659, 587, 523].forEach((f, i) => INST.musicbox(ctx, sfxBus, f / 2, t + i * 0.5, 0.1)); },
   drum: (t) => { kick(ctx, sfxBus, t, 0.9); noise(t, 0.08, { freq: 1800, q: 0.8, gain: 0.25 }); },
 };
 export function sfx(name) {

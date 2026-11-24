@@ -1,4 +1,4 @@
-// 小鎮的新地點：超市（多多）、公園（啾啾）、診所（抱抱）、農場（達達）。每個地點三個短關卡。
+// 小鎮的新地點：超市（多多）、公園（啾啾）、醫院（謝醫生＋護理師抱抱）、農場（達達）。每個地點三個短關卡。
 // 大部分用 kit.js 的三種玩法（分類、尋找、照步驟）組合；付錢、溜滑梯排隊、身體部位是各自的特別玩法。
 import { runRoom } from './room-base.js';
 import { sortGame, findGame, stepsGame } from './kit.js';
@@ -12,6 +12,7 @@ import { shanSvg, kidSvg, starPolygon } from '../art/stars.js';
 import { guaSvg, dongSvg, bibiSvg, personSvg } from '../art/more.js';
 import { duoduoSvg, jiujiuSvg, baobaoSvg, dadaSvg, itemSvg } from '../art/town.js';
 import { shaoSvg, VEHICLES, signSvg, DINOS, boneSvg, skullSvg, ANIMALS } from '../art/fun.js';
+import { xieSvg } from '../art/doctor.js';
 
 const hardSolo = (R) => R.members.includes('yy') && !turnsOn();
 const tree = (s = 1) => `<svg viewBox="0 0 80 110"><rect x="34" y="70" width="12" height="38" rx="5" fill="#a9744f"/><circle cx="40" cy="48" r="34" fill="#4fbf6e"/><circle cx="28" cy="36" r="10" fill="#8fe39a" opacity=".7"/></svg>`;
@@ -264,93 +265,144 @@ async function queueGame(R) {
   }
 }
 
-// ============================== 診所（抱抱） ==============================
+// ============================== 醫院・小兒科（謝醫生；抱抱是護理小幫手） ==============================
+// 11/24：醫院只有一個人類角色謝醫生（小兒科）。五件事：看醫生流程、哪裡不舒服、勇敢打針（深呼吸）、視力檢查、生病時怎麼做。
+// 岳岳：打針前的深呼吸（按住按鈕吸氣、放開吐氣），練習讓自己冷靜；愷愷：視力檢查（E 的開口朝哪邊）練觀察和方向。
+const giraffeSvg = () => `<svg viewBox="0 0 120 300"><rect x="70" y="10" width="40" height="286" rx="10" fill="#fff"/>${[...Array(13)].map((_, i) => `<path d="M70 ${24 + i * 21} H${i % 2 ? 84 : 94}" stroke="#ff8a3d" stroke-width="4"/>`).join('')}
+  <path d="M30 296 V120 C30 90 40 70 50 50" stroke="#ffc94a" stroke-width="22" stroke-linecap="round" fill="none"/>
+  <ellipse cx="54" cy="40" rx="20" ry="14" fill="#ffc94a"/><path d="M46 28 V16 M60 28 V16" stroke="#c98b3a" stroke-width="4" stroke-linecap="round"/><circle cx="60" cy="38" r="3" fill="#2b2140"/>
+  ${[[30, 150], [34, 200], [28, 250], [40, 95]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="6" fill="#c98b3a"/>`).join('')}</svg>`;
+const tumbleE = (rot = 0, fill = '#2b2140') => `<svg viewBox="0 0 50 50" width="100%" height="100%"><path d="M0 0 H50 V10 H10 V20 H50 V30 H10 V40 H50 V50 H0Z" fill="${fill}" transform="rotate(${rot} 25 25)"/></svg>`;
+const eyeChartSvg = () => `<svg viewBox="0 0 120 170"><rect width="120" height="170" rx="8" fill="#fff"/>${[[60, 26, 30, 0], [40, 66, 18, 90], [80, 66, 18, 180], [30, 98, 12, 270], [60, 98, 12, 0], [90, 98, 12, 90]].map(([x, y, w, r]) => `<g transform="translate(${x - w / 2} ${y - w / 2}) scale(${w / 50})"><path d="M0 0 H50 V10 H10 V20 H50 V30 H10 V40 H50 V50 H0Z" fill="#2b2140" transform="rotate(${r} 25 25)"/></g>`).join('')}
+  ${[0, 1, 2, 3, 4, 5].map((i) => `<g transform="translate(${16 + i * 16} 122) scale(.16)"><path d="M0 0 H50 V10 H10 V20 H50 V30 H10 V40 H50 V50 H0Z" fill="#2b2140" transform="rotate(${(i * 90) % 360} 25 25)"/></g>`).join('')}
+  <rect x="20" y="150" width="80" height="8" rx="4" fill="#ff8fb8"/></svg>`;
+
 export function mountClinic(root, app) {
   return runRoom(root, app, {
-    id: 'clinic', host: 'baobao', back: 'town',
+    id: 'clinic', host: 'xie', back: 'town',
     build() {
-      const dio = createDiorama({ w: 600, d: 560, wallH: 280, zoom: 0.98, cy: 0.6, wall: '#eefaf4', base: '#9fb8a8',
-        floorCss: 'background: repeating-linear-gradient(90deg, #f4efe6 0 60px, #ebe4d8 60px 62px)' });
+      const dio = createDiorama({ w: 640, d: 580, wallH: 280, zoom: 0.95, cy: 0.6, wall: '#fff3e2', base: '#b8a99a',
+        floorCss: 'background: repeating-conic-gradient(#e8f6ff 0 25%, #fff6e6 0 50%) 0 0/80px 80px' });
+      // 看診床（西邊）＋小枕頭
       dio.addBox({ x: 20, y: 60, w: 110, d: 220, h: 60, color: '#ffffff', cls: 'soft' });
       dio.addBox({ x: 20, y: 60, w: 110, d: 60, h: 14, z: 60, color: '#bfe6ff', cls: 'soft' });
-      dio.addBox({ x: 380, y: 60, w: 160, d: 80, h: 76, color: '#d4955f' });
-      dio.addBox({ x: 260, y: 400, w: 70, d: 70, h: 14, color: '#9fb4cc' });
-      dio.wallArt('n', { along: 200, up: 120, w: 110, h: 150, html: `<svg viewBox="0 0 110 150"><rect width="110" height="150" rx="8" fill="#fff"/>${['E', 'ㄇ', 'E', 'ㄇ'].map((c, i) => `<text x="55" y="${40 + i * 30}" text-anchor="middle" font-size="${30 - i * 6}" font-weight="900" fill="#4a3b6b" font-family="sans-serif">${c}</text>`).join('')}</svg>` });
-      dio.wallArt('w', { along: dio.alongWall('w', 0, 380) - 60, up: 140, w: 120, h: 100, html: `<svg viewBox="0 0 120 100"><rect width="120" height="100" rx="10" fill="#c8f5d6"/><g transform="translate(10 0) scale(1)">${strip(itemSvg('heal'))}</g></svg>` });
-      dio.addSprite({ x: 560, y: 480, w: 70, h: 100, shadow: 0.5, html: itemSvg('plant') });
-      const baobao = dio.addSprite({ x: 330, y: 200, w: 120, h: 144, html: baobaoSvg(), shadow: 0.6, tap: 'baobao' });
-      const shan = dio.addSprite({ x: 470, y: 360, w: 110, h: 126, html: shanSvg(), shadow: 0.7, tap: 'shan' });
-      return { dio, chars: { baobao, shan } };
+      dio.addBox({ x: 24, y: 140, w: 102, d: 130, h: 3, z: 60, color: '#ffd6e6', cls: 'soft' });
+      // 謝醫生的桌子＋電腦（北邊）
+      dio.addBox({ x: 380, y: 50, w: 180, d: 84, h: 76, color: '#d4955f', top: '#e8b07a' });
+      dio.addBox({ x: 440, y: 62, w: 70, d: 10, h: 48, z: 76, color: '#4a3b6b', faces: { s: '<div style="position:absolute;inset:5px;border-radius:4px;background:linear-gradient(#bfe6ff,#e8f6ff)"></div>' } });
+      // 牆上：長頸鹿身高尺（西牆）、E 字視力表（北牆）、小熊海報
+      dio.wallArt('w', { along: dio.alongWall('w', 0, 400) - 40, up: 10, w: 90, h: 240, html: giraffeSvg() });
+      dio.wallArt('n', { along: 210, up: 110, w: 110, h: 156, html: eyeChartSvg() });
+      dio.wallArt('n', { along: 600, up: 150, w: 80, h: 80, html: `<svg viewBox="0 0 100 100"><rect width="100" height="100" rx="16" fill="#c8f5d6"/>${strip(itemSvg('heal'))}</svg>` });
+      // 身高體重計（身高尺旁邊）
+      dio.addSprite({ x: 70, y: 420, w: 96, h: 96, shadow: 0.4, html: itemSvg('scale') });
+      // 候診的玩具角（東南）：小地毯、積木、球
+      dio.addDecal({ x: 470, y: 430, w: 150, h: 130, z: 0.6, css: 'border-radius:28px;background:radial-gradient(circle,#ffe27a 0 30%,#ffd0a0 31% 60%,#ffb3c8 61%)' });
+      [['#ff5d73', 490, 450], ['#5b8fd8', 524, 452], ['#4cd07d', 506, 470]].forEach(([c, x, y], i) => dio.addBox({ x, y, w: 28, d: 28, h: 28, z: i === 2 ? 28 : 0, color: c, cls: 'soft' }));
+      dio.addSprite({ x: 590, y: 520, w: 44, h: 44, shadow: 0.4, html: '<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="18" fill="#ff8a3d"/><path d="M4 16 C14 22 26 22 36 16 M20 2 C14 14 14 26 20 38" stroke="#fff" stroke-width="3" fill="none"/></svg>' });
+      dio.addSprite({ x: 610, y: 240, w: 70, h: 100, shadow: 0.5, html: itemSvg('plant') });
+      const xie = dio.addSprite({ x: 400, y: 260, w: 140, h: 184, html: xieSvg(), shadow: 0.6, tap: 'xie' });
+      const baobao = dio.addSprite({ x: 180, y: 400, w: 104, h: 125, html: baobaoSvg(), shadow: 0.6, tap: 'baobao' });
+      const shan = dio.addSprite({ x: 320, y: 490, w: 104, h: 120, html: shanSvg(), shadow: 0.7, tap: 'shan' });
+      return { dio, chars: { xie, baobao, shan } };
     },
     music: () => 'clinic',
-    lines: { hello: lineOf('cl'), pick: 'cl_pick', next: 'cl_next', allDone: [['baobao', 'cl_all_done'], ['shan', 'cl_all_done']] },
+    lines: { hello: lineOf('cl'), pick: 'cl_pick', next: 'cl_next', allDone: [['xie', 'cl_all_done'], ['baobao', 'cl_all_done'], ['shan', 'cl_all_done']] },
     games: [
-      { id: 'checkup', icon: itemSvg('stetho'), marker: { x: 75, y: 170, z: 200 }, run: (R) => {
-        const id = whoseTurn() || R.members[0];
-        return stepsGame(R, { host: 'baobao', hostSvg: baobaoSvg(), intro: 'cl_check_go', wrong: 'cl_check_wrong', done: 'cl_check_done', cls: 'checkpanel',
-          scene: `<div class="patient">${kidSvg(id, ['shirt', 'pants'])}</div>`,
-          targets: [
-            { id: 'thermo', html: itemSvg('thermo'), x: 640, y: 130, w: 110, h: 110 },
-            { id: 'stetho', html: itemSvg('stetho'), x: 770, y: 130, w: 110, h: 110 },
-            { id: 'light', html: itemSvg('light'), x: 640, y: 300, w: 110, h: 110 },
-            { id: 'sticker', html: itemSvg('sticker'), x: 770, y: 300, w: 110, h: 110 },
-          ],
-          steps: [
-            { t: 'thermo', icon: itemSvg('thermo'), line: 'cl_check_thermo' },
-            { t: 'stetho', icon: itemSvg('stetho'), line: 'cl_check_stetho' },
-            { t: 'light', icon: itemSvg('light'), line: 'cl_check_mouth' },
-            { t: 'sticker', icon: itemSvg('sticker'), line: 'cl_check_sticker' },
-          ],
-          fx: async (i, t, pnl) => {
-            const pt = pnl.querySelector('.patient');
-            const tool = div('tool-on', t.innerHTML);
-            tool.style.cssText = ['left:180px;top:220px', 'left:200px;top:250px', 'left:200px;top:120px', 'left:230px;top:260px'][i];
-            pnl.appendChild(tool);
-            if (i === 2) pt.querySelector('svg.kid')?.classList.add('talking');
-            sfx(['tick', 'squish', 'click', 'star'][i]);
-            await wait(900);
-            pt.querySelector('svg.kid')?.classList.remove('talking');
-            if (i < 3) tool.remove();
-          },
-        });
-      } },
-      { id: 'body', icon: itemSvg('body'), marker: { x: 290, y: 430, z: 180 }, run: bodyGame },
-      { id: 'heal', icon: itemSvg('heal'), marker: { x: 460, y: 100, z: 220 }, run: (R) => {
-        const all = [['water', 'good'], ['sleep', 'good'], ['medicine', 'good'], ['veggie', 'good'], ['icecream', 'bad'], ['candy', 'bad'], ['phone', 'bad']];
-        const use = hardSolo(R) ? all : [all[0], all[1], all[2], all[4], all[5], all[6]];
-        return sortGame(R, { host: 'baobao', hostSvg: baobaoSvg(), intro: 'cl_heal_go',
+      { id: 'checkup', icon: itemSvg('stetho'), marker: { x: 470, y: 80, z: 230 }, run: checkupGame },
+      { id: 'ouch', icon: itemSvg('ouch'), marker: { x: 75, y: 170, z: 200 }, run: ouchGame },
+      { id: 'shot', icon: itemSvg('bandaid'), marker: { x: 290, y: 400, z: 170 }, run: shotGame },
+      { id: 'eye', icon: itemSvg('eyechart'), marker: { x: 230, y: 40, z: 250 }, run: eyeGame },
+      { id: 'heal', icon: itemSvg('heal'), marker: { x: 610, y: 160, z: 210 }, run: async (R) => {
+        const all = [['water', 'good'], ['sleep', 'good'], ['medicine', 'good'], ['veggie', 'good'], ['icedrink', 'bad'], ['icecream', 'bad'], ['candy', 'bad'], ['phone', 'bad']];
+        const use = hardSolo(R) ? all : all.filter(([k]) => !['veggie', 'icecream'].includes(k));
+        await sortGame(R, { host: 'xie', hostSvg: xieSvg(), intro: 'cl_heal_go',
           bins: [{ id: 'good', html: itemSvg('good') }, { id: 'bad', html: itemSvg('bad') }],
           items: use.map(([k, bin]) => ({ k, bin, html: itemSvg(k) })), wrong: (it) => `cl_heal_${it.k}`, done: 'cl_heal_done',
           placedLine: (it) => (it.k === 'medicine' ? 'cl_heal_medicine' : null) });
+        await R.say('xie', 'cl_motto');   // 謝醫生的口頭禪
       } },
     ],
-    playful(name, R) { if (name === 'baobao') { sfx('squish'); R.hop(R.set.chars.baobao.el); return true; } return false; },
+    playful(name, R) {
+      if (name === 'xie') { R.hop(R.set.chars.xie.el); R.say('xie', 'cl_motto'); return true; }
+      if (name === 'baobao') { sfx('squish'); R.hop(R.set.chars.baobao.el); R.say('baobao', 'cl_tap_baobao'); return true; }
+      return false;
+    },
   });
 }
 
-// 身體部位：抱抱說「摸摸肚子」，點小孩身上那個地方。位置是 kidSvg（160×300）裡的座標。
+// ---- 看醫生流程：掛號 → 量身高體重 → 耳溫 → 聽診 → 看喉嚨 → 貼紙 ----
+// 病人是輪到的小孩（面板左邊）；工具出現的位置是 kidSvg 放大 1.625 倍後的身體位置。
+function checkupGame(R) {
+  const id = whoseTurn() || R.members[0];
+  const T = (t, x, y) => ({ id: t, html: itemSvg(t), x, y, w: 120, h: 120 });
+  return stepsGame(R, { host: 'xie', hostSvg: xieSvg(), intro: 'cl_check_go', wrong: 'cl_check_wrong', done: 'cl_check_done', cls: 'checkpanel',
+    scene: `<div class="patient">${kidSvg(id, ['shirt', 'pants'])}</div>`,
+    targets: [T('card', 600, 120), T('scale', 750, 120), T('earthermo', 600, 280), T('stetho', 750, 280), T('light', 600, 440), T('sticker', 750, 440)],
+    steps: [
+      { t: 'card', icon: itemSvg('card'), line: 'cl_check_card' },
+      { t: 'scale', icon: itemSvg('scale'), line: 'cl_check_scale', who: 'baobao' },
+      { t: 'earthermo', icon: itemSvg('earthermo'), line: 'cl_check_ear' },
+      { t: 'stetho', icon: itemSvg('stetho'), line: 'cl_check_stetho' },
+      { t: 'light', icon: itemSvg('light'), line: 'cl_check_mouth' },
+      { t: 'sticker', icon: itemSvg('sticker'), line: 'cl_check_sticker' },
+    ],
+    fx: async (i, t, pnl) => {
+      const pt = pnl.querySelector('.patient');
+      const kid = pt.querySelector('svg.kid');
+      const k = t.dataset.w;
+      const pos = { card: 'left:350px;top:380px', scale: 'left:245px;top:520px', earthermo: 'left:120px;top:150px', stetho: 'left:250px;top:290px', light: 'left:250px;top:130px', sticker: 'left:250px;top:280px' }[k];
+      const tool = div('tool-on', t.innerHTML);
+      tool.style.cssText = pos;
+      pnl.appendChild(tool);
+      if (k === 'card') { sfx('click'); sfx('ding'); }
+      if (k === 'scale') {
+        // 身高尺從腳長到頭頂，頭頂一顆星星
+        const bar = div('hbar', `<i>${itemSvg('sticker')}</i>`);
+        pnl.appendChild(bar);
+        R.hop(pt, 'hop');
+        sfx('boing');
+        await wait(400);
+        sfx('star');
+        await wait(900);
+        bar.remove();
+      }
+      if (k === 'earthermo') { sfx('beep'); await wait(350); sfx('beep'); }
+      if (k === 'stetho') { sfx('knock'); await wait(260); sfx('knock'); await wait(500); sfx('knock'); await wait(260); sfx('knock'); }
+      if (k === 'light') { kid?.classList.add('talking'); sfx('click'); }
+      if (k === 'sticker') sfx('star');
+      await wait(k === 'stetho' ? 300 : 900);
+      kid?.classList.remove('talking');
+      if (k !== 'sticker') tool.remove();
+    },
+  });
+}
+
+// ---- 哪裡不舒服？謝醫生說症狀，點身上那個地方（不舒服要說出來，大人才能幫你） ----
+// 位置是 kidSvg（160×300）裡的座標。
 const PARTS = {
   head: [[80, 45, 34]], belly: [[80, 170, 28]], hand: [[32, 200, 18], [128, 200, 18]], foot: [[64, 282, 18], [96, 282, 18]],
   ear: [[31, 78, 14], [129, 78, 14]], knee: [[66, 238, 14], [94, 238, 14]], shoulder: [[52, 126, 16], [108, 126, 16]], elbow: [[30, 165, 14], [130, 165, 14]],
+  nose: [[80, 92, 9]], eye: [[64, 80, 10], [96, 80, 10]], throat: [[80, 106, 10], [80, 126, 12]],
 };
-async function bodyGame(R) {
+async function ouchGame(R) {
   const { say, chk, race } = R;
-  const P = R.panel('bodypanel', { host: 'baobao', hostSvg: baobaoSvg() });
+  const P = R.panel('bodypanel', { host: 'xie', hostSvg: xieSvg() });
   const el = P.el;
   try {
-    await say('baobao', 'cl_body_go');
+    await say('xie', 'cl_ouch_go');
     chk();
     const rounds = 6;
+    const easy = shuffle(['belly', 'head', 'ear', 'nose', 'knee', 'hand']);
+    const hard = shuffle(['throat', 'nose', 'eye', 'elbow', 'foot', 'ear']);
     for (let r = 0; r < rounds; r++) {
       if (turnsOn()) { await callTurn(); chk(); }
       const id = whoseTurn() || R.members[0];
-      const hard = levelNow(R.profile) === 'hard';
-      const pool = hard ? ['ear', 'knee', 'shoulder', 'elbow', 'belly', 'foot'] : ['head', 'belly', 'hand', 'foot', 'ear', 'knee'];
-      const part = pool[r % pool.length];
+      const part = (levelNow(R.profile) === 'hard' ? hard : easy)[r];
       el.innerHTML = `<div class="bodykid">${kidSvg(id, ['shirt', 'pants'])}</div>`;
       const fig = el.querySelector('.bodykid');
       setHint(() => null);
-      await say('baobao', `cl_body_${part}`);
+      await say('xie', `cl_ouch_${part}`);
       chk();
       let lastV = 0;
       await race(new Promise((resolve) => {
@@ -362,7 +414,7 @@ async function bodyGame(R) {
           const hit = Object.entries(PARTS).map(([k, cs]) => [k, Math.min(...cs.map(([cx, cy, cr]) => Math.hypot(x - cx, y - cy) / cr))]).sort((a, b) => a[1] - b[1])[0];
           if (hit[0] === part && hit[1] < 1.6) {
             el.removeEventListener('pointerdown', dn);
-            const dot = div('touch-dot');
+            const dot = div('touch-dot ouch');
             const p = toStage(e.clientX, e.clientY), q = stageRect(el);
             dot.style.left = `${p.x - q.left}px`;
             dot.style.top = `${p.y - q.top}px`;
@@ -370,22 +422,205 @@ async function bodyGame(R) {
             resolve();
           } else {
             sfx('soft');
-            if (Date.now() - lastV > 2500 && hit[1] < 1.6) { lastV = Date.now(); say('baobao', `cl_is_${hit[0]}`); }
+            if (Date.now() - lastV > 2500 && hit[1] < 1.6) { lastV = Date.now(); say('xie', `cl_is_${hit[0]}`); }
           }
         };
         el.addEventListener('pointerdown', dn);
       }));
       chk();
-      sfx('giggle');
       sfx('sparkle');
       R.burstAt(fig, { n: 12, stars: true, colors: ['#ffd23f', '#fff3a0'] });
-      fig.querySelector('svg').classList.add('talking');
-      await wait(700);
+      // 第一題說「說出來，大人就能幫你」；鼻子過敏接謝醫生的口頭禪；眼睛癢提醒不要揉
+      if (part === 'nose') await say('xie', 'cl_motto');
+      else if (part === 'eye') await say('xie', 'cl_ouch_eye_ok');
+      else if (r === 0) await say('xie', 'cl_ouch_tell');
+      else await wait(700);
+      chk();
       if (turnsOn() && r < rounds - 1) nextTurn({ say: false });
     }
     sfx('fanfare');
-    await say('baobao', 'cl_body_done');
+    await say('xie', 'cl_ouch_done');
   } finally {
+    P.close();
+  }
+}
+
+// ---- 勇敢打針：先深呼吸三次（按住吸氣、氣球變大；放開吐氣、氣球變小），酒精棉、數一二三，貼 OK 繃 ----
+async function shotGame(R) {
+  const { say, chk, race } = R;
+  const P = R.panel('shotpanel', { host: 'xie', hostSvg: xieSvg() });
+  const el = P.el;
+  try {
+    const id = whoseTurn() || R.members[0];
+    el.innerHTML = `<div class="patient">${kidSvg(id, ['shirt', 'pants'])}</div>
+      <div class="breath-balloon">${itemSvg('balloon')}</div>
+      <div class="breath-dots">${'<i></i>'.repeat(3)}</div>
+      <button class="breath-btn"><span class="ring"></span>${itemSvg('balloon')}</button>`;
+    const balloon = el.querySelector('.breath-balloon');
+    const btn = el.querySelector('.breath-btn');
+    const dots = [...el.querySelectorAll('.breath-dots i')];
+    await say('xie', 'cl_shot_go');
+    chk();
+    let saidIn = false, saidOut = false, lastSlow = 0;
+    for (let b = 0; b < 3; b++) {
+      if (turnsOn()) { await callTurn(); chk(); }
+      btn.classList.add('glowy-2d');
+      setHint(() => btn);
+      if (!saidIn) { saidIn = true; say('xie', 'cl_shot_in'); }
+      // 按住至少 2 秒才算一次吸氣
+      await race(new Promise((resolve) => {
+        let t0 = 0, timer = null;
+        const down = (e) => {
+          e.preventDefault();
+          try { btn.setPointerCapture(e.pointerId); } catch (_) { /* 沒關係 */ }
+          t0 = Date.now();
+          btn.classList.add('hold');
+          balloon.classList.remove('out');
+          balloon.classList.add('in');
+          sfx('breathIn');
+          timer = setTimeout(() => { btn.classList.add('full'); sfx('ding'); }, 2000);
+        };
+        const up = () => {
+          if (!t0) return;
+          clearTimeout(timer);
+          btn.classList.remove('hold', 'full');
+          const held = Date.now() - t0;
+          t0 = 0;
+          balloon.classList.remove('in');
+          balloon.classList.add('out');
+          if (held >= 2000) {
+            btn.removeEventListener('pointerdown', down);
+            btn.removeEventListener('pointerup', up);
+            btn.removeEventListener('pointercancel', up);
+            resolve();
+          } else if (Date.now() - lastSlow > 3000) { lastSlow = Date.now(); say('xie', 'cl_shot_slow'); }
+        };
+        btn.addEventListener('pointerdown', down);
+        btn.addEventListener('pointerup', up);
+        btn.addEventListener('pointercancel', up);
+      }));
+      chk();
+      btn.classList.remove('glowy-2d');
+      sfx('breathOut');
+      if (!saidOut) { saidOut = true; await say('xie', 'cl_shot_out'); } else await wait(2000);
+      chk();
+      dots[b].classList.add('on');
+      sfx('sparkle');
+      if (turnsOn() && b < 2) nextTurn({ say: false });
+    }
+    btn.remove();
+    balloon.classList.remove('out');
+    balloon.classList.add('calm');
+    // 酒精棉：點一下擦手臂
+    const cotton = div('wtap cotton glowy-2d', itemSvg('cotton'));
+    cotton.style.cssText = 'left:640px;top:420px;width:120px;height:120px';
+    el.appendChild(cotton);
+    setHint(() => cotton);
+    say('baobao', 'cl_shot_cotton');
+    await race(new Promise((resolve) => cotton.addEventListener('pointerdown', resolve, { once: true })));
+    chk();
+    setHint(null);
+    cotton.classList.remove('glowy-2d');
+    cotton.classList.add('wipe');
+    sfx('scrub');
+    await wait(300);
+    sfx('scrub');
+    await wait(500);
+    cotton.remove();
+    const shot = div('tool-on', itemSvg('shot'));
+    shot.style.cssText = 'left:150px;top:250px';
+    el.appendChild(shot);
+    await say('xie', 'cl_shot_count');
+    chk();
+    sfx('pop');
+    shot.remove();
+    const aid = div('tool-on', itemSvg('bandaid'));
+    aid.style.cssText = 'left:160px;top:270px;width:80px;height:80px';
+    el.appendChild(aid);
+    sfx('fanfare');
+    R.burstAt(aid, { n: 18, stars: true, colors: ['#ffd23f', '#fff3a0', '#ff8fb8'] });
+    await say('xie', 'cl_shot_done');
+    chk();
+    const bao = div('shot-bao', baobaoSvg());
+    el.appendChild(bao);
+    sfx('squish');
+    await say('baobao', 'cl_shot_hug');
+    await wait(300);
+  } finally {
+    setHint(null);
+    P.close();
+  }
+}
+
+// ---- 視力檢查：E 的開口朝哪邊，就往那邊滑（或點那邊的箭頭）。E 會越來越小 ----
+const DIRS = { right: 0, down: 90, left: 180, up: 270 };
+async function eyeGame(R) {
+  const { say, chk, race } = R;
+  const P = R.panel('eyepanel', { host: 'xie', hostSvg: xieSvg() });
+  const el = P.el;
+  try {
+    el.innerHTML = `<div class="eye-card"><div class="eye-e"></div></div>
+      ${Object.keys(DIRS).map((d) => `<button class="eye-pad ${d}" data-d="${d}"><span style="transform:rotate(${DIRS[d]}deg)">${itemSvg('arrow')}</span></button>`).join('')}`;
+    const card = el.querySelector('.eye-card');
+    const E = el.querySelector('.eye-e');
+    const pads = Object.fromEntries([...el.querySelectorAll('.eye-pad')].map((b) => [b.dataset.d, b]));
+    await say('xie', 'cl_eye_go');
+    chk();
+    const hardNow = () => levelNow(R.profile) === 'hard';
+    const rounds = hardSolo(R) ? 7 : 6;
+    let prev = null, saidSmall = false;
+    for (let r = 0; r < rounds; r++) {
+      if (turnsOn()) { await callTurn(); chk(); }
+      const dir = pick(Object.keys(DIRS).filter((d) => d !== prev));
+      prev = dir;
+      const min = hardNow() ? 0.14 : 0.3;
+      const sz = 1 - (1 - min) * (r / (rounds - 1));
+      E.style.width = E.style.height = `${Math.round(220 * sz)}px`;
+      E.innerHTML = tumbleE(DIRS[dir]);
+      R.hop(card, 'hop');
+      sfx('whoosh');
+      if (!saidSmall && sz < 0.55) { saidSmall = true; await say('xie', 'cl_eye_small'); chk(); }
+      setHint(() => null);
+      let wrongs = 0, lastV = 0;
+      await race(new Promise((resolve) => {
+        let sx = 0, sy = 0, st = 0;
+        const answer = (d) => {
+          if (d === dir) { cleanup(); resolve(); return; }
+          wrongs++;
+          sfx('soft');
+          R.hop(card, 'shake');
+          if (Date.now() - lastV > 2500) { lastV = Date.now(); say('xie', 'cl_eye_wrong'); }
+          // 愷愷錯一次、岳岳錯兩次：對的箭頭發亮
+          if (wrongs >= (hardNow() ? 2 : 1)) { pads[dir].classList.add('glowy-2d'); setHint(() => pads[dir]); }
+        };
+        const down = (e) => { sx = e.clientX; sy = e.clientY; st = 1; };
+        const up = (e) => {
+          if (!st) return;
+          st = 0;
+          const a = toStage(sx, sy), b = toStage(e.clientX, e.clientY);
+          const dx = b.x - a.x, dy = b.y - a.y;
+          if (Math.hypot(dx, dy) > 60) { answer(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up')); return; }
+          const pad = e.target.closest('.eye-pad');
+          if (pad) answer(pad.dataset.d);
+        };
+        const cleanup = () => { el.removeEventListener('pointerdown', down); window.removeEventListener('pointerup', up); };
+        el.addEventListener('pointerdown', down);
+        window.addEventListener('pointerup', up);
+      }));
+      chk();
+      Object.values(pads).forEach((b) => b.classList.remove('glowy-2d'));
+      R.hop(pads[dir], 'hop');
+      sfx('sparkle');
+      R.burstAt(card, { n: 12, stars: true, colors: ['#ffd23f', '#fff3a0', '#4cd07d'] });
+      if (r === 0 || r === rounds - 2) await say('xie', 'cl_eye_ok');
+      else await wait(600);
+      chk();
+      if (turnsOn() && r < rounds - 1) nextTurn({ say: false });
+    }
+    sfx('fanfare');
+    await say('xie', 'cl_eye_done');
+  } finally {
+    setHint(null);
     P.close();
   }
 }

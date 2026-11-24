@@ -40,9 +40,10 @@ export async function mountFame(root, app) {
   }
 
   // ---- 展示台：後排高、前排矮；閃閃在前排正中間 ----
-  const order = [...CAST.slice(1, 10), ...CAST.slice(10, 14), CAST[0], ...CAST.slice(14)];
+  // 後排 10 位、前排 9 位（11/24 加入謝醫生）
+  const order = [...CAST.slice(1, 11), ...CAST.slice(11, 15), CAST[0], ...CAST.slice(15)];
   const spots = [
-    ...[...Array(9)].map((_, i) => ({ x: 170 + i * 120, y: 250, h: 90 })),
+    ...[...Array(10)].map((_, i) => ({ x: 128 + i * 116, y: 250, h: 90 })),
     ...[...Array(9)].map((_, i) => ({ x: 130 + i * 130, y: 520, h: 40 })),
   ];
   const met = (id) => !!state.met[id];

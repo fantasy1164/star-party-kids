@@ -1,4 +1,4 @@
-// 小鎮與新地點的美術（SVG）：叭叭（遙控車）、達達（木頭小馬）、多多（存錢筒小豬）、抱抱（泰迪熊醫生）、啾啾（發條小鳥），
+// 小鎮與新地點的美術（SVG）：叭叭（遙控車）、達達（木頭小馬）、多多（存錢筒小豬）、抱抱（泰迪熊護理師）、啾啾（發條小鳥），
 // 以及超市、公園、診所、農場的道具。一樣是軟膠玩具質感，不描黑邊。
 import { starPolygon } from './stars.js';
 
@@ -57,7 +57,7 @@ export function duoduoSvg() {
     <ellipse cx="62" cy="76" rx="14" ry="7" fill="#fff" opacity=".55" transform="rotate(-25 62 76)"/></g></svg>`;
 }
 
-// ---- 抱抱：泰迪熊醫生（額鏡、聽診器、白袍） ----
+// ---- 抱抱：泰迪熊護理師（護士帽、聽診器、白袍），醫院裡謝醫生的小幫手 ----
 export function baobaoSvg() {
   const g = gid('b');
   return `<svg class="char baobao" viewBox="0 0 200 240" width="100%" height="100%"><defs>${grad(g, '#f3d0a8', '#d4955f', '#a8693f')}</defs><g class="bob">
@@ -70,7 +70,7 @@ export function baobaoSvg() {
     <ellipse cx="100" cy="104" rx="24" ry="17" fill="#f3d0a8"/><ellipse cx="100" cy="96" rx="9" ry="6" fill="#4a2f22"/>
     ${eyes(80, 120, 80, 6.5)}
     <path class="mouth" d="M90 108 Q100 116 110 108" fill="none" stroke="#4a2f22" stroke-width="3.5" stroke-linecap="round"/><ellipse class="mouth-o" cx="100" cy="111" rx="7" ry="5" fill="#c2344a"/>
-    <path d="M52 50 C70 36 130 36 148 50" fill="none" stroke="#4a3b6b" stroke-width="5"/><circle cx="100" cy="42" r="12" fill="#dfe6ee" stroke="#9fb4cc" stroke-width="4"/>
+    <path d="M66 40 C66 16 134 16 134 40 L130 48 C112 42 88 42 70 48Z" fill="#fff" stroke="#e3e8ee" stroke-width="2"/><path d="M100 22 V38 M92 30 H108" stroke="#ff5b7a" stroke-width="5" stroke-linecap="round"/>
     <ellipse cx="64" cy="98" rx="8" ry="5" fill="#ff9fb0" opacity=".6"/><ellipse cx="136" cy="98" rx="8" ry="5" fill="#ff9fb0" opacity=".6"/></g></svg>`;
 }
 
@@ -161,6 +161,17 @@ const I = {
   slide: `<rect x="14" y="20" width="10" height="72" fill="#ff8a3d"/><rect x="34" y="20" width="10" height="72" fill="#ff8a3d"/><path d="M14 30 H44 M14 46 H44 M14 62 H44" stroke="#ff8a3d" stroke-width="5"/><path d="M44 22 C70 30 70 70 92 90 L80 94 C60 76 60 40 40 34Z" fill="#ffd23f"/>`,
   body: `<circle cx="50" cy="20" r="14" fill="#ffd9b8"/><rect x="34" y="36" width="32" height="34" rx="12" fill="#7fd3ff"/><path d="M34 42 L18 62 M66 42 L82 62 M42 70 L38 94 M58 70 L62 94" stroke="#ffd9b8" stroke-width="9" stroke-linecap="round"/>`,
   heal: `<rect x="10" y="10" width="80" height="80" rx="20" fill="#c8f5d6"/><path d="M50 26 V74 M26 50 H74" stroke="#2f9a5a" stroke-width="16" stroke-linecap="round"/>`,
+  // 小兒科（謝醫生）
+  card: `<rect x="8" y="24" width="84" height="54" rx="8" fill="#7fd39a"/><rect x="8" y="24" width="84" height="14" rx="6" fill="#3fae62"/><circle cx="28" cy="58" r="11" fill="#fff"/><circle cx="28" cy="55" r="5" fill="#ffd9b8"/><path d="M20 66 C22 60 34 60 36 66Z" fill="#5b8fd8"/><rect x="46" y="48" width="36" height="6" rx="3" fill="#fff"/><rect x="46" y="60" width="26" height="6" rx="3" fill="#fff"/><rect x="66" y="66" width="18" height="10" rx="2" fill="#ffd23f"/>`,
+  scale: `<rect x="62" y="6" width="12" height="78" rx="4" fill="#9fb4cc"/>${[0, 1, 2, 3, 4].map((i) => `<path d="M62 ${16 + i * 14} H54" stroke="#ff8a3d" stroke-width="3"/>`).join('')}<rect x="44" y="12" width="36" height="7" rx="3" fill="#5b8fd8"/><rect x="14" y="78" width="72" height="16" rx="6" fill="#dfe6ee"/><rect x="24" y="60" width="30" height="20" rx="5" fill="#fff" stroke="#9fb4cc" stroke-width="3"/><text x="39" y="75" text-anchor="middle" font-size="13" font-weight="900" fill="#3ec7e0" font-family="sans-serif">20</text>`,
+  earthermo: `<path d="M30 30 C30 16 46 12 60 18 L82 30 C88 34 86 44 78 44 L56 44 L48 88 C47 94 36 94 36 88 L38 46 C32 42 30 36 30 30Z" fill="#fff" stroke="#9fb4cc" stroke-width="3"/><path d="M78 30 L92 34 C96 36 96 40 92 42 L80 44Z" fill="#bfe6ff"/><rect x="40" y="24" width="22" height="12" rx="3" fill="#7fe3a0"/><circle cx="44" cy="58" r="5" fill="#5b8fd8"/>`,
+  icedrink: `<path d="M24 22 H76 L68 92 H32Z" fill="#dff4ff" stroke="#9fd6f5" stroke-width="4"/><path d="M27 42 H73 L67 88 H33Z" fill="#ff8a3d" opacity=".85"/><rect x="34" y="48" width="14" height="14" rx="3" fill="#fff" opacity=".9" transform="rotate(12 41 55)"/><rect x="52" y="58" width="14" height="14" rx="3" fill="#fff" opacity=".9" transform="rotate(-10 59 65)"/><path d="M60 22 L72 4" stroke="#ff5b7a" stroke-width="6" stroke-linecap="round"/>`,
+  bandaid: `<g transform="rotate(-30 50 50)"><rect x="8" y="34" width="84" height="32" rx="16" fill="#ffd2a6"/><rect x="34" y="34" width="32" height="32" fill="#ffe7cf"/><polygon points="${starPolygon(50, 50, 13, 6)}" fill="#ff8fb8"/><circle cx="20" cy="44" r="2" fill="#e8b48a"/><circle cx="20" cy="56" r="2" fill="#e8b48a"/><circle cx="80" cy="44" r="2" fill="#e8b48a"/><circle cx="80" cy="56" r="2" fill="#e8b48a"/></g>`,
+  eyechart: `<rect x="18" y="6" width="64" height="88" rx="6" fill="#fff" stroke="#c9d3de" stroke-width="3"/><path d="M34 16 H66 V24 H42 V30 H66 V38 H42 V44 H66 V52 H34Z" fill="#2b2140"/><path d="M36 62 H50 V76 H46 V65 H43 V76 H40 V65 H36Z" fill="#2b2140" transform="rotate(90 43 69)"/><path d="M56 62 H70 V66 H60 V68 H70 V71 H60 V73 H70 V76 H56Z" fill="#2b2140"/><rect x="40" y="84" width="20" height="4" rx="2" fill="#2b2140"/>`,
+  ouch: `<circle cx="50" cy="20" r="14" fill="#ffd9b8"/><rect x="34" y="36" width="32" height="34" rx="12" fill="#7fd3ff"/><path d="M34 42 L18 62 M66 42 L82 62 M42 70 L38 94 M58 70 L62 94" stroke="#ffd9b8" stroke-width="9" stroke-linecap="round"/><circle cx="50" cy="54" r="12" fill="#ff5b5b" opacity=".85"/><path d="M50 46 V56 M50 61 V62" stroke="#fff" stroke-width="4" stroke-linecap="round"/>`,
+  cotton: `<path d="M26 60 C14 56 16 40 28 40 C28 28 44 24 50 34 C56 24 74 28 72 40 C86 40 86 58 74 60 C72 72 56 74 50 66 C42 74 26 72 26 60Z" fill="#fff" stroke="#dfe6ee" stroke-width="3"/><circle cx="74" cy="22" r="6" fill="#bfe6ff"/><circle cx="84" cy="34" r="4" fill="#bfe6ff"/>`,
+  shot: `<g transform="rotate(-40 50 50)"><rect x="30" y="38" width="44" height="24" rx="6" fill="#eaf6ff" stroke="#9fb4cc" stroke-width="3"/><rect x="33" y="41" width="22" height="18" rx="4" fill="#ffb3d1"/><rect x="74" y="44" width="10" height="12" rx="3" fill="#9fb4cc"/><rect x="84" y="47" width="10" height="6" rx="3" fill="#5b8fd8"/><path d="M30 50 H10" stroke="#9fb4cc" stroke-width="3" stroke-linecap="round"/><rect x="16" y="44" width="8" height="12" rx="2" fill="#9fb4cc"/></g>`,
+  balloon: `<ellipse cx="50" cy="42" rx="30" ry="36" fill="#ff8fb8"/><ellipse cx="40" cy="28" rx="8" ry="12" fill="#fff" opacity=".5"/><path d="M46 78 H54 L50 84Z" fill="#ff5d8f"/><path d="M50 84 C44 90 56 94 50 100" stroke="#c9b6d8" stroke-width="2" fill="none"/>`,
   feed: `<path d="M14 60 C14 40 30 30 50 30 C70 30 86 40 86 60 Z" fill="#e0b27e"/><path d="M20 60 H80 L72 86 H28Z" fill="#c98b5e"/><circle cx="40" cy="44" r="6" fill="#ffd23f"/><circle cx="56" cy="40" r="6" fill="#ff8a3d"/><circle cx="66" cy="50" r="6" fill="#6fd17f"/>`,
   basket: `<path d="M10 44 H90 L80 90 H20Z" fill="#e0a873"/><path d="M26 44 C26 14 74 14 74 44" stroke="#c98b5e" stroke-width="7" fill="none"/><ellipse cx="40" cy="44" rx="10" ry="13" fill="#fff8ec"/><ellipse cx="60" cy="44" rx="10" ry="13" fill="#fff8ec"/>`,
   plant: `<rect x="20" y="70" width="60" height="22" rx="6" fill="#a8704a"/><path d="M50 72 V40" stroke="#4fbf6e" stroke-width="6"/><path d="M50 50 C30 44 24 30 30 22 C44 24 50 36 50 50Z M50 44 C66 38 76 24 70 16 C56 18 50 30 50 44Z" fill="#6fd17f"/>`,

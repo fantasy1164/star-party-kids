@@ -17,7 +17,7 @@ const NAMES = {
   'school.robot': '修理機器人', 'school.blocks': '積木排排站', 'school.hop': '跳跳口訣', 'school.song': '口訣唱唱', 'school.abc': 'ABC',
   'market.list': '購物清單', 'market.pay': '付錢', 'market.bag': '裝袋子',
   'park.trash': '垃圾分類', 'park.animals': '找小動物', 'park.queue': '溜滑梯排隊', 'park.dino': '挖恐龍化石',
-  'clinic.checkup': '看醫生', 'clinic.body': '身體在哪裡', 'clinic.heal': '生病快點好',
+  'clinic.checkup': '看醫生流程', 'clinic.ouch': '哪裡不舒服', 'clinic.shot': '勇敢打針（深呼吸）', 'clinic.eye': '視力檢查', 'clinic.heal': '生病快點好',
   'farm.feed': '餵動物', 'farm.eggs': '撿雞蛋', 'farm.grow': '種菜',
   'police.traffic': '指揮交通', 'police.cross': '過馬路', 'police.lost': '走散了找誰',
   'fire.call': '打119', 'fire.escape': '火災逃生', 'fire.spray': '消防車滅火',
