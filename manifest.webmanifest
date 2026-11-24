@@ -8,7 +8,24 @@
   "background_color": "#2a2350",
   "theme_color": "#2a2350",
   "icons": [
-    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    {
+      "src": "assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "id": "./",
+  "lang": "zh-TW",
+  "description": "給 5～8 歲小朋友的明星小鎮：邊玩邊學生活知識和好習慣。",
+  "display_override": [
+    "fullscreen",
+    "standalone"
   ]
 }

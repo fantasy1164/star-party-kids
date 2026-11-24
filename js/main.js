@@ -22,6 +22,7 @@ import { mountFire, mountMrt, mountLibrary, mountPost, mountGarbage } from './sc
 import { mountAquarium, mountBeach, mountZoo } from './scenes/nature.js';
 import { mountRest, mountSleep } from './ui/rest.js';
 import { openParent } from './ui/parent.js';
+import { needInstallGuide, showInstallGuide } from './ui/install.js';
 
 const SCREENS = { opening, town: mountTown, ride: mountRide, house, bedroom, bath, kitchen, living, school, market: mountMarket, park: mountPark, clinic: mountClinic, farm: mountFarm, police: mountPolice, draw, world: mountWorld, trip: mountTrip, fire: mountFire, mrt: mountMrt, library: mountLibrary, post: mountPost, garbage: mountGarbage, aquarium: mountAquarium, beach: mountBeach, zoo: mountZoo, rest: mountRest, sleep: mountSleep };
 const ROOMS = ['town', 'ride', 'house', 'bedroom', 'bath', 'kitchen', 'living', 'school', 'market', 'park', 'clinic', 'farm'];
@@ -89,6 +90,8 @@ document.addEventListener('pointerup', () => { unlock(); primeTts(); }, { captur
 document.addEventListener('gesturestart', (e) => e.preventDefault());
 document.addEventListener('dblclick', (e) => e.preventDefault());
 
+// 一般瀏覽器打開時，先給爸媽看「加到主畫面」的步驟（已是 App 就直接開始）
+if (needInstallGuide()) await showInstallGuide();
 app.go('opening');
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
