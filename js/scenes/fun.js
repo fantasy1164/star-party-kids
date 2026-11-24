@@ -96,9 +96,10 @@ export function mountStickerBook(root, dio, { onOpen, onClose } = {}) {
       return;
     }
     if (!chosen) return;
-    const flat = e.target.closest('.dio-decal');
-    if (!flat) return;
-    const x = flat.offsetLeft + e.offsetX, y = flat.offsetTop + e.offsetY;
+    // 點到地面的哪裡（用鏡頭算，地面畫在 WebGL 或 CSS 都可以）
+    const g = dio.groundAt(e.clientX, e.clientY);
+    if (!g) return;
+    const { x, y } = g;
     if (!(x > 0 && y > 0 && x < dio.o.w && y < dio.o.d)) return;
     state.stickers.placed.push({ id: chosen, x: Math.round(x), y: Math.round(y) });
     state.stickers.owned[chosen] -= 1;

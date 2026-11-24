@@ -250,7 +250,7 @@ const BUILD = {
 
 // ---- 小鎮模型（小鎮地圖和坐車都用） ----
 export function buildTown() {
-  const dio = createDiorama({ w: W, d: D, walls: false, zoom: 0.8, zmin: 0.34, zmax: 1.5, cy: 0.58, skirt: '#a6d987', horizon: 'town',
+  const dio = createDiorama({ gl: true, w: W, d: D, walls: false, zoom: 0.8, zmin: 0.34, zmax: 1.5, cy: 0.58, skirt: '#a6d987', horizon: 'town',
     floorCss: 'background: radial-gradient(ellipse at 25% 30%, #b8e89a 0, transparent 40%), radial-gradient(ellipse at 75% 70%, #b0e392 0, transparent 45%), #a6d987' });
   // 地面一張大圖：河、馬路、中線、斑馬線（都是彎的）
   const roadPath = EDGES.map(([a, b, c]) => `M${NODES[a].x} ${NODES[a].y} Q${c[0]} ${c[1]} ${NODES[b].x} ${NODES[b].y}`).join(' ');
@@ -322,6 +322,7 @@ export function buildTown() {
   for (const [x, y] of [[80, 120], [100, 1900], [900, 2100], [2900, 200], [2880, 2000], [2700, 1700], [2950, 1100], [60, 900], [1300, 120], [700, 1980]]) {
     dio.addSprite({ x, y, w: 90, h: 120, shadow: 0.6, html: treeSvg(pick(['#4fbf6e', '#3f9f5a', '#6cc072'])) });
   }
+  dio.seal();   // 之後加的（閃閃、叭叭、坐車時的車子和行人）用 CSS，才能動
   return { dio, markers, crossings };
 }
 

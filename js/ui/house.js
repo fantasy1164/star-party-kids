@@ -30,7 +30,7 @@ const FLOORS = [
 
 export async function mount(root, app) {
   backdrop(root);
-  const dio = createDiorama({ w: W, d: D, walls: false, tilt: 70, angle: 22, zoom: 0.78, zmin: 0.5, zmax: 1.6, cy: 0.84, skirt: '#a6d987', horizon: 'town',
+  const dio = createDiorama({ gl: true, w: W, d: D, walls: false, tilt: 70, angle: 22, zoom: 0.78, zmin: 0.5, zmax: 1.6, cy: 0.84, skirt: '#a6d987', horizon: 'town',
     floorCss: 'background: radial-gradient(ellipse at 50% 40%, #b8e89a, #a6d987)' });
   root.appendChild(dio.el);
   app.onLeave(() => { setHint(null); setPlaying(false); dio.destroy(); });
@@ -71,7 +71,7 @@ export async function mount(root, app) {
     dio.addPanel({ x1: RX + 60, y1: Y0 + BD - 20, x2: RX + 60, y2: Y0 + 90, z: F.z, h: FH, css: 'transparent', html: rail, both: true, cls: 'ropenet', tap: 'stairs' });
   }
   // ---- 一樓：車庫（叭叭停在這裡，點它就出門）----
-  const car = dio.addSprite({ x: 300, y: 400, z: 0, w: 150, h: 120, html: babaSvg(), shadow: 0.6, tap: 'car' });
+  const car = dio.addSprite({ x: 300, y: 400, z: 0, w: 150, h: 120, html: babaSvg(), shadow: 0.6, tap: 'car', live: true });
   dio.addSprite({ x: 470, y: 330, z: 0, w: 90, h: 80, shadow: 0.4, html: `<svg viewBox="0 0 100 80"><circle cx="22" cy="58" r="16" fill="none" stroke="#3a3550" stroke-width="5"/><circle cx="78" cy="58" r="16" fill="none" stroke="#3a3550" stroke-width="5"/><path d="M22 58 L40 32 L64 32 L78 58 M40 32 L50 58 L64 32" stroke="#2f7fe0" stroke-width="5" fill="none"/></svg>` });
   dio.addBox({ x: 520, y: 240, w: 70, d: 40, h: 90, color: '#c98b5e' });
   dio.addBox({ x: X0, y: Y0 + BD - 6, z: FH - 40, w: RX - X0, d: 6, h: 26, color: '#9aa3b5' });   // 捲起來的鐵捲門
@@ -96,6 +96,7 @@ export async function mount(root, app) {
   // 兩旁的鄰居透天（矮一點，不擋住）
   dio.addBox({ x: 20, y: Y0 + 20, w: 150, d: BD - 20, h: 300, color: '#e6f4e8' });
   dio.addBox({ x: 760, y: Y0 + 20, w: 140, d: BD - 20, h: 330, color: '#e6eeff' });
+  dio.seal();
   const ROOM_MARK = {
     living: { x: 300, y: 340, z: z2 + 120, icon: ICON2.tv, games: ['tv', 'door', 'stage'] },
     kitchen: { x: 500, y: 340, z: z2 + 120, icon: ICON2.plate, games: ['plate', 'table', 'safe', 'dumpling'] },

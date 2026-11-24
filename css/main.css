@@ -30,6 +30,7 @@ html, body {
 /* ---------- 立體模型屋引擎 ---------- */
 .dio { position: absolute; inset: 0; overflow: hidden; z-index: 0; isolation: isolate; }
 .dio-view { position: absolute; inset: 0; perspective: 2600px; perspective-origin: 50% 30%; }
+.dio-gl { position: absolute; left: 0; top: 0; pointer-events: none; }   /* 大場景的 WebGL 畫布（不會動的房子、樹、路） */
 .dio-cam { position: absolute; width: 0; height: 0; transform-style: preserve-3d; transform-origin: 0 0; will-change: transform; }
 .dio-world, .dio-box { position: absolute; left: 0; top: 0; transform-style: preserve-3d; }
 .dio-face, .dio-decal, .dio-sprite, .dio-shadow {

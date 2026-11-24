@@ -67,7 +67,7 @@ function buildZone(zone) {
   };
   const skirt = { suburb: '#a6d987', sea: '#5ec3ee', mountain: '#7fc86a' }[zone];
   const horizon = { suburb: 'nature', sea: 'sea', mountain: 'mountain' }[zone];
-  const dio = createDiorama({ w: W, d: D, walls: false, zoom: 0.8, zmin: 0.45, zmax: 1.6, cy: 0.58, skirt, horizon, floorCss: floors[zone] });
+  const dio = createDiorama({ gl: true, w: W, d: D, walls: false, zoom: 0.8, zmin: 0.45, zmax: 1.6, cy: 0.58, skirt, horizon, floorCss: floors[zone] });
   const markers = {};
   const P = ZONE_PLACES[zone];
   // 進出這一區的地方：一小段公路＋小車站
@@ -117,6 +117,7 @@ function buildZone(zone) {
   for (const [id, p] of Object.entries(P)) {
     markers[id] = dio.addSprite({ x: p.x, y: p.y, z: p.h + 60, w: 120, h: 120, html: `<div class="inner">${p.icon}</div>`, cls: 'marker place-mark', shadow: 0, tap: `go:${id}` });
   }
+  dio.seal();
   return { dio, markers };
 }
 
@@ -187,7 +188,7 @@ export async function mountWorld(root, app) {
     <path d="M300 700 Q600 640 880 700" stroke="#8a8fa0" stroke-width="26" fill="none" stroke-linecap="round"/>
     <path d="M360 300 Q620 360 860 300 Q980 520 860 690" stroke="#a9744f" stroke-width="10" fill="none" stroke-dasharray="4 10"/>
   </svg>`;
-  const dio = createDiorama({ w: W, d: D, walls: false, zoom: 0.62, zmin: 0.4, zmax: 1.3, cy: 0.56, skirt: '#3ea8e0', horizon: 'sea', floorCss: 'background:transparent' });
+  const dio = createDiorama({ gl: true, w: W, d: D, walls: false, zoom: 0.62, zmin: 0.4, zmax: 1.3, cy: 0.56, skirt: '#3ea8e0', horizon: 'sea', floorCss: 'background:transparent' });
   dio.addDecal({ x: 0, y: 0, w: W, h: D, z: 0.6, html: map, budget: 6e6 });
   root.appendChild(dio.el);
   app.onLeave(() => { setHint(null); setPlaying(false); dio.destroy(); });
@@ -211,6 +212,7 @@ export async function mountWorld(root, app) {
   const pos = { city: [300, 230, 250], suburb: [900, 230, 200], sea: [300, 700, 170], mountain: [900, 700, 300] };
   const markers = {};
   for (const [z, [x, y, h]] of Object.entries(pos)) markers[z] = dio.addSprite({ x, y, z: h, w: 140, h: 140, cls: 'marker place-mark', shadow: 0, tap: `zone:${z}`, html: `<div class="inner">${ZONES[z].icon}</div>` });
+  dio.seal();
   const here = app.trip.zone || 'city';
   markers[here].el.classList.add('here');
   const shan = dio.addSprite({ x: 600, y: 450, z: 1, w: 120, h: 136, html: shanSvg(), shadow: 0.7, tap: 'shan' });

@@ -4,7 +4,8 @@
 //
 // 座標：世界地板是 x（往東）× y（往南），z 往上。鏡頭預設在東南方往西北看（angle 45°）。
 // 方塊家具的每一面依「固定在房間裡的光」上色（光從北邊窗戶、斜上方來），轉房間時亮暗面跟著轉，看起來是真的立體。
-import { div, stageW, stageScale, onFit } from '../core/dom.js';
+import { div, stageW, stageScale, onFit, toStage } from '../core/dom.js';
+import { createGLScene } from './glscene.js';
 
 const LIGHT = (() => { const v = [-0.45, -0.62, 0.64]; const l = Math.hypot(...v); return v.map((x) => x / l); })();
 
@@ -36,6 +37,37 @@ export function lowRes(w, h, budget) {
   return px > budget ? Math.sqrt(px / budget) : 1;
 }
 
+// ---- 4×4 矩陣（column-major，跟 WebGL 一樣）----
+const I4 = () => [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+function mul(a, b) {
+  const r = new Array(16);
+  for (let c = 0; c < 4; c++) for (let rr = 0; rr < 4; rr++) {
+    r[c * 4 + rr] = a[rr] * b[c * 4] + a[4 + rr] * b[c * 4 + 1] + a[8 + rr] * b[c * 4 + 2] + a[12 + rr] * b[c * 4 + 3];
+  }
+  return r;
+}
+const T4 = (x, y, z) => { const m = I4(); m[12] = x; m[13] = y; m[14] = z; return m; };
+const S4 = (x, y, z) => { const m = I4(); m[0] = x; m[5] = y; m[10] = z; return m; };
+// CSS rotateX／rotateZ（y 往下、z 朝向觀眾）
+const RX = (deg) => { const r = (deg * Math.PI) / 180, c = Math.cos(r), s = Math.sin(r); const m = I4(); m[5] = c; m[6] = s; m[9] = -s; m[10] = c; return m; };
+const RZ = (deg) => { const r = (deg * Math.PI) / 180, c = Math.cos(r), s = Math.sin(r); const m = I4(); m[0] = c; m[1] = s; m[4] = -s; m[5] = c; return m; };
+function inv4(m) {
+  const [a00, a01, a02, a03, a10, a11, a12, a13, a20, a21, a22, a23, a30, a31, a32, a33] = m;
+  const b00 = a00 * a11 - a01 * a10, b01 = a00 * a12 - a02 * a10, b02 = a00 * a13 - a03 * a10, b03 = a01 * a12 - a02 * a11;
+  const b04 = a01 * a13 - a03 * a11, b05 = a02 * a13 - a03 * a12, b06 = a20 * a31 - a21 * a30, b07 = a20 * a32 - a22 * a30;
+  const b08 = a20 * a33 - a23 * a30, b09 = a21 * a32 - a22 * a31, b10 = a21 * a33 - a23 * a31, b11 = a22 * a33 - a23 * a32;
+  const det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;
+  const d = 1 / det;
+  return [
+    (a11 * b11 - a12 * b10 + a13 * b09) * d, (a02 * b10 - a01 * b11 - a03 * b09) * d, (a31 * b05 - a32 * b04 + a33 * b03) * d, (a22 * b04 - a21 * b05 - a23 * b03) * d,
+    (a12 * b08 - a10 * b11 - a13 * b07) * d, (a00 * b11 - a02 * b08 + a03 * b07) * d, (a32 * b02 - a30 * b05 - a33 * b01) * d, (a20 * b05 - a22 * b02 + a23 * b01) * d,
+    (a10 * b10 - a11 * b08 + a13 * b06) * d, (a01 * b08 - a00 * b10 - a03 * b06) * d, (a30 * b04 - a31 * b02 + a33 * b00) * d, (a21 * b02 - a20 * b04 - a23 * b00) * d,
+    (a11 * b07 - a10 * b09 - a12 * b06) * d, (a00 * b09 - a01 * b07 + a02 * b06) * d, (a31 * b01 - a30 * b03 - a32 * b00) * d, (a20 * b03 - a21 * b01 + a22 * b00) * d,
+  ];
+}
+const xf = (m, p, w = 1) => [m[0] * p[0] + m[4] * p[1] + m[8] * p[2] + m[12] * w, m[1] * p[0] + m[5] * p[1] + m[9] * p[2] + m[13] * w, m[2] * p[0] + m[6] * p[1] + m[10] * p[2] + m[14] * w];
+const PERSP = 2600, PO_Y = 0.3;   // 跟 CSS 的 .dio-view { perspective: 2600px; perspective-origin: 50% 30% } 一樣
+
 export function createDiorama(opt = {}) {
   const o = {
     w: 640, d: 640, wallH: 300, tilt: 56, angle: 45, zoom: 1, cy: 0.56,
@@ -58,6 +90,15 @@ export function createDiorama(opt = {}) {
   world.style.height = `${o.d}px`;
   cam.appendChild(world);
   viewEl.appendChild(cam);
+  // 大場景：不會動的東西畫在 WebGL 畫布上（在 CSS 立體層的下面）；會動的角色、標記仍用 CSS 疊在上面
+  let glS = null, glCanvas = null, sealed = false;
+  if (o.gl) {
+    glCanvas = document.createElement('canvas');
+    glCanvas.className = 'dio-gl';
+    try { glS = createGLScene(glCanvas); } catch { glS = null; }
+    if (glS) el.appendChild(glCanvas);
+  }
+  const useGL = () => glS && !sealed;
   el.appendChild(viewEl);
   const tint = div('dio-tint');
   el.appendChild(tint);
@@ -90,6 +131,48 @@ export function createDiorama(opt = {}) {
     const lean = Math.round((o.tilt - view.t) * 2) / 2;
     if (lean !== shownLean) { shownLean = lean; world.style.setProperty('--lean', `${lean}deg`); }
     rotHooks.forEach((f) => f(view.a));
+    if (glS) renderGL();
+  }
+  // ---- 跟 CSS 一模一樣的鏡頭矩陣（世界 → 畫面），給 WebGL 和點擊用 ----
+  function viewSize() { return [el.offsetWidth || stageW(), el.offsetHeight || 900]; }
+  function camMatrix() {
+    return [T4(stageW() / 2, 900 * o.cy, 0), S4(view.z, view.z, 1), RX(view.t), RZ(view.a), T4(-view.px, -view.py, 0)].reduce(mul);
+  }
+  function projMatrix(W, H) {
+    const P = PERSP, ox = W / 2, oy = H * PO_Y, n = 60, f = P + 60000;
+    const A = -(n + f) / (f - n), B = -n - A * (P - n);
+    const m = new Array(16).fill(0);
+    m[0] = (2 * P) / W; m[8] = 1 - (2 * ox) / W; m[12] = -P;
+    m[5] = (-2 * P) / H; m[9] = (2 * oy) / H - 1; m[13] = P;
+    m[10] = A; m[14] = B;
+    m[11] = -1; m[15] = P;
+    return m;
+  }
+  let glSize = '';
+  function renderGL() {
+    const [W, H] = viewSize();
+    const ratio = stageScale() * Math.min(2, window.devicePixelRatio || 1);
+    const key = `${W}|${H}|${ratio}`;
+    if (key !== glSize) { glSize = key; glS.resize(W, H, ratio); }
+    glS.render(mul(projMatrix(W, H), camMatrix()), view.a, o.tilt - view.t);
+  }
+  let glRaf = 0;
+  const renderSoon = () => { if (!glS || glRaf) return; glRaf = requestAnimationFrame(() => { glRaf = 0; renderGL(); }); };
+  if (glS) glS.onReady = renderSoon;
+  // 螢幕上的點 → 世界裡的一條射線（起點、方向）
+  function rayAt(clientX, clientY) {
+    const [W, H] = viewSize();
+    const p = toStage(clientX, clientY);
+    const inv = inv4(camMatrix());
+    const ox = W / 2, oy = H * PO_Y;
+    return { o: xf(inv, [ox, oy, PERSP]), d: xf(inv, [p.x - ox, p.y - oy, -PERSP], 0) };
+  }
+  // 點到地面（z = 0）的哪裡
+  function groundAt(clientX, clientY) {
+    const { o: ro, d } = rayAt(clientX, clientY);
+    if (Math.abs(d[2]) < 1e-9) return null;
+    const t = -ro[2] / d[2];
+    return t > 0 ? { x: ro[0] + d[0] * t, y: ro[1] + d[1] * t } : null;
   }
   // 拖曳、捏合時用：同一格畫面裡多次移動只套用一次
   function applySoon() {
@@ -235,8 +318,106 @@ export function createDiorama(opt = {}) {
   window.addEventListener('pointerup', onUp);
   window.addEventListener('pointercancel', onUp);
 
+  // ---- WebGL 版的建造（只在 o.gl 而且還沒 seal() 的時候用）----
+  // 點擊用的替身元素：呼叫的人照樣可以設定 dataset.tap，點到時讀它
+  const proxy = (tap) => { const p = document.createElement('div'); if (tap) p.dataset.tap = tap; return p; };
+  const isPlain = (bg) => !bg || /^#[0-9a-f]{3,8}$/i.test(bg.trim());
+  const opaque = (bg) => bg && !/transparent|rgba\(/i.test(bg);
+  // 直立的面：p1→p2 是底邊，off 是從底邊到頂邊的位移（直立：[0,0,h]；屋頂斜面：往屋脊那邊）
+  function glPanel(p1, p2, off, { bg = '', html = '', pick, w, h }) {
+    const BL = p1, BR = p2, TL = [p1[0] + off[0], p1[1] + off[1], p1[2] + off[2]], TR = [p2[0] + off[0], p2[1] + off[1], p2[2] + off[2]];
+    const pts = [BL, TL, TR, BR], uv = [[0, 1], [0, 0], [1, 0], [1, 1]];
+    if (!html && isPlain(bg)) return glS.addPoly({ pts, color: bg || '#ffffff', pick });
+    if (!html && !opaque(bg)) return null;
+    const k = Math.min(2, 512 / Math.max(w, h));
+    const tex = glS.texture({ bg, svg: html, w, h, k });
+    return glS.addPoly({ pts, uv, tex, pass: opaque(bg) ? 'solid' : 'alpha', pick });
+  }
+  function glBox({ x, y, z, w, d, h, color, top, faces, tap }) {
+    const pick = proxy(tap);
+    const Z = z + h;
+    const tbg = top || lit(color, 0, 0, 1);
+    const tpts = [[x, y, Z], [x + w, y, Z], [x + w, y + d, Z], [x, y + d, Z]];
+    if (!faces.t && isPlain(tbg)) glS.addPoly({ pts: tpts, color: tbg, pick });
+    else glS.addPoly({ pts: tpts, uv: [[0, 0], [1, 0], [1, 1], [0, 1]], tex: glS.texture({ bg: tbg, svg: faces.t || '', w, h: d, k: Math.min(2, 512 / Math.max(w, d)) }), pick });
+    const side = (k, x1, y1, x2, y2) => {
+      const n = [-(y2 - y1), x2 - x1, 0]; const L = Math.hypot(n[0], n[1]) || 1;
+      glPanel([x + x1, y + y1, z], [x + x2, y + y2, z], [0, 0, h], { bg: lit(color, n[0] / L, n[1] / L, 0), html: faces[k] || '', pick, w: L, h });
+    };
+    side('n', w, 0, 0, 0); side('e', w, d, w, 0); side('s', 0, d, w, d); side('w', 0, 0, 0, d);
+    const fx = proxy();
+    return { el: pick, faces: { t: fx, n: fx, e: fx, s: fx, w: fx } };
+  }
+  function glGable({ x, y, z, w, d, h, color, wallColor, ridge, over, tap, faces }) {
+    const pick = proxy(tap);
+    const X = x - over, Y = y - over, W = w + over * 2, D = d + over * 2;
+    const half = ridge === 'x' ? D / 2 : W / 2;
+    const phi = Math.atan2(h, half), sn = Math.sin(phi), cs = Math.cos(phi);
+    const L = Math.hypot(half, h);
+    const slope = (x1, y1, x2, y2, n, k) => {
+      const th = Math.atan2(y2 - y1, x2 - x1);
+      const off = [half * Math.sin(th), -half * Math.cos(th), h];
+      glPanel([x1, y1, z], [x2, y2, z], off, { bg: lit(color, ...n), html: faces[k] || '', pick, w: Math.hypot(x2 - x1, y2 - y1), h: L });
+    };
+    const end = (x1, y1, x2, y2) => {
+      const n = [-(y2 - y1), x2 - x1, 0]; const l = Math.hypot(n[0], n[1]) || 1;
+      glS.addPoly({ pts: [[x1, y1, z], [(x1 + x2) / 2, (y1 + y2) / 2, z + h], [x2, y2, z]], color: lit(wallColor || color, n[0] / l, n[1] / l, 0), pick });
+    };
+    if (ridge === 'x') {
+      slope(X, Y + D, X + W, Y + D, [0, sn, cs], 's');
+      slope(X + W, Y, X, Y, [0, -sn, cs], 'n');
+      end(x + w, y + d, x + w, y); end(x, y, x, y + d);
+    } else {
+      slope(X + W, Y + D, X + W, Y, [sn, 0, cs], 'e');
+      slope(X, Y, X, Y + D, [-sn, 0, cs], 'w');
+      end(x, y + d, x + w, y + d); end(x + w, y, x, y);
+    }
+    return { el: pick };
+  }
+  // 平面（地面上的、或高處的地板）：低於 3 的當「地面」，照高度順序疊、永遠在東西下面
+  function glDecal({ x, y, w, h, z, html, css, cls }) {
+    const pick = proxy();
+    const svg = /^\s*<svg/i.test(html) ? html : '';
+    const big = Math.max(w, h);
+    // 只有漸層的大平面畫粗一點也看不出來；有圖（馬路、地圖）的要清楚
+    const k = svg ? Math.min(big > 1500 && stageScale() < 0.6 ? 0.9 : 1.3, 4096 / big) : Math.min(1, 1024 / big);
+    const ground = z < 3;
+    const tex = glS.texture({ bg: css, svg, w, h, k, fade: /dio-floor open/.test(cls), ground });
+    const pts = [[x, y, z], [x + w, y, z], [x + w, y + h, z], [x, y + h, z]];
+    glS.addPoly({ pts, uv: [[0, 0], [1, 0], [1, 1], [0, 1]], tex, pass: ground ? 'ground' : (opaque(css) && !/border-radius/.test(css) ? 'solid' : 'alpha'), order: z, pick, oneSided: false });
+    return pick;
+  }
+  const SHADOW_CSS = 'background:radial-gradient(ellipse, rgba(60,30,10,.32), rgba(60,30,10,0) 70%)';
+  function glSprite({ x, y, z, w, h, html, shadow, tap }) {
+    const pick = proxy(tap);
+    const pad = 0.12;
+    const tex = glS.texture({ svg: html, w: w * (1 + pad * 2), h: h * (1 + pad * 2), k: Math.min(2, 512 / Math.max(w, h)), pad });
+    const b = glS.addBillboard({ x, y, z, w: w * (1 + pad * 2), h: h * (1 + pad * 2), below: h * pad, tex, pick });
+    let shm = null;
+    const putShadow = () => {
+      if (!shadow) return;
+      const sw = w * shadow;
+      shm = glS.addPoly({ pts: [[b.x - sw / 2, b.y - sw * 0.22, b.z + 1], [b.x + sw / 2, b.y - sw * 0.22, b.z + 1], [b.x + sw / 2, b.y + sw * 0.22, b.z + 1], [b.x - sw / 2, b.y + sw * 0.22, b.z + 1]],
+        uv: [[0, 0], [1, 0], [1, 1], [0, 1]], tex: glS.texture({ bg: SHADOW_CSS, w: 64, h: 28, k: 1 }), pass: b.z + 1 < 3 ? 'ground' : 'alpha', order: b.z + 1, oneSided: false });
+    };
+    putShadow();
+    const sp = {
+      el: pick, sh: null, x, y, z, w, h,
+      move(nx, ny, nz = sp.z) {
+        sp.x = b.x = nx; sp.y = b.y = ny; sp.z = b.z = nz;
+        if (shm) { shm.hidden = true; glS.markDirty(); putShadow(); }
+        renderSoon();
+      },
+      remove() { b.hidden = true; if (shm) shm.hidden = true; glS.markDirty(); renderSoon(); },
+    };
+    return sp;
+  }
+  // 建好不會動的部分以後呼叫：之後新加的東西（角色、車、箭頭）都用 CSS，才能動、能換表情
+  function seal() { sealed = true; renderSoon(); }
+
   // ---- 建造 ----
   function addBox({ x, y, z = 0, w, d, h, color = '#f2d0a4', top = null, faces = {}, cls = '', tap = null, parent = world }) {
+    if (useGL() && parent === world) return glBox({ x, y, z, w, d, h, color, top, faces, tap });
     const g = div(`dio-box ${cls}`);
     g.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${d}px;transform:translateZ(${z}px)`;
     if (tap) g.dataset.tap = tap;
@@ -261,6 +442,7 @@ export function createDiorama(opt = {}) {
 
   // 人字形屋頂（放在方塊上面）：ridge 'x' 屋脊東西向（斜面朝南北、三角形山牆在東西），'y' 屋脊南北向
   function addGable({ x, y, z = 0, w, d, h, color = '#ff7a5a', wallColor = null, ridge = 'x', over = 0, tap = null, cls = '', faces = {} }) {
+    if (useGL()) return glGable({ x, y, z, w, d, h, color, wallColor, ridge, over, tap, faces });
     const g = div(`dio-box gable ${cls}`);
     g.style.cssText = `left:0;top:0;transform:translateZ(${z}px)`;
     if (tap) g.dataset.tap = tap;
@@ -299,7 +481,9 @@ export function createDiorama(opt = {}) {
   }
 
   // 看板（一直面向鏡頭）：腳底踩在 (x, y, z)
-  function addSprite({ x, y, z = 0, w, h, html = '', cls = '', shadow = 0.7, tap = null, budget = 0 }) {
+  function addSprite({ x, y, z = 0, w, h, html = '', cls = '', shadow = 0.7, tap = null, budget = 0, live = false }) {
+    // 不會動的看板（樹、路燈、遠景）畫在 WebGL；標記、角色（live）用 CSS
+    if (useGL() && !live && !/marker/.test(cls) && /^\s*<svg/i.test(html)) return glSprite({ x, y, z, w, h, html, shadow, tap });
     const s = div(`dio-sprite ${cls}`);
     s.style.cssText = `left:${x - w / 2}px;top:${y - h}px;width:${w}px;height:${h}px`;
     // 遠景用：縮小畫、再放大（只給不會移動的看板用，move() 不處理縮放）
@@ -339,6 +523,14 @@ export function createDiorama(opt = {}) {
   // 單面的直立牆片（只有從「正面」看得到；背面看會消失——娃娃屋轉到哪，靠近鏡頭的牆就不見）
   // both：兩面都看得到（例如防墜網）
   function addPanel({ x1, y1, x2, y2, z = 0, h, html = '', css = '', cls = '', both = false, tap = null }) {
+    if (useGL()) {
+      const pick = proxy(tap);
+      const L = Math.hypot(x2 - x1, y2 - y1);
+      const bg = css || '#fff3e6';
+      glPanel([x1, y1, z], [x2, y2, z], [0, 0, h], { bg, html, pick, w: L, h });
+      if (both) glPanel([x2, y2, z], [x1, y1, z], [0, 0, h], { bg, html, pick, w: L, h });
+      return { el: pick };
+    }
     const g = div(`dio-box panel3d ${cls}`);
     g.style.cssText = `left:0;top:0;transform:translateZ(${z}px)`;
     if (tap) g.dataset.tap = tap;
@@ -357,6 +549,7 @@ export function createDiorama(opt = {}) {
   // iPhone（像素密度 3）上一張 3000×2200 的地圖要 2 億多像素，記憶體不夠，Safari 會直接重新載入（11/24 iPhone 發現）。
   // 只給內容不怕放大的平面用（SVG、百分比漸層）；用 px 畫格線的地板不要給 budget。
   function addDecal({ x, y, w, h, z = 0.6, html = '', cls = '', css = '', budget = 0 }) {
+    if (useGL()) return glDecal({ x, y, w, h, z, html, css, cls });
     const dd = div(`dio-decal ${cls}`, html);
     const k = budget ? lowRes(w, h, budget) : 1;
     const size = k > 1 ? `width:${w / k}px;height:${h / k}px;transform-origin:0 0;transform:translateZ(${z}px) scale(${k})`
@@ -418,9 +611,9 @@ export function createDiorama(opt = {}) {
   function setTint(css) { tint.style.background = css; }
 
   apply();
-  return {
+  const api = {
     el, cam, world, view, walls, floor, o,
-    addBox, addGable, addPanel, addSprite, addDecal, wallArt, alongWall,
+    addBox, addGable, addPanel, addSprite, addDecal, wallArt, alongWall, seal, groundAt, gl: !!glS,
     animateTo, rotateBy, faceQuadrant, quadrant, snap, apply, setTint, glow, zoomBy, view,
     onRotate(fn) { rotHooks.push(fn); },
     lock(on) { locked = on; },
@@ -430,14 +623,18 @@ export function createDiorama(opt = {}) {
     onTap(fn) {
       el.addEventListener('click', (e) => {
         if (Date.now() - lastDrag < 250) return;
-        const t = e.target.closest('[data-tap]');
-        if (t) fn(t.dataset.tap, t, e);
+        let t = e.target.closest('[data-tap]');
+        // 沒點到 CSS 的東西：看看有沒有點到畫布上的房子、樹
+        if (!t && glS) { const r = rayAt(e.clientX, e.clientY); t = glS.pick(r.o, r.d); }
+        if (t?.dataset.tap) fn(t.dataset.tap, t, e);
       });
     },
     isLocked: () => locked,
     destroy() {
       cancelAnimationFrame(raf);
       cancelAnimationFrame(pending);
+      cancelAnimationFrame(glRaf);
+      glS?.destroy();
       offFit();
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
@@ -445,4 +642,6 @@ export function createDiorama(opt = {}) {
       el.remove();
     },
   };
+  window.__dio = api;   // 測試用
+  return api;
 }
