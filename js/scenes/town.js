@@ -14,7 +14,7 @@ import { isDark, roomTint, hour } from '../core/clock.js';
 import { turnsOn, turnsScene, whoseTurn, nextTurn, callTurn, levelNow } from '../core/turns.js';
 import { setHint, setPlaying, mountClock } from '../core/session.js';
 import { KIDS } from '../config.js';
-import { shanSvg, kidHead } from '../art/stars.js';
+import { shanSvg, kidHead, starPolygon } from '../art/stars.js';
 import { personSvg } from '../art/more.js';
 import { babaSvg, itemSvg, ITEM } from '../art/town.js';
 import { VEHICLES, helmetSvg, shaoSvg } from '../art/fun.js';
@@ -112,6 +112,54 @@ export const PLACE_OF_SCREEN = Object.fromEntries(Object.entries(PLACES).map(([k
 // ---- 每個地點的建築：形狀都不一樣，看輪廓就認得出來 ----
 const win = (x, y, w = 30, h = 28, c = '#bfe6ff') => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="${c}"/><rect x="${x}" y="${y}" width="${w}" height="${h * 0.35}" rx="4" fill="#fff" opacity=".45"/>`;
 const face = (w, h, inner) => `<svg viewBox="0 0 ${w} ${h}" width="100%" height="100%" preserveAspectRatio="none">${inner}</svg>`;
+// ---- 鄰居的透天（11/24，參考大雅區龍善二街一帶）：四層樓連棟，一樓鐵捲門車庫、樓上有陽台欄杆，
+// 外牆各家不一樣（二丁掛磁磚、白色現代風、洗石子＋石材、歐式拱窗），屋頂有斜屋頂、鐵皮加蓋。
+// 我們家是三層樓＋屋頂水塔、橘色欄杆、插一面星星旗，一看就認得。
+const TOU = {
+  // 二丁掛磁磚（米色、一條一條橫線）＋紅色斜屋頂
+  brick: { wall: '#ecd3ad', line: '#dcbf95', frame: '#8a6f55', glass: '#bfe6ff', rail: '#6b5a4a', roof: 'gable', roofColor: '#c9553f' },
+  // 白色現代風：深灰窗框、玻璃陽台，屋頂藍色鐵皮加蓋
+  modern: { wall: '#f6f6f2', frame: '#3a3f4a', glass: '#a8d8f0', rail: '#3a3f4a', glassRail: true, roof: 'shed', roofColor: '#5b8fd8' },
+  // 一樓石材、樓上奶油色，咖啡色鋁窗，屋頂綠色鐵皮
+  stone: { wall: '#f1eadb', base: '#9aa0a8', frame: '#7a4f2f', glass: '#cfe8f5', rail: '#7a4f2f', roof: 'shed', roofColor: '#6fb27a' },
+  // 歐式：粉橘外牆、白色拱窗，深灰斜屋頂
+  euro: { wall: '#f4c9b8', frame: '#ffffff', glass: '#bfe6ff', rail: '#ffffff', arch: true, roof: 'gable', roofColor: '#5a5f6e' },
+};
+function touHouse(dio, { x, y, w = 100, d = 100, floors = 4, style = 'brick', tap = null }) {
+  const S = TOU[style];
+  const FH = 40, h = floors * FH;
+  const up = (i) => (floors - 1 - i) * FH;   // 第 i 層（0 是一樓）的上緣
+  let art = '';
+  if (S.line) for (let yy = 4; yy < h - FH; yy += 7) art += `<rect x="0" y="${yy}" width="${w}" height="1.6" fill="${S.line}"/>`;
+  if (S.base) art += `<rect x="0" y="${up(0)}" width="${w}" height="${FH}" fill="${S.base}"/>${[0, 1, 2].map((r) => [...Array(5)].map((_, c) => `<rect x="${c * 22 + (r % 2) * 11 - 6}" y="${up(0) + r * 13 + 1}" width="20" height="11" rx="2" fill="#b4bac2"/>`).join('')).join('')}`;
+  for (let i = 1; i < floors; i++) {
+    const t = up(i);
+    // 窗戶（歐式是拱形）
+    const wx = w * 0.16, ww = w * 0.68, wy = t + 6, wh = FH * 0.58;
+    art += S.arch
+      ? `<path d="M${wx} ${wy + wh} V${wy + 10} Q${wx + ww / 2} ${wy - 8} ${wx + ww} ${wy + 10} V${wy + wh}Z" fill="${S.frame}"/><path d="M${wx + 4} ${wy + wh} V${wy + 12} Q${wx + ww / 2} ${wy - 2} ${wx + ww - 4} ${wy + 12} V${wy + wh}Z" fill="${S.glass}"/>`
+      : `<rect x="${wx}" y="${wy}" width="${ww}" height="${wh}" fill="${S.frame}"/><rect x="${wx + 3}" y="${wy + 3}" width="${ww / 2 - 4.5}" height="${wh - 6}" fill="${S.glass}"/><rect x="${wx + ww / 2 + 1.5}" y="${wy + 3}" width="${ww / 2 - 4.5}" height="${wh - 6}" fill="${S.glass}"/>`;
+    // 陽台欄杆（玻璃的或鐵的）
+    const ry = t + FH - 12;
+    art += S.glassRail
+      ? `<rect x="4" y="${ry}" width="${w - 8}" height="11" fill="${S.glass}" opacity=".75"/><rect x="4" y="${ry}" width="${w - 8}" height="2.5" fill="${S.rail}"/>`
+      : `<rect x="4" y="${ry}" width="${w - 8}" height="2.5" fill="${S.rail}"/>${[...Array(9)].map((_, k) => `<rect x="${6 + k * ((w - 14) / 8)}" y="${ry}" width="2" height="11" fill="${S.rail}"/>`).join('')}`;
+  }
+  // 一樓：鐵捲門車庫＋小門
+  const g = up(0);
+  art += `<rect x="${w * 0.06}" y="${g + 6}" width="${w * 0.6}" height="${FH - 6}" fill="#a7adb9"/>${[...Array(7)].map((_, k) => `<rect x="${w * 0.06}" y="${g + 9 + k * 4.6}" width="${w * 0.6}" height="1.4" fill="#c9ced8"/>`).join('')}<rect x="${w * 0.72}" y="${g + 10}" width="${w * 0.2}" height="${FH - 10}" rx="2" fill="${S.frame === '#ffffff' ? '#a8693f' : S.frame}"/>`;
+  const front = face(w, h, art);
+  // 側面：小窗、冷氣室外機
+  const side = face(d, h, `${S.line ? [...Array(Math.floor((h - FH) / 7))].map((_, k) => `<rect x="0" y="${4 + k * 7}" width="${d}" height="1.6" fill="${S.line}"/>`).join('') : ''}<rect x="${d * 0.55}" y="${up(2) + 10}" width="${d * 0.22}" height="18" fill="${S.frame}"/><rect x="${d * 0.57}" y="${up(2) + 12}" width="${d * 0.18}" height="14" fill="${S.glass}"/><rect x="${d * 0.2}" y="${up(1) + 14}" width="22" height="16" rx="2" fill="#e8e8e8"/><circle cx="${d * 0.2 + 11}" cy="${up(1) + 22}" r="5" fill="#b8bcc6"/>`);
+  dio.addBox({ x, y, w, d, h, color: S.wall, tap, faces: { s: front, n: side, e: side, w: side } });
+  // 屋頂
+  if (S.roof === 'gable') dio.addGable({ x, y, w, d, z: h, h: 28, over: 5, color: S.roofColor, wallColor: S.wall, ridge: 'x', tap });
+  else {
+    dio.addBox({ x, y: y + d - 6, z: h, w, d: 6, h: 14, color: S.wall, tap });   // 女兒牆
+    dio.addBox({ x: x + w * 0.12, y: y + 8, z: h, w: w * 0.76, d: d * 0.55, h: 30, color: S.roofColor, tap });   // 鐵皮加蓋
+  }
+}
+
 const BUILD = {
   // 學堂：長長的兩層樓＋中間高高的鐘塔＋紅屋頂
   school(dio, p, tap) {
@@ -157,9 +205,11 @@ const BUILD = {
     dio.addBox({ x, y: y + d - 8, z: h, w, d: 8, h: 18, color: '#ff8a3d', tap });
     dio.addBox({ x: x + w - 8, y, z: h, w: 8, d, h: 18, color: '#ff8a3d', tap });
     dio.addSprite({ x: x + 34, y: y + 40, z: h, w: 44, h: 54, shadow: 0, tap, html: `<svg viewBox="0 0 44 54"><rect x="6" y="34" width="4" height="20" fill="#8a8fa0"/><rect x="34" y="34" width="4" height="20" fill="#8a8fa0"/><rect x="2" y="6" width="40" height="30" rx="8" fill="#3ea8e0"/><ellipse cx="22" cy="7" rx="20" ry="5" fill="#7fd3ff"/></svg>` });
-    // 鄰居
-    const nb = face(80, 150, `${win(10, 14, 24, 24, '#e0f0ff')}${win(46, 14, 24, 24, '#e0f0ff')}${win(10, 70, 24, 24, '#e0f0ff')}${win(46, 70, 24, 24, '#e0f0ff')}<rect x="0" y="110" width="80" height="40" fill="#cfe7d2"/>`);
-    dio.addBox({ x: x + w + 6, y: y + 6, w: 80, d: d - 6, h: 150, color: '#e6f4e8', faces: { s: nb } });
+    // 我們家的記號：屋頂插一面黃色星星旗
+    dio.addSprite({ x: x + 14, y: y + d - 14, z: h + 18, w: 46, h: 70, shadow: 0, tap, html: `<svg viewBox="0 0 46 70"><rect x="4" y="4" width="4" height="66" fill="#8a8fa0"/><path d="M8 6 H42 L34 18 L42 30 H8Z" fill="#ffd23f"/><polygon points="${starPolygon(22, 18, 8, 3.5)}" fill="#ff8a3d"/></svg>` });
+    // 隔壁鄰居：連棟的四層樓透天（跟我們家長得不一樣）
+    touHouse(dio, { x: x - 100, y: y + 4, w: 98, d: d - 4, style: 'brick' });
+    touHouse(dio, { x: x - 198, y: y + 4, w: 98, d: d - 4, style: 'modern' });
   },
   // 消防局：紅色、三個大車庫門、旁邊一座高高的瞭望塔
   fire(dio, p, tap) {
@@ -310,9 +360,11 @@ export function buildTown() {
     ...[[2200, 760], [2400, 780], [2560, 1180], [2560, 1420], [1820, 1520], [2340, 1500], [2080, 250], [1780, 300]].map(([x, y], i) => ['apt', x, y, ['#c9d6ea', '#e6d6c4', '#d6c8ff', '#c8f0d6', '#ffd6a0', '#bfe6ff', '#ffe0a8', '#e6eeff'][i]]),
     ...[[1820, 960], [2240, 1000]].map(([x, y], i) => ['shop', x, y, ['#ff8fbf', '#7ee06a'][i]]),
   ];
+  const TOU_ORDER = ['stone', 'euro', 'modern', 'brick', 'euro', 'stone', 'brick', 'modern', 'euro'];
+  let touN = 0;
   for (const [k, x, y, c] of filler) {
     if (k === 'tou') {
-      dio.addBox({ x: x - 50, y: y - 50, w: 100, d: 100, h: 150, color: c, faces: { s: `<svg viewBox="0 0 100 150" width="100%" height="100%" preserveAspectRatio="none">${[14, 66].map((yy) => `<rect x="12" y="${yy}" width="30" height="26" rx="4" fill="#bfe6ff"/><rect x="58" y="${yy}" width="30" height="26" rx="4" fill="#bfe6ff"/>`).join('')}<rect x="26" y="110" width="48" height="40" fill="#9aa3b5"/></svg>` } });
+      touHouse(dio, { x: x - 50, y: y - 50, w: 100, d: 100, floors: 3 + (touN % 2), style: TOU_ORDER[touN++ % TOU_ORDER.length] });
     } else if (k === 'apt') {
       dio.addBox({ x: x - 60, y: y - 50, w: 120, d: 100, h: 230, color: c, faces: { s: `<svg viewBox="0 0 120 230" width="100%" height="100%" preserveAspectRatio="none">${[14, 58, 102, 146, 190].map((yy) => [12, 48, 84].map((xx) => `<rect x="${xx}" y="${yy}" width="24" height="26" rx="3" fill="#fff" opacity=".7"/>`).join('')).join('')}</svg>` } });
     } else {
