@@ -150,6 +150,45 @@ export function createDiorama(opt = {}) {
     return { el: g, faces: { t, ...Object.fromEntries(Object.entries(sides).map(([k, p]) => [k, p.el])) } };
   }
 
+  // 人字形屋頂（放在方塊上面）：ridge 'x' 屋脊東西向（斜面朝南北、三角形山牆在東西），'y' 屋脊南北向
+  function addGable({ x, y, z = 0, w, d, h, color = '#ff7a5a', wallColor = null, ridge = 'x', over = 0, tap = null, cls = '', faces = {} }) {
+    const g = div(`dio-box gable ${cls}`);
+    g.style.cssText = `left:0;top:0;transform:translateZ(${z}px)`;
+    if (tap) g.dataset.tap = tap;
+    const X = x - over, Y = y - over, W = w + over * 2, D = d + over * 2;
+    const half = ridge === 'x' ? D / 2 : W / 2;
+    const L = Math.hypot(half, h);
+    const phi = Math.atan2(h, half);   // 斜面跟地面的角度
+    const sn = Math.sin(phi), cs = Math.cos(phi);
+    const slope = (x1, y1, x2, y2, n, k) => {
+      const p = vpanel(x1, y1, x2, y2, L, `side roof ${k}`);
+      p.el.style.transform = `rotateZ(${(Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI}deg) rotateX(${-(phi * 180) / Math.PI}deg)`;
+      p.el.style.background = lit(color, ...n);
+      if (faces[k]) p.el.innerHTML = faces[k];
+      g.appendChild(p.el);
+    };
+    const gableEnd = (x1, y1, x2, y2, k) => {
+      const p = vpanel(x1, y1, x2, y2, h, `side gable-end ${k}`);
+      p.el.style.background = lit(wallColor || color, ...p.n);
+      p.el.style.clipPath = 'polygon(0 100%, 100% 100%, 50% 0)';
+      if (faces[k]) p.el.innerHTML = faces[k];
+      g.appendChild(p.el);
+    };
+    if (ridge === 'x') {
+      slope(X, Y + D, X + W, Y + D, [0, sn, cs], 's');
+      slope(X + W, Y, X, Y, [0, -sn, cs], 'n');
+      gableEnd(x + w, y + d, x + w, y, 'e');
+      gableEnd(x, y, x, y + d, 'w');
+    } else {
+      slope(X + W, Y + D, X + W, Y, [sn, 0, cs], 'e');
+      slope(X, Y, X, Y + D, [-sn, 0, cs], 'w');
+      gableEnd(x, y + d, x + w, y + d, 's');
+      gableEnd(x + w, y, x, y, 'n');
+    }
+    world.appendChild(g);
+    return { el: g };
+  }
+
   // 看板（一直面向鏡頭）：腳底踩在 (x, y, z)
   function addSprite({ x, y, z = 0, w, h, html = '', cls = '', shadow = 0.7, tap = null }) {
     const s = div(`dio-sprite ${cls}`);
@@ -231,7 +270,7 @@ export function createDiorama(opt = {}) {
   apply();
   return {
     el, cam, world, view, walls, floor, o,
-    addBox, addSprite, addDecal, wallArt, alongWall,
+    addBox, addGable, addSprite, addDecal, wallArt, alongWall,
     animateTo, rotateBy, faceQuadrant, quadrant, snap, apply, setTint, glow,
     onRotate(fn) { rotHooks.push(fn); },
     lock(on) { locked = on; },

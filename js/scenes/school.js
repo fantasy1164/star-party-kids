@@ -1,19 +1,21 @@
 // 學堂（機器人老師嗶嗶）：九九乘法。岳岳靠死背、6×N 開始沒意願，所以改成「先懂、再練、看得到進步」：
 //   積木排排站：照課本的意思，a×b 是「b 個 a」：每排 a 個、排 b 排。點一下放上一整排積木（一排就是一組）；問一共幾個，
 //              答完一排一排亮起來、嗶嗶跟著數（6、12、18…），再把房間轉 90 度：變成 a 個 b，積木一樣多（交換律）。
-//              右上角的眼睛可以從高處往下看。凱凱：小小的題目、只要數；一起玩時凱凱放積木、岳岳回答。
+//              右上角的眼睛可以從高處往下看。愷愷：小小的題目、只要數；一起玩時愷愷放積木、岳岳回答。
 //   跳跳口訣：閃閃踩著石頭跳，嗶嗶數倍數（6、12、18…）→ 換小孩點亮的石頭 → 閃閃停在某一格，選這格是多少。
 //   修理機器人：嗶嗶壞掉了，聽題目選答案，每答對一題裝回一個零件。第一次是「健康檢查」（程度檢查，12 題），
 //              之後依每一題的熟練度出題（js/core/mult.js：間隔重複，常錯的多出、熟的隔久複習）。
 //   乘法星空：西牆上 9×9 的星星，學會一題亮一顆；點牆可以打開大星空，點星星聽口訣。
 import { runRoom } from './room-base.js';
+import { askChoice } from './kit.js';
 import { createDiorama } from '../engine/diorama.js';
 import { div, wait, burst, stageRect, shuffle, pick } from '../core/dom.js';
-import { sfx, playMusic } from '../core/audio.js';
+import { sfx, playMusic, playNote, think } from '../core/audio.js';
 import { turnsOn, callTurn, nextTurn, whoseTurn, levelNow } from '../core/turns.js';
 import { setHint } from '../core/session.js';
-import { shanSvg, starPolygon } from '../art/stars.js';
+import { shanSvg, starPolygon, starIcon } from '../art/stars.js';
 import { bibiSvg, BIBI_PARTS, ICON2, numSvg } from '../art/more.js';
+import { rocketSvg, planetSvg } from '../art/fun.js';
 import * as M from '../core/mult.js';
 import { roundBtn } from '../ui/hud.js';
 
@@ -35,9 +37,10 @@ export function mount(root, app) {
       { id: 'robot', icon: ICON2.robot, marker: { x: 540, y: 150, z: 250 }, run: robotGame },
       { id: 'blocks', icon: ICON2.blocks, marker: { x: 312, y: 300, z: 200 }, run: blocksGame },
       { id: 'hop', icon: ICON2.hop, marker: { x: 560, y: 470, z: 200 }, run: hopGame },
+      { id: 'song', icon: ICON2.song, marker: { x: 120, y: 470, z: 200 }, run: songGame },
     ],
     setup(R) {
-      // 右上角的眼睛：從高處往下看（凱凱的空間視角），再按一次回來
+      // 右上角的眼睛：從高處往下看（愷愷的空間視角），再按一次回來
       let high = false;
       R.viewBtn = roundBtn(R.root, 'blue btn-view', ICON2.eye, async () => {
         high = !high;
@@ -135,7 +138,7 @@ async function blocksGame(R) {
       labels.push(dio.addSprite({ x: ox - 30, y: oy + (rows * MAT.cell) / 2 + 20, w: 64, h: 64, html: numSvg(rows, { bg: '#fff', color: '#ff8a3d' }), shadow: 0 }).el);
       labels.push(dio.addSprite({ x: ox + (per * MAT.cell) / 2, y: oy - 14, w: 64, h: 64, html: numSvg(per, { bg: '#fff', color: '#3ea8e0' }), shadow: 0 }).el);
       // 每一排的虛線框，點了放一整排
-      if (turnsOn() && whoseTurn() !== 'kk') nextTurn({ say: false });   // 一起玩：凱凱放積木、岳岳回答
+      if (turnsOn() && whoseTurn() !== 'kk') nextTurn({ say: false });   // 一起玩：愷愷放積木、岳岳回答
       for (let r = 0; r < rows; r++) {
         const s = dio.addDecal({ x: ox + 2, y: oy + r * MAT.cell + 2, w: per * MAT.cell - 4, h: MAT.cell - 4, z: 1, cls: 'rowstrip', css: `--c:${ROW_COLORS[r]}` });
         s.dataset.tap = `row:${r}`;
@@ -178,7 +181,7 @@ async function blocksGame(R) {
       const ok = await askChoice(R, answers, M.choices(a, b), a * b);
       const ms = Date.now() - t0;
       chk();
-      if (yyIn && !kidMode) recordAndSky(R, a, b, ok.firstTry, ms);
+      if (yyIn && !kidMode) await recordAndSky(R, a, b, ok.firstTry, ms);
       // 一排一排亮起來，嗶嗶跟著數
       if (!ok.firstTry) { await say('bibi', 'blocks_wrong'); chk(); }
       await say('bibi', 'blocks_count');
@@ -214,36 +217,6 @@ async function blocksGame(R) {
 }
 
 // 三個大大的答案泡泡。回傳 { firstTry }：第一次就答對？（答錯會讓他再選，直到對）
-function askChoice(R, box, opts, correct) {
-  return R.race(new Promise((resolve) => {
-    let first = true;
-    box.innerHTML = '';
-    box.classList.add('show');
-    for (const v of opts) {
-      const b = document.createElement('button');
-      b.className = 'ans';
-      b.innerHTML = numSvg(v, { color: '#4a3b6b' });
-      b.addEventListener('pointerdown', (e) => {
-        e.stopPropagation();
-        if (b.disabled) return;
-        if (v === correct) {
-          sfx('fanfare');
-          R.burstAt(b, { n: 18, stars: true, colors: ['#ffd23f', '#fff3a0', '#4cd07d'] });
-          b.classList.add('right');
-          setTimeout(() => { box.classList.remove('show'); box.innerHTML = ''; resolve({ firstTry: first }); }, 650);
-        } else {
-          first = false;
-          sfx('soft');
-          b.disabled = true;
-          b.classList.add('wrong');
-        }
-      });
-      box.appendChild(b);
-    }
-    setHint(() => [...box.querySelectorAll('.ans')].find((x) => !x.disabled));
-  }));
-}
-
 // 記錄作答；有新的星星就讓牆上的星空閃一下
 async function recordAndSky(R, a, b, correct, ms) {
   const res = M.answer(a, b, correct, ms);
@@ -252,6 +225,7 @@ async function recordAndSky(R, a, b, correct, ms) {
     R.hop(R.set.skyWall, 'sky-flash');
     sfx('star');
     await R.say('bibi', M.rowDone(a) ? 'sky_row' : 'sky_new');
+    if (M.rowDone(a)) await launchRocket(R, a);
   }
 }
 
@@ -330,7 +304,7 @@ async function hopGame(R) {
         const res = await askChoice(R, answers, M.choices(a, i + 1), stones[i].v);
         chk();
         stones[i].st.classList.remove('next');
-        if (yyIn && !(turnsOn() && whoseTurn() === 'kk')) recordAndSky(R, a, i + 1, res.firstTry, Date.now() - t0);
+        if (yyIn && !(turnsOn() && whoseTurn() === 'kk')) await recordAndSky(R, a, i + 1, res.firstTry, Date.now() - t0);
         reveal(i);
         await say('bibi', `c_${a}_${i + 1}`);
       } else {
@@ -365,11 +339,45 @@ function jump(sp, x1, y1, z1, ms = 500) {
 
 // ---------------- 修理機器人 ----------------
 // a 排、每排 b 個
-function dotsHtml(a, b) {
+function dotsHtml(a, b, bridge = false) {
+  // a 排、每排 b 個（a×b 照課本是「b 個 a」，所以叫的時候是 dotsHtml(b, a)）
+  // bridge：用直的一條一條上色（前五條藍、後面橘），配合「五的口訣再加上去」
   const c = 30;
   let s = '';
-  for (let r = 0; r < a; r++) for (let k = 0; k < b; k++) s += `<circle class="dot r${r}" cx="${k * c + c / 2}" cy="${r * c + c / 2}" r="${c * 0.36}" fill="${ROW_COLORS[r]}"/>`;
+  for (let r = 0; r < a; r++) for (let k = 0; k < b; k++) {
+    const fill = bridge ? (k < 5 ? '#3ea8e0' : '#ff8a3d') : ROW_COLORS[r];
+    s += `<circle class="dot r${r} c${k}" cx="${k * c + c / 2}" cy="${r * c + c / 2}" r="${c * 0.36}" fill="${fill}"${bridge ? ' opacity=".22"' : ''}/>`;
+  }
   return `<svg viewBox="0 0 ${b * c} ${a * c}" width="${b * c}" height="${a * c}">${s}</svg>`;
+}
+
+// 示範一題：
+//   六以上：先亮前面五條、唸五的口訣（五七三十五），再一條一條加上去（四十二）——「六就是五再多一個」
+//   五以下：一排一排亮，跟著數
+async function demoFact(R, qdots, a, b) {
+  const { say, chk } = R;
+  if (a >= 6) {
+    qdots.innerHTML = dotsHtml(b, a, true);
+    await say('bibi', 'bridge_5');
+    chk();
+    for (let k = 0; k < 5; k++) qdots.querySelectorAll(`.c${k}`).forEach((d) => { d.setAttribute('opacity', '1'); d.classList.add('lit5'); });
+    sfx('sparkle');
+    await say('bibi', `c_5_${b}`);
+    chk();
+    for (let k = 5; k < a; k++) {
+      qdots.querySelectorAll(`.c${k}`).forEach((d) => { d.setAttribute('opacity', '1'); d.classList.add('lit'); });
+      sfx('tap');
+      await say('bibi', `n_${(k + 1) * b}`);
+      chk();
+    }
+  } else {
+    qdots.innerHTML = dotsHtml(b, a);
+    for (let r = 0; r < b; r++) {
+      qdots.querySelectorAll(`.r${r}`).forEach((d) => d.classList.add('lit'));
+      await say('bibi', `n_${(r + 1) * a}`);
+      chk();
+    }
+  }
 }
 
 async function robotGame(R) {
@@ -380,54 +388,101 @@ async function robotGame(R) {
   const checkMode = yyIn && !turnsOn() && !M.checked();
   const missing = new Set(BIBI_PARTS);
   try {
-    el.innerHTML = `<div class="robot-big">${bibiSvg([...missing])}</div><div class="qcard"></div><div class="qdots"></div><div class="answers in-panel"></div>`;
+    el.innerHTML = `<div class="qprog"></div><div class="robot-big">${bibiSvg([...missing])}</div><div class="qcard"></div><div class="qdots"></div><div class="answers in-panel"></div>`;
     const robot = el.querySelector('.robot-big');
     const qcard = el.querySelector('.qcard');
     const qdots = el.querySelector('.qdots');
     const answers = el.querySelector('.answers');
+    const prog = el.querySelector('.qprog');
     const paint = () => { robot.innerHTML = bibiSvg([...missing]); };
-    // 題目
-    let qs;
-    if (checkMode) qs = M.checkQuestions();
-    else if (!yyIn) qs = [...Array(6)].map(() => M.kidQuestion());
+    // 題目：程度檢查固定 12 題；平常一輪 6 題，大約八成是會的
+    let fixed = null, known = [], hard = [];
+    if (checkMode) fixed = M.checkQuestions();
+    else if (!yyIn) fixed = [...Array(6)].map(() => M.kidQuestion());
     else if (turnsOn()) {
-      const big = M.pickQuestions(3);
-      qs = [];
-      for (let i = 0; i < 3; i++) qs.push(big[i], M.kidQuestion());
-    } else qs = M.pickQuestions(6);
+      const r = M.pickRound(3, 1);
+      const big = [r.known[0], r.hard[0] || r.known[1], r.known[2] || r.known[0]];
+      fixed = [];
+      for (let i = 0; i < 3; i++) fixed.push(big[i], M.kidQuestion());
+    } else ({ known, hard } = M.pickRound(6));
+    const total = fixed ? fixed.length : known.length + hard.length;
+    // 岳岳一個人玩：會、新、會、會、新、會；剛答錯的下一題一定出會的（先找回信心）
+    const PATTERN = ['k', 'h', 'k', 'k', 'h', 'k'];
+    let lastMissed = false;
+    const nextQ = (i) => {
+      if (fixed) return fixed[i];
+      let want = PATTERN[i] || 'k';
+      if (lastMissed && known.length > 1) want = 'k';          // 剛答錯：先出會的
+      if (hard.length && known.length <= 1 && i < total - 1) want = 'h';   // 留一題會的給最後
+      if (i === total - 1) want = 'k';                         // 最後一題一定是會的，開心結束
+      const q = (want === 'h' && hard.length ? hard : known.length ? known : hard).shift();
+      return q;
+    };
+    prog.innerHTML = '<i></i>'.repeat(total);
+    const progStar = (i) => { const d = prog.children[i]; d.className = 'on'; d.innerHTML = starIcon(); };
     const results = [];
+    let streak = 0;
+    let fails = 0;
     await say('bibi', checkMode ? 'robot_check' : yyIn ? 'robot_broken' : 'robot_kk');
     chk();
     if (turnsOn()) { await callTurn(); chk(); }
-    for (let i = 0; i < qs.length; i++) {
-      const [a, b] = qs[i];
+    // 六以上的排：每天第一次先教一次「五的口訣再加上去」
+    const today = new Date().toDateString();
+    const st = M.extra();
+    if (yyIn && !checkMode && !turnsOn() && M.focusRow() >= 6 && st.bridgeDay !== today) {
+      st.bridgeDay = today; M.saveExtra();
+      const a = M.focusRow(), b = 7;
+      qcard.innerHTML = `<span class="n">${a}</span><span class="x">×</span><span class="n">${b}</span>`;
+      await say('bibi', 'bridge_intro');
+      chk();
+      await demoFact(R, qdots, a, b);
+      await say('bibi', `c_${a}_${b}`);
+      chk();
+      qdots.innerHTML = '';
+    }
+    for (let i = 0; i < total; i++) {
+      const [a, b] = nextQ(i);
+      prog.children[i]?.classList.add('now');
       const kidQ = !yyIn || (turnsOn() && whoseTurn() === 'kk');
       qcard.innerHTML = `<span class="n">${a}</span><span class="x">×</span><span class="n">${b}</span>`;
       qdots.innerHTML = kidQ ? dotsHtml(b, a) : '';
       qcard.classList.toggle('small', kidQ);
       if (!kidQ) { await say('bibi', `q_${a}_${b}`); chk(); }
+      const missedBefore = !kidQ && M.recentlyMissed(a, b);
       const t0 = Date.now();
-      // 程度檢查：答錯不重選，直接告訴他口訣
       let res;
       if (checkMode) res = await askOnce(R, answers, M.choices(a, b), a * b);
-      else res = await askChoice(R, answers, M.choices(a, b), a * b);
+      else {
+        const four = !kidQ;
+        answers.classList.toggle('four', four);
+        res = await askChoice(R, answers, M.choices(a, b, four ? 4 : 3), a * b, { demo: kidQ ? null : () => demoFact(R, qdots, a, b) });
+      }
       const ms = Date.now() - t0;
       chk();
       if (checkMode) results.push({ a, b, correct: res.firstTry, ms });
-      else if (!kidQ) recordAndSky(R, a, b, res.firstTry, ms);
-      if (!res.firstTry && !checkMode && !kidQ) {
-        // 答錯：把這題的點點排出來，一排一排數給他看
-        await say('bibi', 'robot_wrong');
-        chk();
-        qdots.innerHTML = dotsHtml(b, a);
-        for (let r = 0; r < b; r++) {
-          qdots.querySelectorAll(`.r${r}`).forEach((d) => d.classList.add('lit'));
-          await say('bibi', `n_${(r + 1) * a}`);
+      else if (!kidQ) await recordAndSky(R, a, b, res.firstTry, ms);
+      lastMissed = !res.firstTry;
+      progStar(i);
+      sfx('pop');
+      // 誇他「做到了什麼」，一題最多一句
+      if (!checkMode && !kidQ) {
+        if (res.firstTry) {
+          streak++;
+          if (missedBefore) await say('bibi', 'praise_remember');
+          else if (streak === 3 || streak === 5) await say('bibi', 'praise_streak');
+          else if (ms < 4000) await say('bibi', 'robot_fast');
+        } else {
+          streak = 0;
+          fails++;
+          await say('bibi', res.wrongs === 1 ? 'praise_retry' : 'praise_nogiveup');
           chk();
+          await say('bibi', 'say_with_me');
         }
+        chk();
       }
       await say('bibi', `c_${a}_${b}`);
       chk();
+      qdots.innerHTML = '';
       // 裝零件（程度檢查 12 題，兩題裝一個）
       const every = checkMode ? 2 : 1;
       if ((i + 1) % every === 0 && missing.size) {
@@ -437,10 +492,9 @@ async function robotGame(R) {
         sfx('knock');
         sfx('sparkle');
         R.burstAt(robot, { n: 16, stars: true, colors: ['#7ff0c0', '#ffd23f', '#fff'] });
-        if (!checkMode && res.firstTry && ms < 4000 && !kidQ) await say('bibi', 'robot_fast');
       }
       chk();
-      if (turnsOn() && i < qs.length - 1) nextTurn({ say: false });
+      if (turnsOn() && i < total - 1) nextTurn({ say: false });
     }
     if (checkMode) {
       M.applyCheck(results);
@@ -453,7 +507,72 @@ async function robotGame(R) {
     robot.classList.add('dance');
     sfx('fanfare');
     await say('bibi', 'robot_fixed');
+    // 有錯過但沒有放棄：特別誇一次（願意嘗試也是本事）
+    if (fails && !checkMode) { await say('bibi', 'praise_effort'); }
     await wait(400);
+  } finally {
+    P.close();
+    setHint(null);
+  }
+}
+
+// ---------------- 口訣唱唱 ----------------
+// 岳岳是聽覺型、又喜歡音樂：照順序把一整排口訣唱完（六一得六、六二十二…六九五十四），
+// 每答對一題，木琴就多一個音；九題都答完，木琴把整首曲子彈一次，嗶嗶再快快地唱一遍。
+// 照順序唱，下一題就是「再加一個 a」，跳數的規律也會跟著記住。
+// 愷愷：唱 2 或 5 的跳數（前兩題答案會發亮）。一起玩：一人一題輪流，愷愷那題答案發亮。
+const SONG_NOTES = ['C5', 'D5', 'E5', 'G5', 'A5', 'C6', 'D6', 'E6', 'G6'];
+async function songGame(R) {
+  const { say, chk, members } = R;
+  const yyIn = members.includes('yy');
+  const a = yyIn ? M.focusRow() : pick([2, 5]);
+  const P = R.panel('songpanel', { host: 'bibi', hostSvg: bibiSvg() });
+  const el = P.el;
+  try {
+    el.innerHTML = `<div class="xylo">${SONG_NOTES.map((_, i) => `<div class="xbar" style="--h:${230 - i * 16}px;--c:${ROW_COLORS[i]}"><span>${numSvg(a * (i + 1), { color: '#fff' })}</span></div>`).join('')}</div>
+      <div class="qcard"></div><div class="answers in-panel"></div>`;
+    const bars = [...el.querySelectorAll('.xbar')];
+    const qcard = el.querySelector('.qcard');
+    const answers = el.querySelector('.answers');
+    await say('bibi', 'song_go');
+    chk();
+    if (turnsOn()) { await callTurn(); chk(); }
+    for (let i = 0; i < 9; i++) {
+      const b = i + 1;
+      bars[i].classList.add('next');
+      qcard.innerHTML = `<span class="n">${a}</span><span class="x">×</span><span class="n">${b}</span>`;
+      const kk = turnsOn() ? whoseTurn() === 'kk' : !yyIn;
+      await askChoice(R, answers, M.choices(a, b), a * b, { glow: kk && (turnsOn() || i < 2) });
+      chk();
+      bars[i].classList.remove('next');
+      bars[i].classList.add('on');
+      playNote(SONG_NOTES[i]);
+      R.hop(bars[i]);
+      await say('bibi', `c_${a}_${b}`);
+      chk();
+      if (turnsOn() && i < 8) nextTurn({ say: false });
+    }
+    // 整排唱完：木琴彈一次
+    await say('bibi', 'song_play');
+    chk();
+    for (let i = 0; i < 9; i++) {
+      playNote(SONG_NOTES[i]);
+      R.hop(bars[i]);
+      await wait(260);
+    }
+    for (const i of [8, 6, 4, 8]) { playNote(SONG_NOTES[i], 'musicbox', 0.25); await wait(200); }
+    sfx('fanfare');
+    R.burstAt(el.querySelector('.xylo'), { n: 26, spread: 260, stars: true });
+    await say('bibi', 'song_done');
+    chk();
+    // 木琴借他自由彈 15 秒（喜歡音樂的獎勵；時間到自己結束）
+    el.classList.add('free');
+    bars.forEach((bar, i) => bar.addEventListener('pointerdown', (e) => { e.stopPropagation(); playNote(SONG_NOTES[i]); R.hop(bar); }));
+    await say('bibi', 'song_free');
+    chk();
+    await wait(15000);
+    chk();
+    await say('bibi', 'song_free_end');
   } finally {
     P.close();
     setHint(null);
@@ -462,6 +581,7 @@ async function robotGame(R) {
 
 // 程度檢查用：只選一次
 function askOnce(R, box, opts, correct) {
+  think(true);
   return R.race(new Promise((resolve) => {
     box.innerHTML = '';
     box.classList.add('show');
@@ -475,18 +595,38 @@ function askOnce(R, box, opts, correct) {
         sfx(ok ? 'sparkle' : 'soft');
         b.classList.add(ok ? 'right' : 'wrong');
         box.querySelectorAll('.ans').forEach((x) => { x.disabled = true; if (+x.textContent === correct) x.classList.add('right'); });
+        think(false);
         setTimeout(() => { box.classList.remove('show'); box.innerHTML = ''; resolve({ firstTry: ok }); }, 700);
       });
       box.appendChild(b);
     }
     setHint(() => box.querySelector('.ans'));
-  }));
+  })).finally(() => think(false));
+}
+
+// ---------------- 火箭（岳岳喜歡太空）：學會一整排口訣，就有一枚火箭飛到一顆新星球 ----------------
+async function launchRocket(R, a) {
+  const ov = div('rocket-launch', `<div class="rl-sky">${[...Array(30)].map((_, i) => `<i style="left:${(i * 37) % 100}%;top:${(i * 53) % 100}%"></i>`).join('')}</div>
+    <div class="rl-planet">${planetSvg(a - 2)}</div><div class="rl-rocket">${rocketSvg(ROW_COLORS[a - 1], true)}</div>`);
+  R.root.appendChild(ov);
+  try {
+    await R.say('bibi', 'rocket_count');
+    ov.classList.add('go');
+    sfx('whoosh');
+    await wait(1800);
+    sfx('fanfare');
+    R.burstAt(ov.querySelector('.rl-planet'), { n: 26, spread: 200, stars: true });
+    await R.say('bibi', 'rocket_landed');
+    await wait(500);
+  } finally { ov.remove(); }
 }
 
 // ---------------- 乘法星空（大） ----------------
 async function openSky(R) {
   const P = R.panel('skypanel', { host: 'bibi', hostSvg: bibiSvg() });
-  P.el.innerHTML = `<div class="skybig">${skyHtml(false)}</div><button class="closebtn">${ICON2.skip}</button>`;
+  // 上面一排星球：學會的那一排，星球旁邊停著一枚火箭
+  const planets = [2, 3, 4, 5, 6, 7, 8, 9].map((a) => `<div class="pl ${M.rowDone(a) ? 'done' : ''}">${planetSvg(a - 2, M.rowDone(a))}<b>${a}</b></div>`).join('');
+  P.el.innerHTML = `<div class="planets">${planets}</div><div class="skybig">${skyHtml(false)}</div><button class="closebtn">${ICON2.skip}</button>`;
   sfx('star');
   const close = () => { P.close(); };
   P.el.querySelector('.closebtn').addEventListener('click', (e) => { e.stopPropagation(); sfx('tap'); close(); });

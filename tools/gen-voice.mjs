@@ -8,6 +8,7 @@
 //   node tools/gen-voice.mjs --char dudu  # 只做某個角色
 //   node tools/gen-voice.mjs --line hello # 只做某一句
 //   node tools/gen-voice.mjs --force      # 已存在的也重做
+//   （台詞改過字的會自動重做：assets/voice/texts.json 記著每個檔案當初唸的是哪句話）
 //   node tools/gen-voice.mjs --dry        # 只列出要做什麼，不呼叫 API
 //   node tools/gen-voice.mjs --convert    # 把現有的 wav 轉成 mp3（需要 ffmpeg，不呼叫 API）
 //   node tools/gen-voice.mjs --resplit    # 用 tools/voice-debug 裡存下來的原始語音重新切一次（不呼叫 API）
@@ -27,7 +28,7 @@ const VOICE_DIR = join(ROOT, 'assets', 'voice');
 const cfg = JSON.parse(readFileSync(join(ROOT, 'tools', 'voice-config.json'), 'utf8'));
 const API = process.env.GEMINI_API_BASE || 'https://generativelanguage.googleapis.com/v1beta/interactions';
 const KEY = process.env.GEMINI_API_KEY;
-const WHO = { yy: '岳岳', kk: '凱凱', both: '岳岳、凱凱' };
+const WHO = { yy: '岳岳', kk: '愷愷', both: '岳岳、愷愷' };
 
 const args = process.argv.slice(2);
 const flag = (n) => args.includes(`--${n}`);
@@ -59,6 +60,12 @@ function jobs() {
 }
 
 const existing = (key) => ['mp3', 'wav'].find((ext) => existsSync(join(VOICE_DIR, `${key}.${ext}`)));
+
+// 每個語音檔當初唸的文字；台詞改了（例如名字改了）就算過期，要重做
+const TEXTS_PATH = join(VOICE_DIR, 'texts.json');
+const TEXTS = existsSync(TEXTS_PATH) ? JSON.parse(readFileSync(TEXTS_PATH, 'utf8')) : {};
+const stale = (j) => existing(j.key) && TEXTS[j.key] !== undefined && TEXTS[j.key] !== j.text;
+const remember = (j) => { TEXTS[j.key] = j.text; writeFileSync(TEXTS_PATH, JSON.stringify(TEXTS, Object.keys(TEXTS).sort(), 1) + '\n'); };
 
 async function synth({ charId, text }) {  // text 可以是很多句用停頓串起來
   const c = cfg.characters[charId];
@@ -290,8 +297,9 @@ async function runBatch(batch, depth = 0) {
   if (parts) {
     if (how === 'B') console.log('    （用字數估計位置切開）');
     batch.forEach((j, i) => {
-      if (flag('force')) { const ext = existing(j.key); if (ext) unlinkSync(join(VOICE_DIR, `${j.key}.${ext}`)); }
+      const ext = existing(j.key); if (ext) unlinkSync(join(VOICE_DIR, `${j.key}.${ext}`));
       saveSamples(j.key, parts[i], rate);
+      remember(j);
     });
     return batch.length;
   }
@@ -397,7 +405,7 @@ if (flag('resplit')) {
     const samples = new Int16Array(b.buffer.slice(b.byteOffset + 44, b.byteOffset + b.length - ((b.length - 44) % 2)));
     const { parts, how, info } = splitBySilence(samples, rate, batch.map((j) => j.text));
     if (!parts) { console.log(`  ${f}：還是切不開（${info}）`); continue; }
-    batch.forEach((j, i) => { if (!existing(j.key)) { saveSamples(j.key, parts[i], rate); n++; } });
+    batch.forEach((j, i) => { if (!existing(j.key)) { saveSamples(j.key, parts[i], rate); remember(j); n++; } });
     console.log(`  ${f}：切開了（方法 ${how}），存了 ${batch.length} 句`);
   }
   console.log(`撿回 ${n} 句；清單已更新：${writeManifest()} 個語音檔`);
@@ -405,8 +413,9 @@ if (flag('resplit')) {
 }
 
 const all = jobs();
-const todo = all.filter((j) => flag('force') || !existing(j.key));
-console.log(`共 ${all.length} 句，這次要產生 ${todo.length} 句（模型 ${cfg.model}，${hasFfmpeg ? '輸出 mp3' : '找不到 ffmpeg，輸出 wav'}）`);
+const todo = all.filter((j) => flag('force') || !existing(j.key) || stale(j));
+const nStale = all.filter(stale).length;
+console.log(`共 ${all.length} 句，這次要產生 ${todo.length} 句${nStale ? `（其中 ${nStale} 句是台詞改過要重做）` : ''}（模型 ${cfg.model}，${hasFfmpeg ? '輸出 mp3' : '找不到 ffmpeg，輸出 wav'}）`);
 
 if (flag('dry')) {
   todo.forEach((j) => console.log(`  ${j.key}  ←  ${j.text}`));

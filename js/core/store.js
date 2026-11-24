@@ -16,6 +16,7 @@ function blank() {
     session: { usedMs: 0, restUntil: 0 },
     settings: { ...DEFAULT_SETTINGS },
     seen: {},   // 看過的東西（開場長版、規則說明）
+    stickers: { owned: {}, placed: [] },   // 愷愷的貼紙：手上有幾張、貼在小鎮哪裡
   };
 }
 function normalize(s) {
@@ -26,6 +27,7 @@ function normalize(s) {
     session: { ...b.session, ...(s.session || {}) },
     settings: { ...b.settings, ...(s.settings || {}) },
     seen: { ...(s.seen || {}) },
+    stickers: { owned: { ...(s.stickers?.owned || {}) }, placed: [...(s.stickers?.placed || [])] },
   };
 }
 function load() {

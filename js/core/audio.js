@@ -19,7 +19,7 @@ export function unlock() {
     lim.threshold.value = -8; lim.knee.value = 6; lim.ratio.value = 8;
     lim.attack.value = 0.004; lim.release.value = 0.2;
     master.connect(lim).connect(ctx.destination);
-    musicBus = ctx.createGain(); musicBus.gain.value = musicBase(); musicBus.connect(master);
+    musicBus = ctx.createGain(); musicBus.gain.value = musicTarget(); musicBus.connect(master);
     sfxBus = ctx.createGain(); sfxBus.gain.value = 0.7; sfxBus.connect(master);
     voiceBus = ctx.createGain(); voiceBus.gain.value = 1; voiceBus.connect(master);
     noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
@@ -48,15 +48,40 @@ let ducked = false;
 function musicBase() { return MUSIC_VOL[musicVol] || MUSIC_VOL.mid; }
 export function setMusicVolume(v) {
   musicVol = MUSIC_VOL[v] ? v : 'mid';
-  if (ctx) musicBus.gain.setTargetAtTime(musicBase() * (ducked ? duckFactor() : 1), ctx.currentTime, 0.1);
+  applyMusic(0.1);
 }
 const DUCK = { song: 0.6, bg: 0.45, quiet: 0.55 };
 function duckFactor() { return DUCK[music && TRACKS[music.name]?.style] ?? DUCK.bg; }
+// 音樂現在該多大聲：說話時壓低；思考時間幾乎聽不到；安靜模式整個關掉
+function musicTarget() {
+  if (quietMode) return 0.0001;
+  if (thinking) return musicBase() * 0.05;
+  return musicBase() * (ducked ? duckFactor() : 1);
+}
+function applyMusic(tc = 0.15) { if (ctx) musicBus.gain.setTargetAtTime(musicTarget(), ctx.currentTime, tc); }
 export function duck(on) {
   ducked = on;
-  if (!ctx) return;
-  musicBus.gain.setTargetAtTime(musicBase() * (on ? duckFactor() : 1), ctx.currentTime, 0.15);
+  applyMusic();
 }
+
+// ---- 思考時間（岳岳對聲音很敏感，任何小聲音都會分心）----
+// 題目出來、等他想答案的時候：音樂淡到幾乎聽不到、不放裝飾音效；
+// 等待的人按啦啦隊也先不出聲，答完才一起拍手（onThinkEnd）。
+let thinking = false;
+let thinkEnd = [];
+export function think(on) {
+  if (thinking === on) return;
+  thinking = on;
+  applyMusic(on ? 0.25 : 0.5);
+  if (!on) { const fns = thinkEnd; thinkEnd = []; fns.forEach((fn) => fn()); }
+}
+export const isThinking = () => thinking;
+export function onThinkEnd(fn) { if (thinking) thinkEnd.push(fn); else fn(); }
+
+// ---- 安靜模式（家長頁）：關掉背景音樂和裝飾音效，只留角色說話和對錯的聲音 ----
+let quietMode = false;
+const DECOR = new Set(['whoosh', 'boing', 'tick', 'pop', 'giggle', 'windup', 'curtain', 'squish', 'slide', 'burp']);
+export function setQuietMode(on) { quietMode = !!on; applyMusic(0.2); }
 
 // ---------- 基本合成 ----------
 function osc(c, dest, freq, t, dur, { type = 'sine', gain = 0.2, attack = 0.01, release = null, lp = 0, to = null } = {}) {
@@ -158,7 +183,14 @@ const SFX = {
 };
 export function sfx(name) {
   if (!ctx || ctx.state !== 'running') return;
+  if ((thinking || quietMode) && DECOR.has(name)) return;
   SFX[name]?.(ctx.currentTime + 0.005);
+}
+
+// 彈一個音（口訣唱唱：答對一題彈一個音，整排答完就是一首曲子）
+export function playNote(name, inst = 'marimba', gain = 0.32) {
+  if (!ctx || ctx.state !== 'running') return;
+  INST[inst](ctx, sfxBus, hz(name), ctx.currentTime + 0.005, gain);
 }
 
 // ---------- 音樂 ----------

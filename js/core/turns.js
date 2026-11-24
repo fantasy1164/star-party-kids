@@ -1,10 +1,10 @@
 // 兩兄弟一起玩的輪流。
-// iPad 分不出是誰點的，所以靠：閃閃唱名、左下（岳岳）右下（凱凱）頭像——輪到的放大發亮、
+// iPad 分不出是誰點的，所以靠：閃閃唱名、左下（岳岳）右下（愷愷）頭像——輪到的放大發亮、
 // 一支「明星麥克風」飛到輪到的人那邊（拿麥克風的人才點）、可以點的東西發輪到的人的顏色。
 // 等待的人頭上有「拍手」鈕當啦啦隊：等待也有事做，比較不會去搶（岳岳最需要）。
 import { KIDS } from '../config.js';
 import { speak } from './voice.js';
-import { sfx } from './audio.js';
+import { sfx, isThinking, onThinkEnd } from './audio.js';
 import { div, burst, stageRect } from './dom.js';
 import { kidHead } from '../art/stars.js';
 
@@ -70,19 +70,23 @@ export function turnsScene(root, { first = null } = {}) {
 }
 
 function cheer(t) {
-  sfx('clap');
+  // 另一個人正在想答案：先只亮光不出聲，答完才拍手（岳岳對聲音很敏感）
+  if (isThinking()) {
+    t.classList.add('cheer-wait');
+    if (!t.dataset.pending) { t.dataset.pending = '1'; onThinkEnd(() => { delete t.dataset.pending; t.classList.remove('cheer-wait'); sfx('applause'); }); }
+  } else sfx('clap');
   const r = stageRect(t);
   burst(r.x, r.y - 120, { n: 10, spread: 90 });
   t.querySelector('.cheer').classList.remove('hop');
   void t.offsetWidth;
   t.querySelector('.cheer').classList.add('hop');
-  if (Date.now() - lastCheerThanks > 25000) {
+  if (!isThinking() && Date.now() - lastCheerThanks > 25000) {
     lastCheerThanks = Date.now();
     setTimeout(() => speak('shan', 'cheer_thanks'), 300);
   }
 }
 
-// 唱名：每個畫面第一次說「岳岳，換你囉」，之後換人時說「換凱凱！」
+// 唱名：每個畫面第一次說「岳岳，換你囉」，之後換人時說「換愷愷！」
 export async function callTurn() {
   if (!turnsOn()) return;
   const k = KIDS[cur];

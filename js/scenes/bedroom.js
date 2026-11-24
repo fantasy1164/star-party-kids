@@ -1,5 +1,5 @@
 // 臥室（晚晚）。三個短關卡，每個 1～2 分鐘，做完馬上有星星：
-//   收玩具：把玩具拖回架子上一樣形狀的影子（空間配對）；有的玩具躲在家具後面，要轉房間才找得到（凱凱的強項）
+//   收玩具：把玩具拖回架子上一樣形狀的影子（空間配對）；有的玩具躲在家具後面，要轉房間才找得到（愷愷的強項）
 //   換衣服：白天選外出服、晚上選睡衣（生活知識）；岳岳要照順序穿（看得見的流程表，練習照步驟做事）
 //   晚晚說：聽到「晚晚說」才能做，閃閃會偷偷騙人（練習「先停一下再動」，ADHD 的衝動控制，用遊戲的方式）
 // 流程條、標記、星星、輪流等共用的部分在 room-base.js。
@@ -209,7 +209,7 @@ async function toysGame(R) {
       if (s) {
         sfx('soft');
         wrongs++;
-        // 凱凱（或錯兩次）：把對的影子亮起來
+        // 愷愷（或錯兩次）：把對的影子亮起來
         const right = set.slots.find((x) => x.toy === d.t.id);
         if (levelNow(profile) === 'easy' || wrongs >= 2) { right.sp.el.classList.add('glowy'); setTimeout(() => right.sp.el.classList.remove('glowy'), 3000); }
         if (wrongs === 1 || wrongs === 3) say('wan', wrongs >= 3 ? 'toys_hint' : 'toys_wrong');
@@ -250,7 +250,7 @@ async function dressGame(R) {
     kids[id] = { sp, worn: [], done: false, hard: KIDS[id].level === 'hard', items: {} };
     sp.el.dataset.kid = id;
   }
-  // 托盤：一人一份（一起玩時岳岳在左、凱凱在右）
+  // 托盤：一人一份（一起玩時岳岳在左、愷愷在右）
   for (const id of members) {
     const k = kids[id];
     const side = members.length > 1 ? KIDS[id].side : 'center';

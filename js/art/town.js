@@ -168,6 +168,7 @@ const I = {
   arrow: `<path d="M12 50 H66 M50 26 L78 50 L50 74" fill="none" stroke="#fff" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>`,
   belt: `<rect x="40" y="10" width="20" height="56" rx="4" fill="#4a3b6b"/><rect x="34" y="62" width="32" height="28" rx="6" fill="#c9d3de" stroke="#9fb4cc" stroke-width="3"/><rect x="44" y="70" width="12" height="12" rx="2" fill="#ff5b5b"/>`,
   flag: `<rect x="20" y="8" width="7" height="86" rx="3" fill="#4a3b6b"/><path d="M27 12 L86 24 L27 40Z" fill="#ff5d73"/>`,
+  school2: `<rect x="12" y="52" width="76" height="40" rx="4" fill="#ffe0a8"/><path d="M6 54 L50 30 L94 54Z" fill="#ff5d73"/><rect x="36" y="20" width="28" height="40" fill="#ffd28a"/><path d="M32 22 L50 6 L68 22Z" fill="#ff5d73"/><circle cx="50" cy="38" r="10" fill="#fff" stroke="#4a3b6b" stroke-width="3"/><path d="M50 38 V31 M50 38 L55 40" stroke="#4a3b6b" stroke-width="2.5" stroke-linecap="round"/><rect x="42" y="70" width="16" height="22" rx="3" fill="#a8693f"/><rect x="18" y="62" width="14" height="12" rx="2" fill="#bfe6ff"/><rect x="68" y="62" width="14" height="12" rx="2" fill="#bfe6ff"/>`,
   home2: `<path d="M10 50 L50 14 L90 50" fill="#ff8a3d"/><rect x="22" y="48" width="56" height="42" fill="#fff3e0"/><rect x="42" y="60" width="16" height="30" fill="#c98b5e"/>`,
 };
 export function itemSvg(k) { return `<svg class="item-svg" viewBox="0 0 100 100" width="100%" height="100%">${I[k]}</svg>`; }

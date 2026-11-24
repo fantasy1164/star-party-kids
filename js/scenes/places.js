@@ -11,6 +11,7 @@ import { KIDS } from '../config.js';
 import { shanSvg, kidSvg, starPolygon } from '../art/stars.js';
 import { guaSvg, dongSvg, bibiSvg, personSvg } from '../art/more.js';
 import { duoduoSvg, jiujiuSvg, baobaoSvg, dadaSvg, itemSvg } from '../art/town.js';
+import { shaoSvg, VEHICLES, signSvg, DINOS, boneSvg, skullSvg, ANIMALS } from '../art/fun.js';
 
 const hardSolo = (R) => R.members.includes('yy') && !turnsOn();
 const tree = (s = 1) => `<svg viewBox="0 0 80 110"><rect x="34" y="70" width="12" height="38" rx="5" fill="#a9744f"/><circle cx="40" cy="48" r="34" fill="#4fbf6e"/><circle cx="28" cy="36" r="10" fill="#8fe39a" opacity=".7"/></svg>`;
@@ -164,6 +165,9 @@ export function mountPark(root, app) {
       dio.addBox({ x: 120, y: 200, w: 140, d: 40, h: 40, color: '#c98b5e' });
       dio.addBox({ x: 120, y: 196, w: 140, d: 10, h: 80, color: '#a8693f' });
       const jiujiu = dio.addSprite({ x: 190, y: 225, z: 40, w: 90, h: 90, html: jiujiuSvg(), shadow: 0.5, tap: 'jiujiu' });
+      // 沙坑（挖恐龍化石）
+      dio.addBox({ x: 560, y: 250, w: 120, d: 100, h: 14, color: '#c9a86b' });
+      dio.addDecal({ x: 566, y: 256, w: 108, h: 88, z: 14.5, css: 'background:radial-gradient(circle at 40% 40%,#f2dca6,#e6c98a);border-radius:8px' });
       // 垃圾桶
       [['binTrash', 600, 520], ['binRecycle', 650, 520], ['binFood', 550, 520]].forEach(([k, x, y]) => dio.addSprite({ x, y, w: 52, h: 60, shadow: 0.4, html: itemSvg(k) }));
       // 花
@@ -188,11 +192,15 @@ export function mountPark(root, app) {
           { id: 'frog', x: 150, y: 400, z: 0, hidden: false },
           { id: 'squirrel', x: 540, y: 70, z: 0, hidden: true, seenFrom: [1, 2] },
           { id: 'nest', x: 100, y: 90, z: 90, hidden: true, seenFrom: [1, 2] },
+          { id: 'duck', x: 180, y: 455, z: 0, hidden: false },
+          { id: 'turtle', x: 270, y: 545, z: 0, hidden: false },
         ];
-        const items = (hardSolo(R) ? all : all.slice(0, 4)).map((it) => ({ w: 64, h: 64, ...it, html: itemSvg(it.id) }));
+        const pickIds = hardSolo(R) ? null : ['butterfly', 'ladybug', 'frog', 'squirrel', 'duck'];
+        const items = all.filter((it) => !pickIds || pickIds.includes(it.id)).map((it) => ({ w: 64, h: 64, ...it, html: ANIMALS[it.id] || itemSvg(it.id) }));
         return findGame(R, { host: 'jiujiu', intro: 'pk_animals_go', items, found: (id) => `pk_found_${id}`, hiddenLine: 'pk_animals_hidden', done: 'pk_animals_done' });
       } },
       { id: 'queue', icon: itemSvg('slide'), marker: { x: 500, y: 300, z: 230 }, run: queueGame },
+      { id: 'dino', icon: DINOS.trex, marker: { x: 620, y: 300, z: 200 }, run: dinoGame },
     ],
     playful(name, R) { if (name === 'jiujiu') { sfx('giggle'); R.hop(R.set.chars.jiujiu.el); return true; } return false; },
   });
@@ -407,8 +415,10 @@ export function mountFarm(root, app) {
       dio.addSprite({ x: 560, y: 180, w: 56, h: 56, shadow: 0.4, html: itemSvg('chicken') });
       [[680, 560], [700, 40], [40, 560]].forEach(([x, y]) => dio.addSprite({ x, y, w: 110, h: 150, html: tree(), shadow: 0.6 }));
       const dada = dio.addSprite({ x: 330, y: 330, w: 120, h: 132, html: dadaSvg(), shadow: 0.6, tap: 'dada' });
+      const pig = dio.addSprite({ x: 470, y: 520, w: 90, h: 80, html: ANIMALS.pig, shadow: 0.5, tap: 'pig' });
+      const sheep = dio.addSprite({ x: 90, y: 520, w: 90, h: 80, html: ANIMALS.sheep, shadow: 0.5, tap: 'sheep' });
       const shan = dio.addSprite({ x: 620, y: 420, w: 110, h: 126, html: shanSvg(), shadow: 0.7, tap: 'shan' });
-      return { dio, chars: { dada, shan } };
+      return { dio, chars: { dada, shan, pig, sheep } };
     },
     music: () => 'farm',
     lines: { hello: lineOf('fm'), pick: 'fm_pick', next: 'fm_next', allDone: [['dada', 'fm_all_done'], ['shan', 'fm_all_done']] },
@@ -463,6 +473,267 @@ export function mountFarm(root, app) {
         },
       }) },
     ],
-    playful(name, R) { if (name === 'dada') { sfx('boing'); R.hop(R.set.chars.dada.el); return true; } return false; },
+    playful(name, R) {
+      if (name === 'dada') { sfx('boing'); R.hop(R.set.chars.dada.el); return true; }
+      if (name === 'pig' || name === 'sheep') { sfx('giggle'); R.hop(R.set.chars[name].el); R.say('dada', `fm_${name}`); return true; }
+      return false;
+    },
   });
+}
+
+// ============================== 警察局（警察狗哨哨） ==============================
+// 愷愷喜歡警察：哨哨是原創的玩具警察狗，教交通安全和「走散了找誰幫忙」。
+//   指揮交通：有人要過馬路 → 舉「停」；人都走過去了 → 舉「走」。人還在走就舉「走」會被提醒（先停一下、等一下）
+//   過馬路：停在路邊 → 看左 → 看右 → 再看左 → 等綠燈 → 走斑馬線
+//   走散了找誰：可以找的放愛心（警察、店員、帶著小孩的媽媽），不可以的放叉叉（給糖果叫你跟他走、叫你上車的陌生人）
+export function mountPolice(root, app) {
+  return runRoom(root, app, {
+    id: 'police', host: 'shao', back: 'town',
+    build() {
+      const dio = outdoor(700, 600);
+      // 馬路與斑馬線
+      dio.addDecal({ x: 0, y: 380, w: 700, h: 110, z: 0.6, css: 'background:#8a8fa0' });
+      dio.addDecal({ x: 300, y: 380, w: 100, h: 110, z: 0.7, css: 'background:repeating-linear-gradient(90deg,#fff 0 14px,transparent 14px 28px)' });
+      // 警察局
+      const front = `<svg viewBox="0 0 260 120" width="100%" height="100%" preserveAspectRatio="none"><rect width="260" height="18" fill="#2f5fbf"/><rect x="20" y="36" width="44" height="34" rx="4" fill="#bfe6ff"/><rect x="196" y="36" width="44" height="34" rx="4" fill="#bfe6ff"/><rect x="108" y="56" width="44" height="64" rx="4" fill="#1d3f8a"/><circle cx="130" cy="38" r="14" fill="#ffd23f"/></svg>`;
+      dio.addBox({ x: 220, y: 90, w: 260, d: 150, h: 120, color: '#e3ebff', faces: { s: front } });
+      dio.addBox({ x: 318, y: 150, z: 120, w: 30, d: 26, h: 26, color: '#ff4a4a', cls: 'siren-r' });
+      dio.addBox({ x: 352, y: 150, z: 120, w: 30, d: 26, h: 26, color: '#3ea8e0', cls: 'siren-b' });
+      dio.addSprite({ x: 560, y: 330, w: 130, h: 108, shadow: 0.5, html: VEHICLES.police });
+      dio.addSprite({ x: 290, y: 372, w: 46, h: 120, shadow: 0.3, html: `<svg viewBox="0 0 46 120"><rect x="20" y="50" width="6" height="68" fill="#4a3b6b"/><rect x="6" y="4" width="34" height="54" rx="10" fill="#2f2a44"/><circle cx="23" cy="18" r="9" fill="#ff4a4a"/><circle cx="23" cy="42" r="9" fill="#4cff8a"/></svg>` });
+      [[90, 120], [620, 130], [80, 560], [630, 560]].forEach(([x, y]) => dio.addSprite({ x, y, w: 110, h: 150, html: tree(), shadow: 0.6 }));
+      const shao = dio.addSprite({ x: 200, y: 330, w: 120, h: 128, html: shaoSvg(), shadow: 0.6, tap: 'shao' });
+      const shan = dio.addSprite({ x: 470, y: 560, w: 110, h: 126, html: shanSvg(), shadow: 0.7, tap: 'shan' });
+      return { dio, chars: { shao, shan } };
+    },
+    music: () => 'town',
+    lines: { hello: lineOf('pl'), pick: 'pl_pick', next: 'pl_next', allDone: [['shao', 'pl_all_done'], ['shan', 'pl_all_done']] },
+    games: [
+      { id: 'traffic', icon: `<svg viewBox="0 0 100 100"><rect x="30" y="6" width="40" height="88" rx="14" fill="#2f2a44"/><circle cx="50" cy="28" r="12" fill="#ff4a4a"/><circle cx="50" cy="62" r="12" fill="#4cff8a"/></svg>`, marker: { x: 350, y: 440, z: 160 }, run: trafficGame },
+      { id: 'cross', icon: crossIcon('walk'), marker: { x: 120, y: 440, z: 160 }, run: (R) => stepsGame(R, {
+        host: 'shao', hostSvg: shaoSvg(), cls: 'crosspanel', intro: 'pl_cross_go', wrong: 'pl_cross_wrong', done: 'pl_cross_done',
+        scene: `<div class="cr-road"><div class="cr-zebra"></div></div><div class="cr-kid">${kidSvg(R.members[0])}</div>`,
+        steps: [
+          { t: 'curb', line: 'pl_cross_1', icon: itemSvg('stop') },
+          { t: 'left', line: 'pl_cross_2', icon: crossIcon('left') },
+          { t: 'right', line: 'pl_cross_3', icon: crossIcon('right') },
+          { t: 'left', line: 'pl_cross_4', icon: crossIcon('left') },
+          { t: 'light', line: 'pl_cross_5', icon: signSvg(true) },
+          { t: 'zebra', line: 'pl_cross_6', icon: crossIcon('walk') },
+        ],
+        targets: [
+          { id: 'curb', x: 330, y: 380, w: 160, h: 70, html: '<div class="cr-curb"></div>' },
+          { id: 'left', x: 30, y: 150, w: 150, h: 150, html: crossIcon('left') },
+          { id: 'right', x: 640, y: 150, w: 150, h: 150, html: crossIcon('right') },
+          { id: 'light', x: 620, y: 110, w: 80, h: 160, html: `<svg viewBox="0 0 46 120" width="100%" height="100%"><rect x="20" y="50" width="6" height="68" fill="#4a3b6b"/><rect x="6" y="4" width="34" height="54" rx="10" fill="#2f2a44"/><circle class="lr" cx="23" cy="18" r="9" fill="#ff4a4a"/><circle class="lg" cx="23" cy="42" r="9" fill="#2f4a3a"/></svg>` },
+          { id: 'zebra', x: 300, y: 170, w: 220, h: 150, html: '<div class="cr-zebra-hit"></div>' },
+        ],
+        fx: async (i, target, el) => {
+          if (i === 4) { target.querySelector('.lr').setAttribute('fill', '#5a3a3a'); target.querySelector('.lg').setAttribute('fill', '#4cff8a'); }
+          if (i === 5) { el.querySelector('.cr-kid').classList.add('walk'); await wait(1600); }
+        },
+      }) },
+      { id: 'lost', icon: shaoSvg(), marker: { x: 560, y: 220, z: 200 }, run: (R) => {
+        const all = [
+          ['police', shaoSvg(), 'good'], ['clerk', duoduoSvg(), 'good'], ['mom', personSvg('mom'), 'good'],
+          ['candy', `<div class="withicon">${personSvg('uncle')}<i>${itemSvg('candy')}</i></div>`, 'bad'],
+          ['car', `<div class="withicon">${personSvg('auntie')}<i>${VEHICLES.bus}</i></div>`, 'bad'],
+        ];
+        return sortGame(R, { host: 'shao', hostSvg: shaoSvg(), intro: 'pl_lost_go',
+          bins: [{ id: 'good', html: itemSvg('good') }, { id: 'bad', html: itemSvg('bad') }],
+          items: all.map(([k, html, bin]) => ({ k, bin, html })), wrong: (it) => `pl_lost_${it.k}`, done: 'pl_lost_done' });
+      } },
+    ],
+    playful(name, R) { if (name === 'shao') { sfx('ding'); R.hop(R.set.chars.shao.el); R.say('shao', 'shao_hi'); return true; } return false; },
+  });
+}
+function crossIcon(k) {
+  if (k === 'walk') return `<svg viewBox="0 0 100 100" width="100%" height="100%"><path d="M20 70 H80 M20 50 H80 M20 30 H80" stroke="#fff" stroke-width="10"/><circle cx="56" cy="20" r="9" fill="#ffd9b8"/><path d="M56 30 V56 L44 76 M56 56 L66 76 M56 38 L40 30" stroke="#2f7fe0" stroke-width="7" stroke-linecap="round" fill="none"/></svg>`;
+  const flip = k === 'right' ? 'transform="scale(-1 1) translate(-100 0)"' : '';
+  return `<svg viewBox="0 0 100 100" width="100%" height="100%"><g ${flip}><circle cx="50" cy="50" r="44" fill="#fff3c4"/><path d="M66 50 H28 M42 34 L26 50 L42 66" stroke="#ff8a3d" stroke-width="10" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="72" cy="40" r="6" fill="#4a3b6b"/></g></svg>`;
+}
+
+async function trafficGame(R) {
+  const { say, chk, race } = R;
+  const P = R.panel('trafficpanel', { host: 'shao', hostSvg: shaoSvg() });
+  const el = P.el;
+  const cars = ['bus', 'police', 'fire', 'bus'];
+  try {
+    el.innerHTML = `<div class="tr-road"><div class="tr-zebra"></div><div class="tr-cars moving">${[...cars, ...cars].map((k) => `<div class="tr-car">${VEHICLES[k]}</div>`).join('')}</div></div>
+      <div class="tr-walkers"></div><button class="tr-sign">${signSvg(true)}</button>`;
+    const sign = el.querySelector('.tr-sign');
+    const carsEl = el.querySelector('.tr-cars');
+    const walkersEl = el.querySelector('.tr-walkers');
+    let mode = 'go';
+    let tapped = null;
+    sign.addEventListener('pointerdown', (e) => { e.stopPropagation(); tapped?.(); });
+    const setSign = (m) => { mode = m; sign.innerHTML = signSvg(m === 'go'); sfx('click'); R.hop(sign); carsEl.classList.toggle('moving', m === 'go'); };
+    const waitTap = () => race(new Promise((res) => { tapped = () => { tapped = null; res(); }; }));
+    await say('shao', 'pl_tr_go');
+    chk();
+    await callTurn();
+    chk();
+    const rounds = hardSolo(R) ? 4 : 3;
+    for (let r = 0; r < rounds; r++) {
+      // 有人要過馬路
+      const who = shuffle(['mom', 'dad', 'grandma', 'uncle', 'auntie']).slice(0, r % 2 ? 2 : 1);
+      walkersEl.innerHTML = who.map((k, i) => `<div class="tr-w" style="left:${360 + i * 70}px">${personSvg(k)}</div>`).join('');
+      await wait(400);
+      await say('shao', 'pl_tr_walkers');
+      chk();
+      if (levelNow(R.profile) === 'easy') sign.classList.add('glowy-2d');
+      setHint(() => sign);
+      await waitTap();
+      chk();
+      sign.classList.remove('glowy-2d');
+      setSign('stop');
+      sfx('sparkle');
+      await say('shao', 'pl_tr_stop_good');
+      chk();
+      // 走過去；還在走的時候舉「走」會被提醒（等一下）
+      setHint(null);
+      walkersEl.querySelectorAll('.tr-w').forEach((w) => w.classList.add('cross'));
+      let early = 0;
+      tapped = () => { if (early++ === 0) say('shao', 'pl_tr_wait'); sfx('soft'); R.hop(sign); };
+      await wait(3200);
+      chk();
+      tapped = null;
+      walkersEl.innerHTML = '';
+      await say('shao', 'pl_tr_clear');
+      chk();
+      if (levelNow(R.profile) === 'easy') sign.classList.add('glowy-2d');
+      setHint(() => sign);
+      await waitTap();
+      chk();
+      sign.classList.remove('glowy-2d');
+      setSign('go');
+      sfx('sparkle');
+      await say('shao', early ? 'pl_tr_go_wait_good' : 'pl_tr_go_good');
+      chk();
+      if (turnsOn() && r < rounds - 1) await nextTurn({ say: false });
+      await wait(1200);
+    }
+    sfx('fanfare');
+    await say('shao', 'pl_tr_done');
+    await wait(300);
+  } finally {
+    setHint(null);
+    P.close();
+  }
+}
+
+// ---------------- 公園：挖恐龍化石（愷愷喜歡恐龍；看形狀放回骨架是他的強項）----------------
+// 1. 用手指撥開沙子（擦掉），找到三塊化石
+// 2. 把化石拖回骨架上一樣形狀、一樣方向的位置
+// 3. 恐龍活過來！
+const DINO_KINDS = ['trex', 'tri', 'stego', 'bronto'];
+async function dinoGame(R) {
+  const { say, chk, race } = R;
+  const kind = pick(DINO_KINDS);
+  const P = R.panel('dinopanel', { host: 'jiujiu', hostSvg: jiujiuSvg() });
+  const el = P.el;
+  // 三塊化石：頭骨、兩根（不同方向的）骨頭
+  const pieces = [
+    { k: 'skull', html: skullSvg(), dig: [70, 60], slot: [720, 150] },
+    { k: 'bone0', html: boneSvg(0), dig: [300, 230], slot: [600, 260] },
+    { k: 'bone1', html: boneSvg(60), dig: [470, 80], slot: [470, 300] },
+  ];
+  try {
+    el.innerHTML = `<div class="sandbox"><canvas class="sand" width="600" height="380"></canvas>${pieces.map((p, i) => `<div class="fos" data-i="${i}" style="left:${p.dig[0]}px;top:${p.dig[1]}px">${p.html}</div>`).join('')}</div>
+      <div class="skel">${pieces.map((p, i) => `<div class="slot" data-i="${i}" style="left:${p.slot[0]}px;top:${p.slot[1]}px">${p.html}</div>`).join('')}<div class="dino-big">${DINOS[kind]}</div></div>`;
+    const cv = el.querySelector('canvas');
+    const g = cv.getContext('2d');
+    g.fillStyle = '#e8cf95'; g.fillRect(0, 0, 600, 380);
+    for (let i = 0; i < 500; i++) { g.fillStyle = i % 2 ? '#d8b878' : '#f4e0ad'; g.beginPath(); g.arc((i * 131) % 600, (i * 71) % 380, 3 + (i % 4), 0, 7); g.fill(); }
+    const fos = [...el.querySelectorAll('.fos')];
+    const slots = [...el.querySelectorAll('.slot')];
+    await say('jiujiu', 'dn_go');
+    chk();
+    await callTurn();
+    chk();
+    // 1. 挖
+    const found = new Set();
+    let down = false, moves = 0;
+    const rectOf = (i) => { const p = pieces[i]; return [p.dig[0] - 20, p.dig[1] - 20, 110, 110]; };
+    const uncovered = (i) => {
+      const [x, y, w, h] = rectOf(i);
+      const d = g.getImageData(Math.max(0, x), Math.max(0, y), w, h).data;
+      let clear = 0;
+      for (let k = 3; k < d.length; k += 16) if (d[k] < 40) clear++;
+      return clear / (d.length / 16);
+    };
+    setHint(() => fos.find((_, i) => !found.has(i)));
+    await race(new Promise((resolve) => {
+      const erase = (e) => {
+        const r = cv.getBoundingClientRect();
+        const x = (e.clientX - r.left) * 600 / r.width, y = (e.clientY - r.top) * 380 / r.height;
+        g.globalCompositeOperation = 'destination-out';
+        g.beginPath(); g.arc(x, y, 34, 0, 7); g.fill();
+        g.globalCompositeOperation = 'source-over';
+        if (++moves % 4) return;
+        if (moves % 24 === 0) sfx('scrub');
+        pieces.forEach((_, i) => {
+          if (found.has(i) || uncovered(i) < 0.45) return;
+          found.add(i);
+          fos[i].classList.add('found');
+          sfx('sparkle');
+          R.burstAt(fos[i], { n: 12, stars: true });
+          if (found.size < pieces.length) say('jiujiu', 'dn_found');
+          setHint(() => fos.find((_, k) => !found.has(k)));
+          if (found.size === pieces.length) resolve();
+        });
+      };
+      cv.addEventListener('pointerdown', (e) => { e.preventDefault(); down = true; cv.setPointerCapture(e.pointerId); erase(e); });
+      cv.addEventListener('pointermove', (e) => { if (down) erase(e); });
+      cv.addEventListener('pointerup', () => { down = false; });
+    }));
+    chk();
+    cv.classList.add('gone');
+    await say('jiujiu', 'dn_build');
+    chk();
+    // 2. 拼回骨架（一起玩：輪流放）
+    el.classList.add('building');
+    const placed = new Set();
+    let lastWrong = 0;
+    if (turnsOn()) await nextTurn({ say: false });
+    if (levelNow(R.profile) === 'easy') slots.forEach((s) => s.classList.add('hintslot'));
+    setHint(() => fos.find((_, i) => !placed.has(i)));
+    await race(new Promise((resolve) => {
+      fos.forEach((f, i) => f.addEventListener('pointerdown', (e) => {
+        if (placed.has(i)) return;
+        R.drag(e, {
+          html: pieces[i].html, size: 110, originEl: f,
+          onStart: () => f.classList.add('lifted'),
+          onDrop: (cx, cy) => {
+            const hit = slots.findIndex((s, k) => { if (placed.has(k)) return false; const r = s.getBoundingClientRect(); return Math.hypot(cx - (r.left + r.width / 2), cy - (r.top + r.height / 2)) < r.width * 0.75; });
+            if (hit === i) { const r = stageRect(slots[i]); return { x: r.x, y: r.y }; }
+            if (hit >= 0 && Date.now() - lastWrong > 3000) { lastWrong = Date.now(); say('jiujiu', 'dn_wrong'); }
+            return null;
+          },
+          onPlaced: async () => {
+            placed.add(i);
+            f.classList.add('used');
+            slots[i].classList.add('filled');
+            sfx('click'); sfx('sparkle');
+            if (placed.size === pieces.length) resolve();
+            else if (turnsOn()) await nextTurn({ say: false });
+          },
+          onBack: () => { f.classList.remove('lifted'); sfx('soft'); },
+        });
+      }));
+    }));
+    chk();
+    setHint(null);
+    // 3. 活過來
+    el.classList.add('alive');
+    sfx('drum'); sfx('fanfare');
+    R.burstAt(el.querySelector('.dino-big'), { n: 28, spread: 240, stars: true });
+    await say('jiujiu', `dn_is_${kind}`);
+    chk();
+    await say('jiujiu', 'dn_done');
+    await wait(300);
+  } finally {
+    setHint(null);
+    P.close();
+  }
 }

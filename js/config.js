@@ -8,20 +8,21 @@ export const DEFAULT_SETTINGS = {
   bedtime: 21,      // 幾點後玩具都睡了
   wake: 6,          // 幾點起床
   musicVol: 'mid',  // 音樂大小：low、mid、high
+  quiet: false,     // 安靜模式：關掉背景音樂和裝飾音效，只留角色說話和對錯的聲音
   nolimit: false,   // 測試用：不限制遊玩時間
 };
 
-// 兩兄弟。代表色是暫定（11/23 John：之後再調整）
+// 兩兄弟。代表色（11/24）：岳岳喜歡藍色、白色；愷愷喜歡紅色、橘色、黃色。
 export const KIDS = {
-  yy: { id: 'yy', name: '岳岳', age: 8, level: 'hard', color: '#ff8a3d', soft: '#ffe0c7', side: 'left' },
-  kk: { id: 'kk', name: '凱凱', age: 5, level: 'easy', color: '#1fa7c9', soft: '#c9f0fa', side: 'right' },
+  yy: { id: 'yy', name: '岳岳', age: 8, level: 'hard', color: '#2f7fe0', soft: '#e3efff', side: 'left' },
+  kk: { id: 'kk', name: '愷愷', age: 5, level: 'easy', color: '#ff6a2b', soft: '#ffefb0', side: 'right' },
 };
 export const PROFILES = {
   yy: { id: 'yy', members: ['yy'], level: 'hard' },
   kk: { id: 'kk', members: ['kk'], level: 'easy' },
   both: { id: 'both', members: ['yy', 'kk'], level: 'easy' },
 };
-export const NAMES = { yy: '岳岳', kk: '凱凱', both: '岳岳、凱凱' };
+export const NAMES = { yy: '岳岳', kk: '愷愷', both: '岳岳、愷愷' };
 
 // 玩具明星。tts 是還沒有語音檔時，裝置內建語音的音高與語速
 export const CHARACTERS = {
@@ -35,4 +36,5 @@ export const CHARACTERS = {
   duoduo: { id: 'duoduo', name: '多多', tts: { pitch: 1.35, rate: 1.0 } },// 存錢筒小豬，超市
   baobao: { id: 'baobao', name: '抱抱', tts: { pitch: 0.95, rate: 0.9 } },// 泰迪熊醫生，診所
   jiujiu: { id: 'jiujiu', name: '啾啾', tts: { pitch: 1.7, rate: 1.1 } },  // 發條小鳥，公園
+  shao: { id: 'shao', name: '哨哨', tts: { pitch: 1.0, rate: 1.0 } },     // 玩具警察狗，警察局（原創角色）
 };

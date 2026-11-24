@@ -1,7 +1,7 @@
 // 家長頁（在開場或休息、睡覺畫面長按左下角的鎖 3 秒）。這裡可以有文字。
 import { div } from '../core/dom.js';
 import { state, save, clearAll } from '../core/store.js';
-import { setMusicVolume } from '../core/audio.js';
+import { setMusicVolume, setQuietMode } from '../core/audio.js';
 import { clearRest } from '../core/session.js';
 import { TEST_KEY, testSettings, dateKey } from '../core/clock.js';
 import { KIDS } from '../config.js';
@@ -49,6 +49,8 @@ export function openParent(root, onClose) {
     <div class="row"><button id="endRest">現在結束休息</button></div>
     <h3>聲音</h3>
     <div class="row"><label>音樂大小</label><select id="musicVol">${[['low', '小'], ['mid', '中'], ['high', '大']].map(([v, t]) => `<option value="${v}" ${v === s.musicVol ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+    <div class="row"><label><input type="checkbox" id="quiet" ${s.quiet ? 'checked' : ''}> 安靜模式（關掉背景音樂和裝飾音效，只留角色說話和對錯的聲音）</label></div>
+    <p class="note">要動腦的題目出現時，音樂會自動淡到幾乎聽不到；一起玩時，等待的人按拍手會等答完才出聲。</p>
     <h3>開發測試</h3>
     <div class="row"><label>假裝現在幾點</label><input id="thour" type="number" step="0.5" min="0" max="23.5" placeholder="例如 20.5" value="${test.hour ?? ''}"><button id="applyTest">套用並重新開啟</button><button id="clearTest" class="gray">回到真實時間</button></div>
     <div class="row"><label><input type="checkbox" id="nolimit" ${s.nolimit ? 'checked' : ''}> 不限制每次遊玩時間</label></div>
@@ -59,8 +61,9 @@ export function openParent(root, onClose) {
   const num = (id) => parseFloat($(id).value);
   const commit = () => {
     s.sessionMin = num('sessionMin'); s.restMin = num('restMin'); s.bedtime = num('bedtime'); s.wake = num('wake');
-    s.musicVol = $('musicVol').value; s.nolimit = $('nolimit').checked;
+    s.musicVol = $('musicVol').value; s.nolimit = $('nolimit').checked; s.quiet = $('quiet').checked;
     setMusicVolume(s.musicVol);
+    setQuietMode(s.quiet);
     save();
   };
   p.querySelectorAll('select, input[type=checkbox]').forEach((el) => el.addEventListener('change', commit));

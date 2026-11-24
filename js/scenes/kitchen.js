@@ -1,9 +1,13 @@
 // 廚房（小恐龍主廚咚咚）。三個短關卡：
 //   我的餐盤：把食物拖進餐盤對的那一格（蔬菜、主食、豆魚蛋肉、水果，國健署「我的餐盤」分類）。
-//            凱凱：格子裡有淡淡的提示圖；岳岳：沒有提示，還會混進零食（放上餐盤咚咚會說明零食不是正餐）。
-//   擺餐具：照桌上的虛線，幫爸爸、媽媽、阿嬤擺碗和筷子（岳岳一個人玩時再加湯匙）。空間配對，凱凱的強項。
+//            愷愷：格子裡有淡淡的提示圖；岳岳：沒有提示，還會混進零食（放上餐盤咚咚會說明零食不是正餐）。
+//   擺餐具：照桌上的虛線，幫爸爸、媽媽、阿嬤擺碗和筷子（岳岳一個人玩時再加湯匙）。空間配對，愷愷的強項。
 //   什麼能摸：檯面上的東西滑過來，可以吃的點一下放進籃子；熱鍋、刀子、熱水壺不要碰（用眼睛判斷的「先停一下」）。
 import { runRoom } from './room-base.js';
+import { askChoice } from './kit.js';
+import { dumplingSvg, plateSvg as roundPlateSvg } from '../art/fun.js';
+import * as M from '../core/mult.js';
+import { numSvg } from '../art/more.js';
 import { createDiorama } from '../engine/diorama.js';
 import { div, wait, burst, stageRect, toStage, shuffle } from '../core/dom.js';
 import { sfx } from '../core/audio.js';
@@ -29,6 +33,7 @@ export function mount(root, app) {
       { id: 'plate', icon: ICON2.plate, marker: { x: 345, y: 375, z: 230 }, run: plateGame },
       { id: 'table', icon: ICON2.table, marker: { x: 160, y: 470, z: 200 }, run: tableGame },
       { id: 'safe', icon: ICON2.hot, marker: { x: 450, y: 44, z: 260 }, run: safeGame },
+      { id: 'dumpling', icon: dumplingSvg(), marker: { x: 560, y: 300, z: 200 }, run: dumplingGame },
     ],
     playful(name, R) {
       if (name === 'dong') { sfx('boing'); R.hop(R.set.chars.dong.el); if (Math.random() < 0.4) R.say('dong', 'dong_hungry'); return true; }
@@ -366,6 +371,87 @@ async function safeGame(R) {
     await wait(500);
     await say('dong', 'safe_done');
   } finally {
+    P.close();
+  }
+}
+
+// ---------------- 分水餃（岳岳喜歡煮飯：用盤子和水餃練乘法）----------------
+// b 盤、每盤 a 顆，就是 a×b（課本的意思：b 個 a）。
+//   岳岳一個人：盤子已經裝好，問「一共幾顆」（一題會的、一題正在練的），答錯會一盤一盤數給他看
+//   愷愷：第一盤是範例，其他盤照著放一樣多（點盤子放一顆），再數一共幾顆（數字小）
+//   一起玩：愷愷放水餃、岳岳回答一共幾顆
+async function dumplingGame(R) {
+  const { say, chk, members } = R;
+  const yyIn = members.includes('yy');
+  const solo = !turnsOn();
+  const P = R.panel('dumppanel', { host: 'dong', hostSvg: dongSvg() });
+  const el = P.el;
+  let qs;
+  if (yyIn) { const r = M.pickRound(2, 1); qs = [r.known[0], r.hard[0] || r.known[1]]; }
+  else qs = [[2, 3], [3, 2]].map(([a, b]) => [a + Math.floor(Math.random() * 2), b]);
+  try {
+    await say('dong', 'dp_go');
+    chk();
+    if (turnsOn()) { await callTurn(); chk(); }
+    for (const [a, b] of qs) {
+      const fillMode = !(yyIn && solo);   // 愷愷要自己放
+      el.innerHTML = `<div class="plates">${[...Array(b)].map((_, i) => `<div class="dplate" data-i="${i}">${roundPlateSvg()}<div class="dps"></div><div class="dnum"></div></div>`).join('')}</div><div class="answers in-panel"></div>`;
+      el.querySelector('.plates').style.setProperty('--cols', b > 4 ? 3 : b);
+      const plates = [...el.querySelectorAll('.dplate')];
+      const add = (p) => { const d = document.createElement('i'); d.innerHTML = dumplingSvg(); p.querySelector('.dps').appendChild(d); };
+      const count = (p) => p.querySelectorAll('.dps i').length;
+      if (!fillMode) { for (const p of plates) { for (let k = 0; k < a; k++) add(p); } sfx('pop'); }
+      else {
+        // 第一盤是範例
+        for (let k = 0; k < a; k++) add(plates[0]);
+        plates[0].classList.add('full');
+        if (turnsOn() && whoseTurn() !== 'kk') await nextTurn({ say: false });
+        await say('dong', 'dp_fill');
+        chk();
+        await R.race(new Promise((resolve) => {
+          const next = () => plates.find((p) => count(p) < a);
+          setHint(() => next());
+          plates.forEach((p) => p.addEventListener('pointerdown', (e) => {
+            e.stopPropagation();
+            if (count(p) >= a) { sfx('soft'); R.hop(p); return; }
+            add(p); sfx('pop');
+            if (count(p) === a) { p.classList.add('full'); sfx('sparkle'); }
+            if (!next()) resolve();
+          }));
+        }));
+        chk();
+        setHint(null);
+      }
+      // 一共幾顆？
+      if (turnsOn()) await nextTurn({ say: false });
+      const kidQ = !yyIn || (turnsOn() && whoseTurn() === 'kk');
+      await say('dong', 'dp_ask');
+      chk();
+      const answers = el.querySelector('.answers');
+      answers.classList.toggle('four', !kidQ);
+      const demo = async () => {
+        await say('dong', 'dp_count');
+        for (let i = 0; i < b; i++) {
+          plates[i].classList.add('lit');
+          plates[i].querySelector('.dnum').innerHTML = numSvg(a * (i + 1), { bg: '#fff', color: '#ff6a2b' });
+          sfx('tick');
+          await wait(650);
+        }
+      };
+      const t0 = Date.now();
+      const res = await askChoice(R, answers, M.choices(a, b, kidQ ? 3 : 4), a * b, { host: 'dong', demo });
+      chk();
+      if (!kidQ) M.answer(a, b, res.firstTry, Date.now() - t0);
+      sfx('chomp');
+      await say('dong', res.firstTry ? 'dp_yum' : 'dp_yum_try');
+      chk();
+      if (turnsOn()) await nextTurn({ say: false });
+    }
+    sfx('fanfare');
+    await say('dong', 'dp_done');
+    await wait(300);
+  } finally {
+    setHint(null);
     P.close();
   }
 }

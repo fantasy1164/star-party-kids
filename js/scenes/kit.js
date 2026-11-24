@@ -2,9 +2,10 @@
 //   sortGame  分類：把東西拖進對的籃子（垃圾分類、餵動物、冰的放保冷袋、生病時好/不好）
 //   findGame  尋找：在立體場景裡找東西，有的躲在後面要轉房間（購物清單、找小動物、撿雞蛋）
 //   stepsGame 照步驟：上面是步驟圖，照順序點東西（看醫生、種菜）
-// 都遵守同樣的原則：做錯不扣分、角色說明為什麼、凱凱（easy）的下一步會發亮、一起玩每一步輪流。
-import { div, wait, toStage, stageRect, shuffle } from '../core/dom.js';
-import { sfx } from '../core/audio.js';
+// 都遵守同樣的原則：做錯不扣分、角色說明為什麼、愷愷（easy）的下一步會發亮、一起玩每一步輪流。
+import { div, wait, toStage, stageRect, shuffle, pick } from '../core/dom.js';
+import { sfx, think } from '../core/audio.js';
+import { numSvg } from '../art/more.js';
 import { turnsOn, callTurn, nextTurn, levelNow } from '../core/turns.js';
 import { setHint } from '../core/session.js';
 
@@ -81,7 +82,7 @@ export async function sortGame(R, opt) {
     chk();
     await callTurn();
     chk();
-    // 凱凱：拿起東西時，對的籃子會發亮
+    // 愷愷：拿起東西時，對的籃子會發亮
     const glow = (on, bin) => Object.values(bins).forEach((b) => b.el.classList.toggle('glowy-2d', on && b.el.dataset.bin === bin));
     const onDown = (e) => { const s = e.target.closest('.sitem'); if (s && levelNow(R.profile) === 'easy') glow(true, s.dataset.bin); };
     const onUp = () => glow(false);
@@ -212,3 +213,68 @@ export async function stepsGame(R, opt) {
     P.close();
   }
 }
+
+// 選答案（岳岳很容易「錯幾次就放棄」，所以不讓他連錯三次）：
+//   錯第一次：再拿掉一個錯的選項，嗶嗶鼓勵他再想一次
+//   錯第二次：嗶嗶示範（排點點、唱口訣；六以上用「五的口訣再加」），對的答案發亮，跟著點
+// 題目出來到答完之間是「思考時間」：音樂幾乎聽不到、等待的人拍手先不出聲。
+// 回傳 { firstTry, wrongs }
+export function askChoice(R, box, opts, correct, { demo = null, glow = false, host = 'bibi' } = {}) {
+  think(true);
+  return R.race(new Promise((resolve) => {
+    let wrongs = 0;
+    let busy = false;
+    box.innerHTML = '';
+    box.classList.add('show');
+    const btns = opts.map((v) => {
+      const b = document.createElement('button');
+      b.className = 'ans';
+      b.dataset.v = v;
+      b.innerHTML = numSvg(v, { color: '#4a3b6b' });
+      b.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        if (b.disabled || busy) return;
+        if (v === correct) {
+          sfx('fanfare');
+          R.burstAt(b, { n: 18, stars: true, colors: ['#ffd23f', '#fff3a0', '#4cd07d'] });
+          b.classList.add('right');
+          think(false);
+          setTimeout(() => { box.classList.remove('show'); box.innerHTML = ''; resolve({ firstTry: wrongs === 0, wrongs }); }, 650);
+          return;
+        }
+        wrongs++;
+        sfx('soft');
+        b.disabled = true;
+        b.classList.add('wrong');
+        const left = () => btns.filter((x) => !x.disabled && +x.dataset.v !== correct);
+        if (wrongs === 1) {
+          // 第一次錯：鼓勵再想一次；選項還多的話少一個，比較好想
+          if (left().length > 1) {
+            const g = pick(left());
+            g.disabled = true;
+            g.classList.add('gone');
+            R.say(host, 'try_2');
+          } else R.say(host, pick(['try_1', 'try_3']));
+        } else {
+          // 一起看：示範，答案發亮
+          left().forEach((x) => { x.disabled = true; x.classList.add('gone'); });
+          busy = true;
+          (async () => {
+            await R.say(host, 'try_show');
+            if (demo) await demo();
+            busy = false;
+            const ok = btns.find((x) => +x.dataset.v === correct);
+            ok.classList.add('glowy-2d');
+            setHint(() => ok);
+            R.say(host, 'try_tap');
+          })().catch(() => {});
+        }
+      });
+      box.appendChild(b);
+      if (glow && v === correct) b.classList.add('glowy-2d');
+      return b;
+    });
+    setHint(() => btns.find((x) => !x.disabled));
+  })).finally(() => think(false));
+}
+

@@ -1,6 +1,6 @@
 // 客廳（主持人閃閃）。三個短關卡：
 //   時間到，關電視：電視在播卡通，鬧鐘一響就按遙控器關電視；門鈴、電話響不能關（直接練岳岳最難的「轉換」：時間到就停）。
-//   誰按電鈴？：從門上的小洞看是誰。爸爸、媽媽、阿嬤可以開門；不認識的人不開門，要去找大人（凱凱很會觀察，可以當看門孔的人）。
+//   誰按電鈴？：從門上的小洞看是誰。爸爸、媽媽、阿嬤可以開門；不認識的人不開門，要去找大人（愷愷很會觀察，可以當看門孔的人）。
 //   明星舞台：跟著閃閃做動作（真的站起來做），再跟著拍子打鼓（讓岳岳動身體、練習抓時間點）。
 import { runRoom } from './room-base.js';
 import { createDiorama } from '../engine/diorama.js';
@@ -331,7 +331,18 @@ async function stageGame(R) {
     sfx('applause');
     burst(stageW() / 2, 360, { n: 36, spread: 320 });
     await say('shan', 'stage_done');
+    chk();
+    // 自己編節奏（岳岳喜歡音樂）：三顆鼓，想怎麼打都可以，12 秒後自己結束
+    const kit = div('freedrums ui', ['drum', 'tap', 'ding'].map((k, i) => `<button class="fdrum" data-s="${k}" style="--c:${['#ff5d73', '#ffb627', '#3ea8e0'][i]}">${ICON2.drum}</button>`).join(''));
+    root.appendChild(kit);
+    kit.addEventListener('pointerdown', (e) => { const b = e.target.closest('.fdrum'); if (!b) return; e.stopPropagation(); sfx(b.dataset.s); b.classList.remove('hit'); void b.offsetWidth; b.classList.add('hit'); shanEl.classList.toggle('mv-jump'); });
+    await say('shan', 'drum_free');
+    await wait(12000);
+    kit.remove();
+    chk();
+    await say('shan', 'drum_free_end');
   } finally {
+    document.querySelector('.freedrums')?.remove();
     spot.remove();
     lane.remove();
     drum.remove();

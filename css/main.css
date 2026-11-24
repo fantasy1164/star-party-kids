@@ -114,7 +114,7 @@ html, body {
 .windclock svg { width: 100%; height: 100%; }
 .windclock.low { animation: pulse 1s ease-in-out infinite; }
 
-/* 輪流：左下岳岳、右下凱凱 */
+/* 輪流：左下岳岳、右下愷愷 */
 .turnbar { position: absolute; inset: 0; z-index: 18; pointer-events: none; }
 .tkid { position: absolute; bottom: 18px; width: 140px; height: 140px; transition: transform .4s, opacity .4s; pointer-events: none; }
 .tkid.left { left: 20px; } .tkid.right { right: 20px; }
@@ -131,8 +131,8 @@ html, body {
 .mictoken svg { width: 100%; height: 100%; animation: floaty 1.4s ease-in-out infinite; }
 body.turn-yy .glowy > svg { animation-name: glowyY; }
 body.turn-kk .glowy > svg { animation-name: glowyK; }
-@keyframes glowyY { 50% { filter: drop-shadow(0 0 12px #ff8a3d); transform: translateY(-3px); } }
-@keyframes glowyK { 50% { filter: drop-shadow(0 0 12px #1fa7c9); transform: translateY(-3px); } }
+@keyframes glowyY { 50% { filter: drop-shadow(0 0 12px #2f7fe0); transform: translateY(-3px); } }
+@keyframes glowyK { 50% { filter: drop-shadow(0 0 12px #ff6a2b); transform: translateY(-3px); } }
 
 /* 手指提示 */
 .hinthand { position: absolute; z-index: 40; width: 110px; height: 110px; pointer-events: none; animation: poke 1s ease-in-out infinite; }
@@ -487,3 +487,165 @@ body.turn-kk .glowy > svg { animation-name: glowyK; }
 .riding .place-mark:not(.target) { opacity: 0; }
 .riding .place-mark.target { pointer-events: none; }
 .riding .dio-sprite, .riding .dio-box { pointer-events: none; }
+/* 啦啦隊在思考時間：只亮光、不出聲 */
+.tkid.cheer-wait .cheer { box-shadow: 0 0 0 6px #ffd23f, 0 0 24px #ffd23f; }
+/* 答錯一次拿掉的選項：縮小淡出 */
+.answers .ans.gone { opacity: 0; transform: scale(.4); transition: opacity .35s, transform .35s; pointer-events: none; }
+.answers .ans:nth-child(4) { animation-delay: .24s; }
+.answers.in-panel.four .ans { width: 112px; height: 112px; padding: 14px; }
+.answers.in-panel.four { gap: 14px; }
+/* 一題一顆星的進度列（看得見還剩幾題） */
+.qprog { position: absolute; left: 50%; top: 18px; transform: translateX(-50%); display: flex; gap: 10px; z-index: 3; }
+.qprog i { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.55); box-shadow: inset 0 0 0 3px rgba(74,59,107,.15); }
+.qprog i.on { background: none; box-shadow: none; animation: popin .4s cubic-bezier(.3,1.6,.5,1); }
+.qprog i.on svg { width: 100%; height: 100%; }
+.qprog i.now { box-shadow: inset 0 0 0 4px #ffd23f; }
+/* 示範時：先亮前面五條（五的口訣），再一條一條加 */
+.qdots .dot.lit5 { filter: drop-shadow(0 0 6px #3ea8e0); opacity: 1; }
+/* 口訣唱唱：木琴 */
+.songpanel .xylo { position: absolute; left: 60px; bottom: 60px; display: flex; align-items: flex-end; gap: 12px; height: 260px; }
+.songpanel .xbar { width: 58px; height: var(--h); border-radius: 14px; background: color-mix(in srgb, var(--c) 30%, #fff); box-shadow: 0 6px 0 rgba(0,0,0,.12); display: flex; align-items: flex-start; justify-content: center; padding-top: 8px; transition: background .3s; }
+.songpanel .xbar span { width: 46px; height: 46px; opacity: 0; transition: opacity .3s; }
+.songpanel .xbar.on { background: var(--c); }
+.songpanel .xbar.on span { opacity: 1; }
+.songpanel .xbar.next { animation: rowglow 1s ease-in-out infinite; box-shadow: 0 0 0 5px #ffd23f, 0 6px 0 rgba(0,0,0,.12); }
+.songpanel .qcard { right: 60px; top: 60px; }
+
+/* ======== 11/24 興趣與獎勵 ======== */
+/* 貼紙 */
+.sticker svg, .tstk svg, .stkbtn svg { width: 100%; height: 100%; display: block; }
+.sticker { filter: drop-shadow(0 0 0 #fff) drop-shadow(3px 0 0 #fff) drop-shadow(-3px 0 0 #fff) drop-shadow(0 3px 0 #fff) drop-shadow(0 -3px 0 #fff) drop-shadow(0 6px 6px rgba(0,0,0,.2)); }
+.sticker-pop { position: absolute; z-index: 40; left: 50%; top: 300px; width: 240px; height: 240px; margin-left: -120px; animation: popin .5s cubic-bezier(.3,1.6,.5,1) both; pointer-events: none; }
+.sticker-pop .sticker { width: 100%; height: 100%; }
+.sticker-pop.fly { transition: transform .55s ease-in, opacity .55s; transform: translate(560px, -260px) scale(.25); opacity: 0; }
+.btn-stickers { right: 24px; top: 140px; background: radial-gradient(circle at 35% 30%, #fff3c4, #ffb627); box-shadow: 0 6px 0 #d6891a, 0 10px 18px rgba(0,0,0,.2); padding: 12px; }
+.stkbtn { position: relative; width: 100%; height: 100%; }
+.stkbtn b { position: absolute; right: -14px; top: -14px; min-width: 36px; height: 36px; border-radius: 18px; background: #ff5d73; color: #fff; font: 800 22px/36px -apple-system, sans-serif; text-align: center; }
+.stkbtn b:empty { display: none; }
+.sticker-tray { position: absolute; z-index: 22; right: 136px; top: 130px; display: none; flex-wrap: wrap; gap: 10px; width: 330px; max-height: 560px; overflow: auto; padding: 16px; border-radius: 28px; background: rgba(255,255,255,.92); box-shadow: 0 10px 30px rgba(0,0,0,.2); }
+.sticker-tray.show { display: flex; }
+.tstk { position: relative; width: 92px; height: 92px; border: 0; border-radius: 20px; background: #fff7e0; padding: 8px; }
+.tstk.sel { box-shadow: 0 0 0 5px #ffd23f, 0 0 16px #ffd23f; }
+.tstk b { position: absolute; right: -6px; top: -6px; min-width: 28px; height: 28px; border-radius: 14px; background: #ff5d73; color: #fff; font: 800 18px/28px -apple-system, sans-serif; }
+.tray-empty { width: 100%; text-align: center; opacity: .5; }
+.sticker-mode .place-mark { opacity: .35; }
+.placing .dio { cursor: crosshair; }
+.placed-sticker.just .inner { animation: popin .45s cubic-bezier(.3,1.6,.5,1); }
+.btn-draw { right: 24px; top: 250px; background: radial-gradient(circle at 35% 30%, #d8ecff, #2f7fe0); box-shadow: 0 6px 0 #1d5aa8, 0 10px 18px rgba(0,0,0,.2); padding: 14px; }
+/* 畫畫板 */
+.drawroom { background: #e9e2f5; }
+.drawpad { position: absolute; left: 140px; top: 24px; right: 24px; bottom: 150px; border-radius: 26px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,.2); }
+.drawpad canvas { width: 100%; height: 100%; display: block; touch-action: none; }
+.dtools { position: absolute; left: 24px; right: 24px; bottom: 16px; height: 120px; display: flex; align-items: center; gap: 12px; z-index: 20; }
+.dcolors, .dbrush, .dstamps, .dbg { display: flex; gap: 6px; align-items: center; }
+.dcolors { flex-wrap: wrap; width: 250px; }
+.dc { width: 42px; height: 42px; border-radius: 50%; border: 4px solid #fff; background: var(--c); box-shadow: 0 3px 6px rgba(0,0,0,.2); }
+.dc.sel, .db.sel, .ds.sel { box-shadow: 0 0 0 5px #ffd23f, 0 0 14px #ffd23f; }
+.db, .ds { width: 70px; height: 70px; border: 0; border-radius: 20px; background: #fff; padding: 8px; }
+.db svg, .ds svg { width: 100%; height: 100%; }
+.dbgb { width: 54px; height: 54px; border-radius: 14px; border: 4px solid #fff; }
+.dbgb[data-bg="space"] { background: linear-gradient(#1d2256, #3a2f7a); }
+.dbgb[data-bg="paper"] { background: #fffdf6; }
+.dclear { width: 64px; height: 64px; border: 0; border-radius: 50%; background: #ffd6d0; padding: 14px; margin-left: auto; }
+.dclear svg { width: 100%; height: 100%; }
+.drawroom .btn-home { top: 22px; }
+/* 交通工具選擇 */
+.vpick { position: absolute; z-index: 26; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; gap: 22px; padding: 30px 34px; border-radius: 40px; background: #fffaf0; box-shadow: 0 16px 40px rgba(0,0,0,.25); align-items: center; }
+.vopt { width: 150px; height: 150px; border: 0; border-radius: 34px; background: radial-gradient(circle at 35% 30%, #fff, #e6f4ff); padding: 14px; box-shadow: 0 6px 0 #bcd8ee; animation: popin .4s cubic-bezier(.3,1.6,.5,1) both; }
+.vopt svg { width: 100%; height: 100%; }
+.vopt.hop { animation: hop .3s; }
+.vback { width: 70px; height: 70px; border: 0; border-radius: 50%; background: #eee; padding: 14px; }
+.vback svg { width: 100%; height: 100%; }
+/* 安全帽 */
+.helmetpanel .hkid { left: 300px; top: 230px; width: 300px; height: 300px; }
+.helmetpanel .hkid svg { width: 260px; height: 260px; }
+.helmetpanel .hspot { position: absolute; left: 70px; top: -20px; width: 140px; height: 90px; border: 5px dashed #ffb627; border-radius: 80px 80px 20px 20px; }
+.helmetpanel .hhelmet { left: 640px; top: 120px; width: 170px; height: 170px; touch-action: none; cursor: grab; }
+.helmetpanel .hhelmet.on { left: 355px !important; top: 175px !important; transition: left .25s, top .25s; }
+.helmetpanel .hhelmet svg { width: 100%; height: 100%; }
+/* 警示燈 */
+.siren-r .dio-face.top { animation: sirenR 1s steps(1) infinite; }
+.siren-b .dio-face.top { animation: sirenB 1s steps(1) infinite; }
+@keyframes sirenR { 50% { filter: brightness(1.8); } }
+@keyframes sirenB { 0% { filter: brightness(1.8); } 50% { filter: none; } }
+/* 指揮交通 */
+.trafficpanel .tr-road { left: 0; right: 0; top: 250px; height: 170px; background: #8a8fa0; overflow: hidden; }
+.trafficpanel .tr-zebra { position: absolute; left: 360px; width: 180px; top: 0; bottom: 0; background: repeating-linear-gradient(0deg, #fff 0 16px, transparent 16px 32px); }
+.trafficpanel .tr-cars { position: absolute; left: 0; top: 30px; display: flex; gap: 120px; animation: cars 9s linear infinite; animation-play-state: paused; }
+.trafficpanel .tr-cars.moving { animation-play-state: running; }
+.trafficpanel .tr-car { width: 130px; height: 110px; flex: none; }
+.trafficpanel .tr-car svg { width: 100%; height: 100%; }
+@keyframes cars { from { transform: translateX(-1100px); } to { transform: translateX(0); } }
+.trafficpanel .tr-walkers { left: 0; right: 0; top: 0; height: 640px; pointer-events: none; }
+.trafficpanel .tr-w { position: absolute; top: 420px; width: 70px; height: 135px; transition: top 3s linear; }
+.trafficpanel .tr-w svg { width: 100%; height: 100%; }
+.trafficpanel .tr-w.cross { top: 110px; }
+.trafficpanel .tr-sign { right: 40px; bottom: 30px; width: 170px; height: 190px; border: 0; background: none; padding: 0; }
+.trafficpanel .tr-sign svg { width: 100%; height: 100%; }
+/* 過馬路 */
+.crosspanel .cr-road { left: 0; right: 0; top: 170px; height: 200px; background: #8a8fa0; }
+.crosspanel .cr-zebra { position: absolute; left: 330px; width: 160px; top: 0; bottom: 0; background: repeating-linear-gradient(90deg, #fff 0 16px, transparent 16px 32px); }
+.crosspanel .cr-kid { left: 360px; top: 400px; width: 110px; height: 210px; transition: top 1.5s ease; }
+.crosspanel .cr-kid svg { width: 100%; height: 100%; }
+.crosspanel .cr-kid.walk { top: 20px; }
+.crosspanel .cr-curb, .crosspanel .cr-zebra-hit { width: 100%; height: 100%; border-radius: 16px; }
+.crosspanel .cr-curb { background: repeating-linear-gradient(90deg, #ffd23f 0 20px, #4a3b6b 20px 40px); opacity: .8; }
+.withicon { position: relative; width: 100%; height: 100%; }
+.withicon > svg { width: 100%; height: 100%; }
+.withicon i { position: absolute; right: -10px; bottom: 0; width: 50%; height: 50%; }
+.withicon i svg { width: 100%; height: 100%; }
+/* 挖恐龍化石 */
+.dinopanel .sandbox { left: 30px; top: 120px; width: 600px; height: 380px; border-radius: 26px; overflow: hidden; background: #d9c08a; transition: all .6s; }
+.dinopanel .sandbox > * { position: absolute; }
+.dinopanel .fos { width: 90px; height: 90px; z-index: 1; }
+.dinopanel .fos svg { width: 100%; height: 100%; }
+.dinopanel .fos.found { z-index: 3; filter: drop-shadow(0 0 10px #fff3a0); animation: popin .4s; }
+.dinopanel .sand { left: 0; top: 0; width: 100%; height: 100%; z-index: 2; touch-action: none; }
+.dinopanel .sand.gone { opacity: 0; pointer-events: none; transition: opacity .6s; }
+.dinopanel .fos.used { visibility: hidden; }
+.dinopanel .fos.lifted { opacity: .3; }
+.dinopanel .skel { left: 0; top: 0; width: 940px; height: 640px; pointer-events: none; }
+.dinopanel .slot { position: absolute; width: 110px; height: 110px; opacity: 0; filter: brightness(0); transition: opacity .4s, filter .4s; }
+.dinopanel .slot svg { width: 100%; height: 100%; }
+.dinopanel.building .slot { opacity: .4; }
+.dinopanel.building .slot:not(.filled)::after { content: ''; position: absolute; inset: -8px; border: 4px dashed #ff8a3d; border-radius: 50%; filter: brightness(1); }
+.dinopanel.building .slot.hintslot:not(.filled) { animation: glow2d 1.2s ease-in-out infinite; }
+.dinopanel .slot.filled { opacity: 1; filter: none; }
+.dinopanel.building .sandbox { left: 20px; top: 120px; transform: scale(.7); transform-origin: 0 100%; }
+.dinopanel.building .dino-big { opacity: .1; transform: scale(1); filter: brightness(0); }
+.dinopanel.alive .dino-big { filter: none; }
+.dinopanel .dino-big { position: absolute; left: 380px; top: 110px; width: 460px; height: 420px; opacity: 0; transform: scale(.6); transition: all .6s cubic-bezier(.3,1.6,.5,1); }
+.dinopanel .dino-big svg { width: 100%; height: 100%; }
+.dinopanel.alive .dino-big { opacity: 1; transform: scale(1); }
+.dinopanel.alive .slot { opacity: 0 !important; }
+/* 分水餃 */
+.dumppanel .plates { left: 40px; top: 40px; width: 560px; display: grid; grid-template-columns: repeat(var(--cols, 3), 1fr); gap: 14px; }
+.dumppanel .dplate { position: relative; height: 170px; border-radius: 24px; cursor: pointer; }
+.dumppanel .dplate > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.dumppanel .dps { position: absolute; left: 18%; right: 18%; top: 26%; bottom: 20%; display: flex; flex-wrap: wrap; align-content: center; justify-content: center; gap: 2px; }
+.dumppanel .dps i { width: 30%; max-width: 46px; aspect-ratio: 1; animation: popin .3s cubic-bezier(.3,1.6,.5,1); }
+.dumppanel .dps i svg { width: 100%; height: 100%; }
+.dumppanel .dplate.full { box-shadow: 0 0 0 4px #c8f5d6; }
+.dumppanel .dplate.lit { box-shadow: 0 0 0 5px #ffd23f, 0 0 16px #ffd23f; }
+.dumppanel .dnum { position: absolute; right: -6px; top: -6px; width: 54px; height: 54px; }
+.dumppanel .dnum svg { width: 100%; height: 100%; }
+/* 火箭發射 */
+.rocket-launch { position: absolute; inset: 0; z-index: 40; background: linear-gradient(#141a4a, #3a2f7a); animation: fadeIn .4s both; }
+.rocket-launch .rl-sky i { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: #fff; opacity: .7; }
+.rocket-launch .rl-planet { position: absolute; left: 50%; top: 80px; width: 260px; height: 260px; margin-left: -130px; }
+.rocket-launch .rl-rocket { position: absolute; left: 50%; top: 600px; width: 180px; height: 180px; margin-left: -90px; transition: top 1.7s cubic-bezier(.5,0,.6,1), transform 1.7s; }
+.rocket-launch.go .rl-rocket { top: 160px; transform: scale(.45); }
+.rocket-launch svg { width: 100%; height: 100%; }
+.skypanel .planets { left: 50%; top: 14px; transform: translateX(-50%); display: flex; gap: 8px; }
+.skypanel .pl { position: relative; width: 80px; height: 80px; opacity: .4; }
+.skypanel .pl.done { opacity: 1; }
+.skypanel .pl svg { width: 100%; height: 100%; }
+.skypanel .pl b { position: absolute; left: 0; right: 0; bottom: -4px; text-align: center; font: 900 22px/1 -apple-system, sans-serif; color: #fff; text-shadow: 0 2px 3px rgba(0,0,0,.4); }
+.songpanel.free .xbar { cursor: pointer; box-shadow: 0 0 0 4px #fff3a0, 0 6px 0 rgba(0,0,0,.12); }
+.skypanel .skybig { top: 110px; width: 500px; height: 500px; margin-left: -250px; }
+.dclear.armed { background: #ff5d73; animation: wiggle .4s ease 2; }
+.freedrums { position: absolute; z-index: 21; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; gap: 26px; }
+.fdrum { width: 150px; height: 150px; border: 0; border-radius: 50%; padding: 22px; background: radial-gradient(circle at 35% 30%, #fff, var(--c)); box-shadow: 0 8px 0 rgba(0,0,0,.18); }
+.fdrum svg { width: 100%; height: 100%; }
+.fdrum.hit { animation: squishbtn .18s ease; }
+@keyframes squishbtn { 50% { transform: scale(.88); } }

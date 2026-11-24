@@ -4,7 +4,7 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { LINES } from '../js/data/lines.js';
 
 const CHARS = ['dudu', 'kiki'];
-const WHO = { yy: '岳岳', kk: '凱凱', both: '岳岳、凱凱' };
+const WHO = { yy: '岳岳', kk: '愷愷', both: '岳岳、愷愷' };
 const rows = [['file', 'character', 'line_id', 'text']];
 const files = [];
 for (const [id, l] of Object.entries(LINES)) {

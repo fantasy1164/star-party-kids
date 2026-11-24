@@ -132,18 +132,62 @@ export function pickQuestions(n = 6) {
   while (out.length < n) out.push([row, 2 + Math.floor(Math.random() * 8)]);
   return out;
 }
-// 凱凱：小小的分組數數（不記錄）
+// 一輪題目（岳岳）：大約八成是已經會的、只夾一兩題正在練的新題。
+// 他失敗幾次就會想放棄，所以要一直有「我會」的感覺；新題夾在會的題目中間，最後一題一定是會的。
+// 回傳兩疊：known（會的、該複習的）、hard（正在練的那一排還不熟的）；出題時再依他答得好不好決定下一題拿哪一疊。
+export function pickRound(n = 6, nHard = n >= 6 ? 2 : 1) {
+  const now = Date.now();
+  const row = focusRow();
+  const all = [];
+  for (let a = 2; a <= 9; a++) for (let b = 2; b <= 9; b++) all.push([a, b]);
+  const draw = (pool, k, w) => {
+    const p = pool.map((q) => ({ q, w: w(q) })).filter((x) => x.w > 0);
+    const out = [];
+    while (out.length < k && p.length) {
+      const sum = p.reduce((t, x) => t + x.w, 0);
+      let r = Math.random() * sum;
+      const i = p.findIndex((x) => (r -= x.w) <= 0);
+      out.push(p[i].q);
+      p.splice(i, 1);
+    }
+    return out;
+  };
+  const isHard = ([a, b]) => a === row && fact(a, b).box < MASTER;
+  const hard = draw(all.filter(isHard), nHard, ([a, b]) => { const f = fact(a, b); return 6 - f.box + (f.bad > f.ok ? 1 : 0); });
+  // 會的：已經學會（該複習的多抽一點）、或交換過來已經會的（六三會了，三六也算會）、或熟練盒 2 以上
+  const knownish = ([a, b]) => {
+    const f = fact(a, b);
+    if (f.box >= MASTER) return due(f, now) ? 3 : 1;
+    if (mastered(b, a) || f.box >= 2) return 2;
+    return 0;
+  };
+  let known = draw(all.filter((q) => !hard.some((h) => h[0] === q[0] && h[1] === q[1])), n - hard.length, knownish);
+  // 剛開始什麼都還不熟：用比較容易的補（小的排、乘以小的數）
+  if (known.length < n - hard.length) {
+    const easy = all.filter(([a, b]) => (a <= 5 || b <= 3) && !known.some((k) => k[0] === a && k[1] === b) && !hard.some((h) => h[0] === a && h[1] === b));
+    known = known.concat(draw(easy, n - hard.length - known.length, ([a, b]) => 10 - a - b / 2));
+  }
+  return { known, hard };
+}
+// 其他學堂的小紀錄（例如今天教過「五的口訣再加」了沒、火箭發射到哪）
+export function extra() { const d = data(); if (!d.extra) d.extra = {}; return d.extra; }
+export const saveExtra = () => save();
+// 這題最近答錯過（答對了要特別誇他「你記住了」）
+export const recentlyMissed = (a, b) => { const f = fact(a, b); return f.bad > 0 && f.box === 0; };
+
+// 愷愷：小小的分組數數（不記錄）
 export function kidQuestion() {
   const a = 2 + Math.floor(Math.random() * 2);
   const b = 2 + Math.floor(Math.random() * 3);
   return [a, b];
 }
 // 選項：正確答案＋兩個很像的（鄰近的倍數）
-export function choices(a, b) {
+// n = 4：答錯一次可以拿掉一個，還剩兩個可以想（不會一錯就只剩答案）
+export function choices(a, b, n = 3) {
   const p = a * b;
-  const cand = [a * (b + 1), a * (b - 1), (a + 1) * b, (a - 1) * b, p + 1, p - 1, p + 2]
+  const cand = [a * (b + 1), a * (b - 1), (a + 1) * b, (a - 1) * b, p + 1, p - 1, p + 2, p + a, p - 2]
     .filter((x) => x > 0 && x !== p);
-  const uniq = [...new Set(cand)].sort(() => Math.random() - 0.5).slice(0, 2);
+  const uniq = [...new Set(cand)].sort(() => Math.random() - 0.5).slice(0, n - 1);
   return [p, ...uniq].sort(() => Math.random() - 0.5);
 }
 // 家長頁：每一題的狀態

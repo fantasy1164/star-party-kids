@@ -1,7 +1,7 @@
 // 進入點：舞台、聲音解鎖、畫面切換。
 import { setupStage, stage, div, stageW } from './core/dom.js';
 import { state } from './core/store.js';
-import { unlock, setMusicVolume } from './core/audio.js';
+import { unlock, setMusicVolume, setQuietMode, think } from './core/audio.js';
 import { loadVoiceManifest, primeTts, speak, hush } from './core/voice.js';
 import { setupTurns, turnsScene } from './core/turns.js';
 import { setupHints, resting, setHint, setPlaying } from './core/session.js';
@@ -15,11 +15,12 @@ import { mount as kitchen } from './scenes/kitchen.js';
 import { mount as living } from './scenes/living.js';
 import { mount as school } from './scenes/school.js';
 import { mountTown, mountRide } from './scenes/town.js';
-import { mountMarket, mountPark, mountClinic, mountFarm } from './scenes/places.js';
+import { mountMarket, mountPark, mountClinic, mountFarm, mountPolice } from './scenes/places.js';
+import { mount as draw } from './scenes/fun.js';
 import { mountRest, mountSleep } from './ui/rest.js';
 import { openParent } from './ui/parent.js';
 
-const SCREENS = { opening, town: mountTown, ride: mountRide, house, bedroom, bath, kitchen, living, school, market: mountMarket, park: mountPark, clinic: mountClinic, farm: mountFarm, rest: mountRest, sleep: mountSleep };
+const SCREENS = { opening, town: mountTown, ride: mountRide, house, bedroom, bath, kitchen, living, school, market: mountMarket, park: mountPark, clinic: mountClinic, farm: mountFarm, police: mountPolice, draw, rest: mountRest, sleep: mountSleep };
 const ROOMS = ['town', 'ride', 'house', 'bedroom', 'bath', 'kitchen', 'living', 'school', 'market', 'park', 'clinic', 'farm'];
 let current = null;
 
@@ -46,6 +47,7 @@ const app = {
   },
   parent() { openParent(stage()); },
   go(name, params = null) {
+    think(false);   // 換畫面時一定結束思考時間（音樂回來）
     hush();
     setHint(null);
     setPlaying(false);
@@ -74,6 +76,7 @@ window.__app = app;   // 測試用
 setupStage(document.getElementById('stage'));
 setupHints(stage());
 setMusicVolume(state.settings.musicVol);
+setQuietMode(state.settings.quiet);
 loadVoiceManifest();
 // iOS：聲音與語音合成都要在觸碰的當下啟動
 document.addEventListener('pointerdown', () => unlock(), { capture: true });

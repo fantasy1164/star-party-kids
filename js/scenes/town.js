@@ -2,10 +2,10 @@
 // 小鎮是一塊可以轉的立體模型：3×3 的路口、馬路、斑馬線、六個地點（家、學堂、公園、超市、診所、農場），閃閃站在中間的廣場。
 // 點一個地點 → 叭叭開過來載兄弟倆去：
 //   1. 上車繫安全帶（把扣環拖到扣座，「喀」一聲）
-//   2. 認路：車子自己開，到路口出現地上的箭頭，選往旗子的方向（凱凱的空間能力；凱凱的對的箭頭會發亮）
+//   2. 認路：車子自己開，到路口出現地上的箭頭，選往旗子的方向（愷愷的空間能力；愷愷的對的箭頭會發亮）
 //   3. 路上的安全：紅燈、有人過斑馬線，要按「停」（岳岳的「先停一下」；按太晚叭叭也會自己停、不扣分）
 //   這次遊玩的第一趟走完整版，之後的路程走短版（繫安全帶＋自動開過去），轉場不會太長。
-// 一起玩：凱凱認路、岳岳煞車，兩個人同時有事做。
+// 一起玩：愷愷認路、岳岳煞車，兩個人同時有事做。
 import { createDiorama } from '../engine/diorama.js';
 import { div, wait, burst, stageW, shuffle, pick, toStage, stageRect } from '../core/dom.js';
 import { speak } from '../core/voice.js';
@@ -17,19 +17,25 @@ import { KIDS } from '../config.js';
 import { shanSvg, kidHead } from '../art/stars.js';
 import { personSvg } from '../art/more.js';
 import { babaSvg, itemSvg, ITEM } from '../art/town.js';
-import { backdrop, homeBtn, rotateBtns, jars } from '../ui/hud.js';
+import { VEHICLES, helmetSvg, shaoSvg } from '../art/fun.js';
+import { mountStickerBook, drawPlacedStickers } from './fun.js';
+import { backdrop, homeBtn, rotateBtns, jars, roundBtn } from '../ui/hud.js';
 import { ICON2 } from '../art/more.js';
 
 // ---- 路網：3×3 的路口 ----
 const XS = [150, 650, 1150], YS = [150, 500, 850];
+function badgeIcon() {
+  return `<svg viewBox="0 0 100 100" width="100%" height="100%"><path d="M50 6 L86 20 Q86 64 50 94 Q14 64 14 20Z" fill="#2f5fbf"/><path d="M50 26 l7 14 h15 l-12 10 5 15 -15 -9 -15 9 5 -15 -12 -10 h15z" fill="#ffd23f"/></svg>`;
+}
 const node = (c, r) => ({ c, r, x: XS[c], y: YS[r], id: `${c},${r}` });
 export const PLACES = {
-  school: { node: [0, 0], x: 300, y: 300, screen: 'school', color: '#ffe0a8', roof: '#ff5d73', icon: ICON2.school, h: 120 },
+  school: { node: [0, 0], x: 300, y: 300, screen: 'school', icon: itemSvg('school2'), h: 230 },
   park: { node: [1, 0], x: 520, y: 310, screen: 'park', color: null, icon: itemSvg('slide'), h: 0 },
-  market: { node: [2, 0], x: 900, y: 310, screen: 'market', color: '#dff4ff', roof: '#3ea8e0', icon: itemSvg('cart'), h: 110 },
-  home: { node: [0, 2], x: 390, y: 690, screen: 'house', color: '#fff3e0', roof: '#ff8a3d', icon: itemSvg('home2'), h: 110 },
-  clinic: { node: [1, 2], x: 790, y: 690, screen: 'clinic', color: '#ffffff', roof: '#4cd07d', icon: itemSvg('heal'), h: 100 },
-  farm: { node: [2, 2], x: 1030, y: 690, screen: 'farm', color: '#ff7a5a', roof: '#c9503a', icon: itemSvg('feed'), h: 100 },
+  market: { node: [2, 0], x: 900, y: 310, screen: 'market', icon: itemSvg('cart'), h: 140 },
+  home: { node: [0, 2], x: 300, y: 690, screen: 'house', icon: itemSvg('home2'), h: 150 },
+  clinic: { node: [1, 2], x: 790, y: 690, screen: 'clinic', icon: itemSvg('heal'), h: 140 },
+  police: { node: [1, 2], x: 515, y: 690, screen: 'police', icon: badgeIcon(), h: 140 },
+  farm: { node: [2, 2], x: 1030, y: 690, screen: 'farm', icon: itemSvg('feed'), h: 160 },
 };
 export const PLACE_OF_SCREEN = Object.fromEntries(Object.entries(PLACES).map(([k, p]) => [p.screen, k]));
 
@@ -55,6 +61,91 @@ function route(from, to) {
   for (let n = goal; n; n = prev[n.id]) path.unshift(n);
   return path;
 }
+
+// ---- 每個地點的建築：形狀都不一樣，看輪廓就認得出來 ----
+const win = (x, y, w = 30, h = 28, c = '#bfe6ff') => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="${c}"/><rect x="${x}" y="${y}" width="${w}" height="${h * 0.35}" rx="4" fill="#fff" opacity=".45"/>`;
+const face = (w, h, inner) => `<svg viewBox="0 0 ${w} ${h}" width="100%" height="100%" preserveAspectRatio="none">${inner}</svg>`;
+const BUILD = {
+  // 學堂：長長的兩層樓＋中間高高的鐘塔＋紅屋頂
+  school(dio, p, tap) {
+    const w = 200, d = 120, h = 96;
+    const x = p.x - w / 2, y = p.y - d / 2;
+    const row = (yy) => [12, 46, 124, 158].map((wx) => win(wx, yy)).join('');
+    const side = face(w, h, `${row(14)}${row(56)}<rect x="${w / 2 - 20}" y="${h - 46}" width="40" height="46" rx="6" fill="#a8693f"/>`);
+    dio.addBox({ x, y, w, d, h, color: '#ffe0a8', tap, faces: { s: side, n: side } });
+    dio.addGable({ x, y, w, d, z: h, h: 44, over: 10, color: '#ff5d73', wallColor: '#ffe0a8', ridge: 'x', tap });
+    // 鐘塔
+    const tw = 62, th = 120;
+    const clock = face(tw, th, `<circle cx="31" cy="34" r="22" fill="#fff"/><circle cx="31" cy="34" r="22" fill="none" stroke="#4a3b6b" stroke-width="4"/><path d="M31 34 V20 M31 34 L41 39" stroke="#4a3b6b" stroke-width="4" stroke-linecap="round"/>`);
+    dio.addBox({ x: p.x - tw / 2, y: p.y - tw / 2, z: h, w: tw, d: tw, h: th - 20, color: '#ffd28a', tap, faces: { s: clock, e: clock, n: clock, w: clock } });
+    dio.addGable({ x: p.x - tw / 2, y: p.y - tw / 2, z: h + th - 20, w: tw, d: tw, h: 36, over: 6, color: '#ff5d73', wallColor: '#ffd28a', ridge: 'y', tap });
+    // 旗桿
+    dio.addSprite({ x: x + w + 22, y: y + d + 10, w: 60, h: 170, shadow: 0.2, tap, html: `<svg viewBox="0 0 60 170"><rect x="6" y="6" width="5" height="162" fill="#8a8fa0"/><path d="M11 10 H56 L46 26 L56 42 H11Z" fill="#ffd23f"/></svg>` });
+  },
+  // 超市：又寬又矮、整面玻璃、紅白條紋遮雨棚、屋頂上有大招牌（購物車）
+  market(dio, p, tap) {
+    const w = 250, d = 150, h = 72;
+    const x = p.x - w / 2, y = p.y - d / 2;
+    const front = face(w, h, `<rect x="10" y="12" width="${w - 20}" height="${h - 12}" rx="4" fill="#bfe6ff"/><path d="M60 12 V${h} M120 12 V${h} M180 12 V${h}" stroke="#fff" stroke-width="5"/><rect x="${w / 2 - 26}" y="${h - 48}" width="52" height="48" fill="#8fd3ff" stroke="#fff" stroke-width="4"/>`);
+    dio.addBox({ x, y, w, d, h, color: '#eaf6ff', tap, faces: { s: front, n: front, e: face(d, h, win(20, 18, 40, 30) + win(90, 18, 40, 30)), w: face(d, h, win(20, 18, 40, 30) + win(90, 18, 40, 30)) } });
+    // 遮雨棚（南邊、北邊各一條）
+    const stripes = 'repeating-linear-gradient(90deg,#ff5d73 0 22px,#fff 22px 44px)';
+    dio.addBox({ x: x - 6, y: y + d - 4, z: h - 18, w: w + 12, d: 30, h: 8, color: '#ff5d73', top: stripes, tap });
+    dio.addBox({ x: x - 6, y: y - 26, z: h - 18, w: w + 12, d: 30, h: 8, color: '#ff5d73', top: stripes, tap });
+    // 屋頂招牌
+    const sign = face(150, 60, `<rect width="150" height="60" rx="12" fill="#3ea8e0"/><g transform="translate(48 2) scale(.56)">${ITEM.cart}</g>`);
+    dio.addBox({ x: p.x - 75, y: p.y - 8, z: h, w: 150, d: 16, h: 60, color: '#3ea8e0', tap, faces: { s: sign, n: sign } });
+    // 門口的購物車
+    for (const cx of [x + 30, x + 66]) dio.addSprite({ x: cx, y: y + d + 44, w: 46, h: 46, shadow: 0.4, tap, html: itemSvg('cart') });
+  },
+  // 家：白牆、橘色尖屋頂、煙囪、門口的花
+  home(dio, p, tap) {
+    const w = 150, d = 120, h = 82;
+    const x = p.x - w / 2, y = p.y - d / 2;
+    const front = face(w, h, `${win(16, 18, 34, 30, '#ffe9a8')}${win(w - 50, 18, 34, 30, '#ffe9a8')}<rect x="${w / 2 - 18}" y="${h - 50}" width="36" height="50" rx="16" fill="#c9503a"/><circle cx="${w / 2 + 9}" cy="${h - 24}" r="3" fill="#ffd23f"/>`);
+    const back = face(w, h, `${win(20, 22, 34, 30, '#ffe9a8')}${win(w - 54, 22, 34, 30, '#ffe9a8')}`);
+    dio.addBox({ x, y, w, d, h, color: '#fff6e8', tap, faces: { s: front, n: back, e: face(d, h, win(42, 22, 36, 30, '#ffe9a8')), w: face(d, h, win(42, 22, 36, 30, '#ffe9a8')) } });
+    dio.addGable({ x, y, w, d, z: h, h: 62, over: 12, color: '#ff7a3d', wallColor: '#fff6e8', ridge: 'x', tap });
+    dio.addBox({ x: x + w - 46, y: y + 18, z: h, w: 24, d: 24, h: 70, color: '#c9503a', tap });
+    for (const [fx, c] of [[x + 8, '#ff5d8f'], [x + 30, '#ffd23f'], [x + w - 30, '#a98bff'], [x + w - 8, '#ff5d8f']]) {
+      dio.addSprite({ x: fx, y: y + d + 24, w: 30, h: 40, shadow: 0, tap, html: `<svg viewBox="0 0 30 40"><rect x="13" y="16" width="4" height="24" fill="#4fbf6e"/><circle cx="15" cy="13" r="10" fill="${c}"/><circle cx="15" cy="13" r="4" fill="#fff"/></svg>` });
+    }
+  },
+  // 診所：白色方方的、屋頂上一個大大的綠色十字（四面都看得到）
+  clinic(dio, p, tap) {
+    const w = 170, d = 130, h = 92;
+    const x = p.x - w / 2, y = p.y - d / 2;
+    const front = face(w, h, `<rect x="0" y="0" width="${w}" height="12" fill="#4cd07d"/>${win(14, 26)}${win(w - 44, 26)}<rect x="${w / 2 - 22}" y="${h - 52}" width="44" height="52" rx="4" fill="#bfe6ff" stroke="#fff" stroke-width="4"/>`);
+    const sideF = face(d, h, `<rect x="0" y="0" width="${d}" height="12" fill="#4cd07d"/>${win(20, 30)}${win(d - 50, 30)}`);
+    dio.addBox({ x, y, w, d, h, color: '#ffffff', tap, faces: { s: front, n: front, e: sideF, w: sideF } });
+    const cw = 30, cl = 100, ch = 30;
+    dio.addBox({ x: p.x - cl / 2, y: p.y - cw / 2, z: h, w: cl, d: cw, h: ch, color: '#4cd07d', tap });
+    dio.addBox({ x: p.x - cw / 2, y: p.y - cl / 2, z: h, w: cw, d: cl, h: ch, color: '#4cd07d', tap });
+  },
+  // 警察局：深藍色、屋頂上有紅藍警示燈、門口一個大大的星星徽章、停著一台警車
+  police(dio, p, tap) {
+    const w = 130, d = 110, h = 92;
+    const x = p.x - w / 2, y = p.y - d / 2;
+    const front = face(w, h, `<rect width="${w}" height="16" fill="#2f5fbf"/>${win(12, 28, 26, 24)}${win(w - 38, 28, 26, 24)}<rect x="${w / 2 - 18}" y="${h - 48}" width="36" height="48" rx="4" fill="#1d3f8a"/><circle cx="${w / 2}" cy="30" r="12" fill="#ffd23f"/>`);
+    const sideF = face(d, h, `<rect width="${d}" height="16" fill="#2f5fbf"/>${win(16, 30, 26, 24)}${win(d - 42, 30, 26, 24)}`);
+    dio.addBox({ x, y, w, d, h, color: '#e3ebff', tap, faces: { s: front, n: front, e: sideF, w: sideF } });
+    dio.addBox({ x: p.x - 24, y: p.y - 10, z: h, w: 22, d: 20, h: 22, color: '#ff4a4a', cls: 'siren-r', tap });
+    dio.addBox({ x: p.x + 2, y: p.y - 10, z: h, w: 22, d: 20, h: 22, color: '#3ea8e0', cls: 'siren-b', tap });
+    dio.addSprite({ x: x + w + 24, y: y + d + 4, w: 72, h: 60, shadow: 0.5, tap, html: VEHICLES.police });
+  },
+  // 農場：紅色穀倉（尖屋頂、白色大門）、旁邊高高的圓筒倉、乾草堆
+  farm(dio, p, tap) {
+    const w = 140, d = 150, h = 84;
+    const x = p.x - w / 2 - 55, y = p.y - d / 2;
+    const door = face(w, h, `<rect x="${w / 2 - 34}" y="${h - 62}" width="68" height="62" fill="#fff"/><rect x="${w / 2 - 28}" y="${h - 56}" width="56" height="56" fill="#c9503a"/><path d="M${w / 2 - 28} ${h - 56} L${w / 2 + 28} ${h} M${w / 2 + 28} ${h - 56} L${w / 2 - 28} ${h}" stroke="#fff" stroke-width="6"/>`);
+    dio.addBox({ x, y, w, d, h, color: '#e0503a', tap, faces: { s: door, n: door } });
+    dio.addGable({ x, y, w, d, z: h, h: 70, over: 10, color: '#7a3b30', wallColor: '#e0503a', ridge: 'y', tap,
+      faces: { s: face(w, 70, `<circle cx="${w / 2}" cy="44" r="12" fill="#fff"/>`), n: face(w, 70, `<circle cx="${w / 2}" cy="44" r="12" fill="#fff"/>`) } });
+    // 圓筒倉（圓柱從哪個方向看都一樣，所以用一直面向鏡頭的看板）
+    dio.addSprite({ x: x + w + 27, y: y + 50, w: 56, h: 200, shadow: 0.5, tap, html: `<svg viewBox="0 0 70 200"><defs><linearGradient id="silo" x1="0" x2="1"><stop offset="0" stop-color="#9aa3b5"/><stop offset=".4" stop-color="#e6ebf3"/><stop offset="1" stop-color="#8a93a5"/></linearGradient></defs><rect x="6" y="40" width="58" height="160" fill="url(#silo)"/><path d="M6 42 C6 4 64 4 64 42Z" fill="#c9503a"/><path d="M6 80 H64 M6 120 H64 M6 160 H64" stroke="#7d8698" stroke-width="2" opacity=".5"/></svg>` });
+    dio.addSprite({ x: x + w + 25, y: y + d + 10, w: 60, h: 44, shadow: 0.4, tap, html: itemSvg('hay') });
+  },
+};
 
 // ---- 小鎮模型（小鎮地圖和坐車都用） ----
 export function buildTown() {
@@ -91,11 +182,7 @@ export function buildTown() {
       for (const [tx, ty] of [[p.x - 70, p.y - 60], [p.x + 70, p.y - 70], [p.x - 60, p.y + 60]]) dio.addSprite({ x: tx, y: ty, w: 80, h: 110, shadow: 0.6, tap: `go:${id}`, html: `<svg viewBox="0 0 80 110"><rect x="34" y="70" width="12" height="38" rx="5" fill="#a9744f"/><circle cx="40" cy="48" r="34" fill="#4fbf6e"/><circle cx="28" cy="36" r="10" fill="#8fe39a" opacity=".7"/></svg>` });
       dio.addSprite({ x: p.x + 40, y: p.y + 50, w: 110, h: 100, shadow: 0.5, html: itemSvg('slide'), tap: `go:${id}` });
     } else {
-      const w = 170, d = 140;
-      dio.addBox({ x: p.x - w / 2, y: p.y - d / 2, w, d, h: p.h, color: p.color, tap: `go:${id}`,
-        faces: { s: `<svg viewBox="0 0 ${w} ${p.h}" width="100%" height="100%" preserveAspectRatio="none"><rect x="${w / 2 - 18}" y="${p.h - 50}" width="36" height="50" rx="4" fill="#a8693f"/>
-          <rect x="16" y="20" width="34" height="30" rx="4" fill="#bfe6ff"/><rect x="${w - 50}" y="20" width="34" height="30" rx="4" fill="#bfe6ff"/></svg>` } });
-      dio.addBox({ x: p.x - w / 2 - 10, y: p.y - d / 2 - 10, w: w + 20, d: d + 20, h: 18, z: p.h, color: p.roof, cls: 'soft', tap: `go:${id}` });
+      BUILD[id](dio, p, `go:${id}`);
     }
     markers[id] = dio.addSprite({ x: p.x, y: p.y, z: (p.h || 40) + 70, w: 120, h: 120, html: `<div class="inner">${p.icon}</div>`, cls: 'marker place-mark', shadow: 0, tap: `go:${id}` });
   }
@@ -132,9 +219,13 @@ export async function mountTown(root, app) {
   turnsScene(root);
   setPlaying(true);
   playMusic(isDark() ? 'lullaby' : 'town');
+  // 愷愷的貼紙本（貼在小鎮上）、岳岳的畫畫板
+  if (app.profile.members.includes('kk')) mountStickerBook(root, dio, { onOpen: () => { going = true; }, onClose: () => { going = false; } });
+  else drawPlacedStickers(dio);
+  if (app.profile.members.includes('yy')) roundBtn(root, 'btn-draw', DRAW_ICON, () => { setPlaying(false); app.go('draw'); });
   setHint(() => T.markers.school.el);
-
   let going = false;
+
   dio.onTap(async (name) => {
     if (name.startsWith('go:')) {
       if (going) return;
@@ -148,7 +239,10 @@ export async function mountTown(root, app) {
         if (app.alive()) app.go(PLACES[to].screen);
       } else {
         await speak('shan', `town_go_${to}`, { node: shan.el });
-        if (app.alive()) app.go('ride', { to });
+        if (!app.alive()) return;
+        const vehicle = await pickVehicle(root, app);
+        if (!vehicle) { going = false; setPlaying(true); T.markers[to].el.classList.remove('hop'); return; }
+        if (app.alive()) app.go('ride', { to, vehicle });
       }
     } else if (name === 'shan') {
       sfx('boing');
@@ -165,6 +259,29 @@ export async function mountTown(root, app) {
     await speak('shan', 'town_hello', { node: shan.el });
   }
   if (app.alive()) speak('shan', 'town_pick', { node: shan.el });
+}
+
+const DRAW_ICON = `<svg viewBox="0 0 100 100"><rect x="14" y="18" width="72" height="60" rx="10" fill="#fff"/><path d="M24 64 Q40 30 56 52 T80 40" stroke="#3ea8e0" stroke-width="7" fill="none" stroke-linecap="round"/><circle cx="66" cy="34" r="8" fill="#ffd23f"/><rect x="44" y="78" width="12" height="14" fill="#c98b5e"/></svg>`;
+
+// ---- 要坐什麼去？叭叭、公車、警車、消防車、腳踏車（一個人玩才能騎腳踏車）----
+function pickVehicle(root, app) {
+  const solo = app.profile.members.length === 1;
+  const color = KIDS[app.profile.members[0]].color;
+  const opts = [['baba', babaSvg()], ['bus', VEHICLES.bus], ['police', VEHICLES.police], ['fire', VEHICLES.fire], ...(solo ? [['bike', VEHICLES.bike(color)]] : [])];
+  return new Promise((resolve) => {
+    const scrim = div('scrim');
+    const box = div('vpick ui', opts.map(([k, html]) => `<button class="vopt" data-v="${k}">${html}</button>`).join('') + `<button class="vback">${ICON2.skip}</button>`);
+    root.append(scrim, box);
+    speak('baba', 'pick_vehicle');
+    const done = (v) => { scrim.remove(); box.remove(); resolve(v); };
+    box.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      const b = e.target.closest('.vopt');
+      if (b) { sfx('tap'); b.classList.add('hop'); setTimeout(() => done(b.dataset.v), 250); return; }
+      if (e.target.closest('.vback')) { sfx('tap'); done(null); }
+    });
+    scrim.addEventListener('pointerdown', (e) => { e.stopPropagation(); done(null); });
+  });
 }
 
 // ======================= 坐叭叭的車 =======================
@@ -190,19 +307,29 @@ export async function mountRide(root, app) {
   const chk = () => { if (!alive) throw new Error('left'); };
 
   const path = route(PLACES[from].node, PLACES[to].node);
-  const car = dio.addSprite({ x: path[0].x, y: path[0].y, z: 1, w: 110, h: 90, html: babaSvg(), shadow: 0.6 });
-  const flag = dio.addSprite({ x: path[path.length - 1].x + 30, y: path[path.length - 1].y - 30, z: 1, w: 80, h: 100, html: itemSvg('flag'), shadow: 0.4 });
+  const vehicle = app.params?.vehicle || 'baba';
+  const vhtml = vehicle === 'baba' ? babaSvg() : vehicle === 'bike' ? VEHICLES.bike(KIDS[app.profile.members[0]].color) : VEHICLES[vehicle];
+  const car = dio.addSprite({ x: path[0].x, y: path[0].y, z: 1, w: vehicle === 'bus' || vehicle === 'fire' ? 130 : 110, h: vehicle === 'bus' || vehicle === 'fire' ? 110 : 90, html: vhtml, shadow: 0.6 });
+  drawPlacedStickers(dio);
+  const flag = dio.addSprite({ x: path[path.length - 1].x + 30, y: path[path.length - 1].y - 30, z: 1, w: 90, h: 240, shadow: 0.4,
+    html: `<svg viewBox="0 0 90 240"><rect x="10" y="10" width="7" height="228" rx="3" fill="#8a8fa0"/><path d="M17 14 H84 L70 40 L84 66 H17Z" fill="#ff5d73"/><circle cx="13" cy="10" r="8" fill="#ffd23f"/></svg>` });
+  flag.el.classList.add('goal-flag');
   T.markers[to].el.classList.add('target');
   dio.el.classList.add('riding');   // 坐車時：只留目的地的標記，其他東西點不到（不擋住地上的箭頭）
 
+  // 轉小鎮的按鈕：只有在路口選方向時出現（可以轉一轉找旗子，不用靠記憶）
+  const rot = rotateBtns(root, dio);
+  rot.show(false);
   // 鏡頭跟著車
-  const follow = () => { dio.view.px = car.x; dio.view.py = car.y; dio.apply(); };
+  let following = true;
+  const follow = () => { if (!following) return; dio.view.px = car.x; dio.view.py = car.y; dio.apply(); };
   dio.view.z = 1.25;
   follow();
 
   try {
     // 1. 繫安全帶
-    await seatbelt(root, app, full, () => alive);
+    if (vehicle === 'bike') await helmet(root, app, () => alive);
+    else await seatbelt(root, app, full, () => alive);
     chk();
     // 2. 開車
     const stopBtn = document.createElement('button');
@@ -346,25 +473,46 @@ export async function mountRide(root, app) {
       });
       const right = arrows.find((d) => d.dataset.ok);
       if (levelNow(app.profile) === 'easy' || (turnsOn() && whoseTurn() === 'kk')) right.classList.add('glow');
+      // 拉遠一點，車子和旗子都在畫面裡；這時候可以轉小鎮，從哪個角度看都可以
+      following = false;
+      const dest = PLACES[to];
+      dio.lock(false);
+      rot.show(true);
+      stopBtn.style.visibility = 'hidden';   // 選方向時用不到停車鈕，讓出位置給轉小鎮的按鈕
+      dio.animateTo({ z: 0.85, px: (a.x + dest.x) / 2, py: (a.y + dest.y) / 2 }, 700);
       setHint(() => right);
       say('baba', 'ride_which', car.el);   // 不等說完：說的時候就可以點
       let lastWrong = 0;
+      let wrongs = 0;
+      // 一陣子沒選、或選錯兩次：提醒可以轉一轉找旗子
+      const lookTimer = setTimeout(() => { if (alive) { rot.pulse(true); say('baba', 'ride_turn_look', car.el); } }, 9000);
       await new Promise((resolve) => {
         const handler = (e) => {
+          if (dio.justDragged()) return;   // 剛剛是在轉小鎮，不是點箭頭
           const t = e.target.closest('[data-tap^="dir:"]');
           if (!t) return;
           if (t.dataset.ok) { dio.el.removeEventListener('click', handler); sfx('tap'); resolve(); return; }
           sfx('soft');
           R2(t);
-          if (Date.now() - lastWrong > 3000) { lastWrong = Date.now(); say('baba', 'ride_wrong_way', car.el); }
+          wrongs++;
+          if (wrongs === 2) { rot.pulse(true); say('baba', 'ride_turn_look', car.el); lastWrong = Date.now(); }
+          else if (Date.now() - lastWrong > 3000) { lastWrong = Date.now(); say('baba', 'ride_wrong_way', car.el); }
         };
         const R2 = (el) => { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); };
         dio.el.addEventListener('click', handler);
         const watch = setInterval(() => { if (!alive) { clearInterval(watch); resolve(); } }, 400);
       });
+      clearTimeout(lookTimer);
       setHint(null);
       arrows.forEach((d) => d.remove());
       shadows.forEach((d) => d.remove());
+      // 回到跟著車子；角度留在小孩轉到的地方，車子往前開的方向跟他看到的一樣
+      rot.pulse(false);
+      rot.show(false);
+      stopBtn.style.visibility = '';
+      dio.lock(true);
+      await dio.animateTo({ z: 1.25, px: car.x, py: car.y }, 600);
+      following = true;
       if (alive) say('baba', 'ride_right_way', car.el);
     }
   } catch (e) {
@@ -375,6 +523,47 @@ export async function mountRide(root, app) {
 function lightSvg(state) {
   return `<svg viewBox="0 0 46 120" width="100%" height="100%"><rect x="20" y="50" width="6" height="68" fill="#4a3b6b"/><rect x="6" y="4" width="34" height="54" rx="10" fill="#2f2a44"/>
     <circle cx="23" cy="18" r="9" fill="${state === 'red' ? '#ff4a4a' : '#5a3a3a'}"/><circle cx="23" cy="42" r="9" fill="${state === 'green' ? '#4cff8a' : '#2f4a3a'}"/></svg>`;
+}
+
+// ---- 騎腳踏車：先把安全帽拖到頭上 ----
+async function helmet(root, app, alive) {
+  const id = app.profile.members[0];
+  const scrim = div('scrim');
+  const pnl = div('panel helmetpanel');
+  root.append(scrim, pnl);
+  pnl.innerHTML = `<div class="hkid">${kidHead(id, 260)}<div class="hspot"></div></div><div class="hhelmet">${helmetSvg()}</div>`;
+  const node = div('panel-host', babaSvg());
+  root.appendChild(node);
+  try {
+    await speak('baba', 'helmet_go', { node });
+    if (!alive()) return;
+    const hel = pnl.querySelector('.hhelmet'), spot = pnl.querySelector('.hspot');
+    setHint(() => hel);
+    await new Promise((resolve) => {
+      hel.addEventListener('pointerdown', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        const pr = pnl.getBoundingClientRect();
+        const k = pnl.offsetWidth / pr.width;
+        const mv = (ev) => { hel.style.left = `${(ev.clientX - pr.left) * k - 80}px`; hel.style.top = `${(ev.clientY - pr.top) * k - 60}px`; };
+        const up = (ev) => {
+          window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up);
+          const r = spot.getBoundingClientRect();
+          if (Math.hypot(ev.clientX - (r.left + r.width / 2), ev.clientY - (r.top + r.height / 2)) < 120 / k) {
+            hel.classList.add('on'); hel.style.left = ''; hel.style.top = '';
+            sfx('click'); sfx('sparkle');
+            const rr = stageRect(spot); burst(rr.x, rr.y, { n: 14, stars: true });
+            resolve();
+          } else { hel.style.left = ''; hel.style.top = ''; sfx('soft'); }
+        };
+        window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
+      });
+      const watch = setInterval(() => { if (!alive()) { clearInterval(watch); resolve(); } }, 400);
+    });
+    setHint(null);
+    if (alive()) await speak('baba', 'helmet_done', { node });
+  } finally {
+    scrim.remove(); pnl.remove(); node.remove();
+  }
 }
 
 // ---- 繫安全帶：把扣環拖到扣座 ----

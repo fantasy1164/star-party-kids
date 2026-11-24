@@ -19,6 +19,7 @@ import { div, wait, burst, stageRect, toStage, stageW } from '../core/dom.js';
 import { speak } from '../core/voice.js';
 import { playMusic, sfx } from '../core/audio.js';
 import { state, addStar, doneToday } from '../core/store.js';
+import { showNewSticker } from './fun.js';
 import { phase, isDark, roomTint } from '../core/clock.js';
 import { turnsScene, whoseTurn } from '../core/turns.js';
 import { setHint, setPlaying, mountClock, timeUp } from '../core/session.js';
@@ -225,6 +226,8 @@ export async function runRoom(root, app, spec) {
       addStar(members, `${spec.id}.${id}`);
       await jar.fly(members, { x: stageW() / 2, y: 430 });
       await say('shan', members.length > 1 ? 'star_both' : 'star');
+      // 愷愷：每做完一關多一張貼紙（可以拿去貼在小鎮上）
+      if (alive && members.includes('kk')) await showNewSticker(root);
       refreshPlan();
     }
     if (!alive) return;
