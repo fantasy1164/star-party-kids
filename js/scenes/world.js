@@ -188,7 +188,7 @@ export async function mountWorld(root, app) {
     <path d="M360 300 Q620 360 860 300 Q980 520 860 690" stroke="#a9744f" stroke-width="10" fill="none" stroke-dasharray="4 10"/>
   </svg>`;
   const dio = createDiorama({ w: W, d: D, walls: false, zoom: 0.62, zmin: 0.4, zmax: 1.3, cy: 0.56, skirt: '#3ea8e0', horizon: 'sea', floorCss: 'background:transparent' });
-  dio.addDecal({ x: 0, y: 0, w: W, h: D, z: 0.6, html: map });
+  dio.addDecal({ x: 0, y: 0, w: W, h: D, z: 0.6, html: map, budget: 6e6 });
   root.appendChild(dio.el);
   app.onLeave(() => { setHint(null); setPlaying(false); dio.destroy(); });
   dio.setTint(roomTint());

@@ -275,7 +275,7 @@ export function buildTown() {
     ${zebra}
     ${Object.values(NODES).map((n) => `<circle cx="${n.x}" cy="${n.y}" r="56" fill="#8a8fa0"/>`).join('')}
   </svg>`;
-  dio.addDecal({ x: 0, y: 0, w: W, h: D, z: 0.8, cls: 'road', html: ground });
+  dio.addDecal({ x: 0, y: 0, w: W, h: D, z: 0.8, cls: 'road', html: ground, budget: 6e6 });
   // 地點
   const markers = {};
   for (const [id, p] of Object.entries(PLACES)) {

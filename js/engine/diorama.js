@@ -28,6 +28,14 @@ function vpanel(x1, y1, x2, y2, h, cls = '') {
   return { el, n: [-Math.sin(r), Math.cos(r), 0] };
 }
 
+
+// 大平面要縮小幾倍來畫：w×h×(像素密度²) 超過 budget 時才縮
+export function lowRes(w, h, budget) {
+  const dpr = Math.min(3, window.devicePixelRatio || 1);
+  const px = w * h * dpr * dpr;
+  return px > budget ? Math.sqrt(px / budget) : 1;
+}
+
 export function createDiorama(opt = {}) {
   const o = {
     w: 640, d: 640, wallH: 300, tilt: 56, angle: 45, zoom: 1, cy: 0.56,
@@ -126,7 +134,7 @@ export function createDiorama(opt = {}) {
       const [k, c, w, h] = sets[i % sets.length];
       const ang = (i / n) * Math.PI * 2 + (i % 3) * 0.07;
       const rr = r0 + (i % 4) * 90 + (k === 'hill' || k === 'peak' ? 260 : 60);
-      addSprite({ x: cx + Math.cos(ang) * rr, y: cy + Math.sin(ang) * rr, w, h, shadow: 0, cls: 'horizon', html: HZ[k](c) });
+      addSprite({ x: cx + Math.cos(ang) * rr, y: cy + Math.sin(ang) * rr, w, h, shadow: 0, cls: 'horizon', html: HZ[k](c), budget: 1.5e5 });
     }
   }
 
@@ -271,9 +279,15 @@ export function createDiorama(opt = {}) {
   }
 
   // 看板（一直面向鏡頭）：腳底踩在 (x, y, z)
-  function addSprite({ x, y, z = 0, w, h, html = '', cls = '', shadow = 0.7, tap = null }) {
+  function addSprite({ x, y, z = 0, w, h, html = '', cls = '', shadow = 0.7, tap = null, budget = 0 }) {
     const s = div(`dio-sprite ${cls}`);
     s.style.cssText = `left:${x - w / 2}px;top:${y - h}px;width:${w}px;height:${h}px`;
+    // 遠景用：縮小畫、再放大（只給不會移動的看板用，move() 不處理縮放）
+    const k = budget ? lowRes(w, h, budget) : 1;
+    if (k > 1) {
+      s.style.cssText = `left:${x - w / 2 / k}px;top:${y - h / k}px;width:${w / k}px;height:${h / k}px`;
+      s.style.setProperty('--s', k);
+    }
     s.style.setProperty('--z', `${z}px`);
     s.innerHTML = html;
     if (tap) s.dataset.tap = tap;
@@ -319,9 +333,15 @@ export function createDiorama(opt = {}) {
     world.appendChild(g);
     return { el: g };
   }
-  function addDecal({ x, y, w, h, z = 0.6, html = '', cls = '', css = '' }) {
+  // budget：這張平面最多用多少「螢幕像素」畫。超過就用小一點的尺寸畫、再放大貼上去。
+  // iPhone（像素密度 3）上一張 3000×2200 的地圖要 2 億多像素，記憶體不夠，Safari 會直接重新載入（11/24 iPhone 發現）。
+  // 只給內容不怕放大的平面用（SVG、百分比漸層）；用 px 畫格線的地板不要給 budget。
+  function addDecal({ x, y, w, h, z = 0.6, html = '', cls = '', css = '', budget = 0 }) {
     const dd = div(`dio-decal ${cls}`, html);
-    dd.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px;transform:translateZ(${z}px);${css}`;
+    const k = budget ? lowRes(w, h, budget) : 1;
+    const size = k > 1 ? `width:${w / k}px;height:${h / k}px;transform-origin:0 0;transform:translateZ(${z}px) scale(${k})`
+      : `width:${w}px;height:${h}px;transform:translateZ(${z}px)`;
+    dd.style.cssText = `left:${x}px;top:${y}px;${size};${css}`;
     world.appendChild(dd);
     return dd;
   }
@@ -332,9 +352,11 @@ export function createDiorama(opt = {}) {
   if (o.open) {
     // 外圈地面：比場景大很多，從邊緣慢慢淡掉；場景本身的地板邊緣也柔化，看不到切口
     const SK = Math.max(o.w, o.d) * 1.6;
-    addDecal({ x: -SK, y: -SK, w: o.w + SK * 2, h: o.d + SK * 2, z: 0.05, cls: 'dio-skirt',
+    // 外圈只是一片漸層，畫得很粗也看不出來
+    addDecal({ x: -SK, y: -SK, w: o.w + SK * 2, h: o.d + SK * 2, z: 0.05, cls: 'dio-skirt', budget: 4e5,
       css: `background:radial-gradient(closest-side, ${o.skirt} 0, ${o.skirt} 46%, transparent 100%)` });
-    floor = addDecal({ x: 0, y: 0, w: o.w, h: o.d, z: 0.3, cls: 'dio-floor open', css: o.floorCss || `background:${o.floor}` });
+    const fcss = o.floorCss || `background:${o.floor}`;
+    floor = addDecal({ x: 0, y: 0, w: o.w, h: o.d, z: 0.3, cls: 'dio-floor open', css: fcss, budget: /\dpx/.test(fcss) ? 0 : 1.5e6 });
     if (o.horizon) addHorizon(o.horizon);
   } else {
     addBox({ x: -R, y: -R, z: -34, w: o.w + R * 2, d: o.d + R * 2, h: 34, color: o.base, cls: 'base' });
