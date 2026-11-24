@@ -88,7 +88,7 @@ export function createDiorama(opt = {}) {
   const quadrant = () => (((Math.round((view.a - 45) / 90)) % 4) + 4) % 4;
   async function rotateBy(deg) {
     if (locked) return;
-    await animateTo({ a: snap(view.a) + deg }, 650);
+    await animateTo({ a: view.a + deg }, 650);   // 從現在的角度轉，不再對齊固定的斜角
   }
   async function faceQuadrant(q, ms = 600) {
     const cur = snap(view.a);
@@ -104,23 +104,35 @@ export function createDiorama(opt = {}) {
   let drag = null;
   const isUi = (t) => t.closest('.grab, .ui, button');
   let lastDrag = 0;
+  // 拖到哪就轉到哪（11/24：不再自動對齊斜角）；上下拖可以稍微抬頭、低頭；放手時順著手勢再滑一小段
+  const TILT_MIN = o.tilt - 14, TILT_MAX = o.tilt + 10;
   el.addEventListener('pointerdown', (e) => {
     if (locked || isUi(e.target)) return;
-    drag = { x: e.clientX, a: view.a, moved: false };
+    drag = { x: e.clientX, y: e.clientY, a: view.a, t: view.t, moved: false, vx: 0, lx: e.clientX, lt: performance.now() };
     cancelAnimationFrame(raf);
   });
   const onMove = (e) => {
     if (!drag) return;
     const dx = (e.clientX - drag.x) / stageScale();
-    if (Math.abs(dx) > 8) drag.moved = true;
+    const dy = (e.clientY - drag.y) / stageScale();
+    if (Math.abs(dx) > 8 || Math.abs(dy) > 8) drag.moved = true;
     view.a = drag.a - dx * 0.38;
+    if (o.tiltable !== false) view.t = Math.max(Math.min(TILT_MIN, drag.t), Math.min(Math.max(TILT_MAX, drag.t), drag.t + dy * 0.12));
+    const now = performance.now();
+    const dt = Math.max(1, now - drag.lt);
+    drag.vx = 0.7 * drag.vx + 0.3 * (((e.clientX - drag.lx) / stageScale()) / dt);
+    drag.lx = e.clientX; drag.lt = now;
     apply();
   };
   const onUp = () => {
     if (!drag) return;
-    const moved = drag.moved;
+    const { moved, vx } = drag;
     drag = null;
-    if (moved) { lastDrag = Date.now(); animateTo({ a: snap(view.a) }, 420); }
+    if (moved) {
+      lastDrag = Date.now();
+      const glide = Math.max(-40, Math.min(40, -vx * 0.38 * 160));
+      if (Math.abs(glide) > 1) animateTo({ a: view.a + glide }, 520);
+    }
   };
   window.addEventListener('pointermove', onMove);
   window.addEventListener('pointerup', onUp);
