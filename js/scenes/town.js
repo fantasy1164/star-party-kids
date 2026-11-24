@@ -24,53 +24,88 @@ import { mountZone, worldBtn } from './world.js';
 // 垃圾車來的時間（台灣通常傍晚到晚上）：16:00～21:00 在小區路口
 export const garbageTime = () => hour() >= 16 && hour() < 21;
 import { mountStickerBook, drawPlacedStickers } from './fun.js';
-import { backdrop, homeBtn, rotateBtns, jars, roundBtn } from '../ui/hud.js';
+import { backdrop, homeBtn, rotateBtns, jars, roundBtn, zoomBtns } from '../ui/hud.js';
 import { ICON2 } from '../art/more.js';
 
-// ---- 路網：4×3 的路口（城市；11/24 擴大）----
-const XS = [150, 650, 1150, 1650], YS = [150, 500, 850];
+// ---- 路網（11/24 改版）：彎彎的馬路、一條河、三個區（住宅區、市中心、公共設施區），城市比畫面大 ----
+// 路口（節點）與馬路（邊）；ctrl 是彎曲的控制點（二次曲線）
+const W = 3000, D = 2200;
+const NODES = {
+  A: { x: 520, y: 470 }, B: { x: 520, y: 1160 }, C: { x: 560, y: 1820 }, D: { x: 1120, y: 380 }, E: { x: 1140, y: 1140 },
+  F: { x: 2020, y: 1120 }, G: { x: 2020, y: 460 }, H: { x: 2620, y: 780 }, I: { x: 2060, y: 1800 }, J: { x: 1180, y: 1840 },
+};
+const EDGES = [
+  ['A', 'B', [430, 820]], ['B', 'C', [600, 1500]], ['A', 'D', [820, 330]], ['B', 'E', [830, 1250]], ['C', 'J', [860, 1960]],
+  ['D', 'E', [1230, 760]], ['E', 'F', [1580, 1060]], ['D', 'G', [1570, 300]], ['G', 'F', [2140, 790]], ['F', 'H', [2400, 1060]],
+  ['G', 'H', [2380, 520]], ['F', 'I', [2120, 1460]], ['J', 'I', [1620, 1980]], ['E', 'J', [1080, 1500]],
+];
+// 河：從北邊彎到南邊
+const RIVER = 'M1480 -60 Q1620 500 1520 1000 T1640 2260';
+Object.entries(NODES).forEach(([id, n]) => { n.id = id; });
+const qpt = (p0, c, p1, t) => ({ x: (1 - t) ** 2 * p0.x + 2 * (1 - t) * t * c[0] + t * t * p1.x, y: (1 - t) ** 2 * p0.y + 2 * (1 - t) * t * c[1] + t * t * p1.y });
+// 一條馬路的折線（a → b 方向），以及各點的累積長度
+const edgeCache = {};
+function edgePts(a, b) {
+  const key = `${a}-${b}`;
+  if (edgeCache[key]) return edgeCache[key];
+  const e = EDGES.find(([x, y]) => (x === a && y === b) || (x === b && y === a));
+  const p0 = NODES[a], p1 = NODES[b];
+  const pts = [];
+  for (let i = 0; i <= 24; i++) pts.push(qpt(p0, e[2], p1, i / 24));
+  // 曲線是 e[0]→e[1] 畫的；反方向時控制點一樣，所以直接用 a→b 取樣即可
+  const acc = [0];
+  for (let i = 1; i < pts.length; i++) acc.push(acc[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
+  return (edgeCache[key] = { pts, acc, len: acc.at(-1) });
+}
+function along(E, t) {
+  const target = t * E.len;
+  let i = 1;
+  while (i < E.acc.length - 1 && E.acc[i] < target) i++;
+  const k = (target - E.acc[i - 1]) / Math.max(0.001, E.acc[i] - E.acc[i - 1]);
+  const p = E.pts[i - 1], q = E.pts[i];
+  return { x: p.x + (q.x - p.x) * k, y: p.y + (q.y - p.y) * k, dx: q.x - p.x, dy: q.y - p.y };
+}
+const neighbors = (n) => EDGES.filter(([a, b]) => a === n.id || b === n.id).map(([a, b]) => NODES[a === n.id ? b : a]);
+// 最短路線（看路的長度）；同樣長的話隨機
+function route(from, to) {
+  const dist = { [from]: 0 }, prev = {};
+  const todo = new Set(Object.keys(NODES));
+  while (todo.size) {
+    let u = null;
+    for (const k of todo) if (dist[k] !== undefined && (u === null || dist[k] < dist[u])) u = k;
+    if (u === null || u === to) break;
+    todo.delete(u);
+    for (const m of shuffle(neighbors(NODES[u]))) {
+      const d = dist[u] + edgePts(u, m.id).len;
+      if (dist[m.id] === undefined || d < dist[m.id]) { dist[m.id] = d; prev[m.id] = u; }
+    }
+  }
+  const path = [];
+  for (let k = to; k; k = prev[k]) path.unshift(NODES[k]);
+  return path;
+}
 function badgeIcon() {
   return `<svg viewBox="0 0 100 100" width="100%" height="100%"><path d="M50 6 L86 20 Q86 64 50 94 Q14 64 14 20Z" fill="#2f5fbf"/><path d="M50 26 l7 14 h15 l-12 10 5 15 -15 -9 -15 9 5 -15 -12 -10 h15z" fill="#ffd23f"/></svg>`;
 }
-const node = (c, r) => ({ c, r, x: XS[c], y: YS[r], id: `${c},${r}` });
 export const PLACES = {
-  school: { node: [0, 0], x: 300, y: 300, screen: 'school', icon: itemSvg('school2'), h: 230 },
-  park: { node: [1, 0], x: 520, y: 310, screen: 'park', color: null, icon: itemSvg('slide'), h: 0 },
-  market: { node: [2, 0], x: 900, y: 310, screen: 'market', icon: itemSvg('cart'), h: 140 },
-  library: { node: [2, 0], x: 1300, y: 300, screen: 'library', icon: PLACE_ICON.library, h: 150 },
-  post: { node: [3, 0], x: 1515, y: 300, screen: 'post', icon: PLACE_ICON.post, h: 130 },
-  home: { node: [0, 2], x: 300, y: 690, screen: 'house', icon: itemSvg('home2'), h: 200 },
-  garbage: { node: [0, 2], x: 70, y: 770, screen: 'garbage', icon: PLACE_ICON.garbage, h: 30 },
-  police: { node: [1, 2], x: 515, y: 690, screen: 'police', icon: badgeIcon(), h: 140 },
-  clinic: { node: [1, 2], x: 790, y: 690, screen: 'clinic', icon: itemSvg('heal'), h: 140 },
-  fire: { node: [2, 2], x: 1000, y: 690, screen: 'fire', icon: PLACE_ICON.fire, h: 190 },
-  mrt: { node: [2, 2], x: 1300, y: 690, screen: 'mrt', icon: PLACE_ICON.mrt, h: 130 },
-  train: { node: [3, 2], x: 1515, y: 690, screen: 'world', icon: PLACE_ICON.train, h: 150 },
+  // 住宅區（河的西邊）
+  home: { node: 'B', x: 300, y: 1020, screen: 'house', icon: itemSvg('home2'), h: 200 },
+  garbage: { node: 'B', x: 640, y: 1290, screen: 'garbage', icon: PLACE_ICON.garbage, h: 30 },
+  school: { node: 'A', x: 860, y: 600, screen: 'school', icon: itemSvg('school2'), h: 230 },
+  park: { node: 'A', x: 300, y: 560, screen: 'park', color: null, icon: itemSvg('slide'), h: 0 },
+  // 市中心（河的東邊）
+  market: { node: 'G', x: 1800, y: 760, screen: 'market', icon: itemSvg('cart'), h: 140 },
+  library: { node: 'G', x: 2330, y: 300, screen: 'library', icon: PLACE_ICON.library, h: 150 },
+  mrt: { node: 'F', x: 1800, y: 1300, screen: 'mrt', icon: PLACE_ICON.mrt, h: 130 },
+  post: { node: 'F', x: 2340, y: 1290, screen: 'post', icon: PLACE_ICON.post, h: 130 },
+  train: { node: 'H', x: 2780, y: 600, screen: 'world', icon: PLACE_ICON.train, h: 150 },
+  // 公共設施區（南邊）
+  fire: { node: 'J', x: 880, y: 1640, screen: 'fire', icon: PLACE_ICON.fire, h: 190 },
+  police: { node: 'J', x: 1330, y: 1640, screen: 'police', icon: badgeIcon(), h: 140 },
+  clinic: { node: 'I', x: 2320, y: 1760, screen: 'clinic', icon: itemSvg('heal'), h: 140 },
 };
 export const PLACE_OF_SCREEN = Object.fromEntries(Object.entries(PLACES).map(([k, p]) => [p.screen, k]));
 
-function neighbors(n) {
-  const out = [];
-  for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-    const c = n.c + dc, r = n.r + dr;
-    if (c >= 0 && c < XS.length && r >= 0 && r < YS.length) out.push(node(c, r));
-  }
-  return out;
-}
-// 最短路線（BFS）；同樣短的路線隨機選一條，路程不會每次都一樣
-function route(from, to) {
-  const start = node(...from), goal = node(...to);
-  const prev = { [start.id]: null };
-  const q = [start];
-  while (q.length) {
-    const n = q.shift();
-    if (n.id === goal.id) break;
-    for (const m of shuffle(neighbors(n))) if (!(m.id in prev)) { prev[m.id] = n; q.push(m); }
-  }
-  const path = [];
-  for (let n = goal; n; n = prev[n.id]) path.unshift(n);
-  return path;
-}
 
 // ---- 每個地點的建築：形狀都不一樣，看輪廓就認得出來 ----
 const win = (x, y, w = 30, h = 28, c = '#bfe6ff') => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="${c}"/><rect x="${x}" y="${y}" width="${w}" height="${h * 0.35}" rx="4" fill="#fff" opacity=".45"/>`;
@@ -215,50 +250,77 @@ const BUILD = {
 
 // ---- 小鎮模型（小鎮地圖和坐車都用） ----
 export function buildTown() {
-  const W = 1800, D = 1000;
-  const dio = createDiorama({ w: W, d: D, walls: false, zoom: 0.56, cy: 0.58, base: '#8fbf6a', rim: 30,
-    floorCss: 'background: radial-gradient(circle at 30% 30%, #b8e89a 0, #9fd87f 60%, #92cf72 100%)' });
-  // 馬路
-  const road = (x, y, w, h) => dio.addDecal({ x, y, w, h, z: 0.8, cls: 'road', css: 'background:#8a8fa0;border-radius:10px' });
-  for (const y of YS) road(XS[0] - 45, y - 45, XS.at(-1) - XS[0] + 90, 90);
-  for (const x of XS) road(x - 45, YS[0] - 45, 90, YS.at(-1) - YS[0] + 90);
-  // 中線
-  for (const y of YS) dio.addDecal({ x: XS[0] + 50, y: y - 3, w: XS.at(-1) - XS[0] - 100, h: 6, z: 1, css: 'background:repeating-linear-gradient(90deg,#fff 0 30px,transparent 30px 60px)' });
-  for (const x of XS) dio.addDecal({ x: x - 3, y: YS[0] + 50, w: 6, h: YS.at(-1) - YS[0] - 100, z: 1, css: 'background:repeating-linear-gradient(0deg,#fff 0 30px,transparent 30px 60px)' });
-  // 廣場（中間的路口）
-  dio.addDecal({ x: XS[1] - 70, y: YS[1] - 70, w: 140, h: 140, z: 1.2, css: 'border-radius:50%;background:radial-gradient(circle,#fff6d6 0 55%,#ffd98a 56% 100%)' });
-  // 斑馬線（每段路中間附近一條）
+  const dio = createDiorama({ w: W, d: D, walls: false, zoom: 0.8, zmin: 0.34, zmax: 1.5, cy: 0.58, skirt: '#a6d987', horizon: 'town',
+    floorCss: 'background: radial-gradient(ellipse at 25% 30%, #b8e89a 0, transparent 40%), radial-gradient(ellipse at 75% 70%, #b0e392 0, transparent 45%), #a6d987' });
+  // 地面一張大圖：河、馬路、中線、斑馬線（都是彎的）
+  const roadPath = EDGES.map(([a, b, c]) => `M${NODES[a].x} ${NODES[a].y} Q${c[0]} ${c[1]} ${NODES[b].x} ${NODES[b].y}`).join(' ');
   const crossings = [];
-  for (let r = 0; r < YS.length; r++) for (let c = 0; c < XS.length - 1; c++) {
-    const x = (XS[c] + XS[c + 1]) / 2 + 120, y = YS[r];
-    dio.addDecal({ x: x - 24, y: y - 42, w: 48, h: 84, z: 1.1, css: 'background:repeating-linear-gradient(0deg,#fff 0 12px,transparent 12px 24px)' });
-    crossings.push({ a: node(c, r), b: node(c + 1, r), x, y });
-  }
-  for (let c = 0; c < XS.length; c++) for (let r = 0; r < YS.length - 1; r++) {
-    const x = XS[c], y = (YS[r] + YS[r + 1]) / 2 + 100;
-    dio.addDecal({ x: x - 42, y: y - 24, w: 84, h: 48, z: 1.1, css: 'background:repeating-linear-gradient(90deg,#fff 0 12px,transparent 12px 24px)' });
-    crossings.push({ a: node(c, r), b: node(c, r + 1), x, y });
-  }
+  let zebra = '';
+  EDGES.forEach(([a, b], i) => {
+    if (i % 3 === 2) return;   // 不是每條路都有斑馬線
+    const E = edgePts(a, b);
+    const m = along(E, 0.5);
+    const ang = (Math.atan2(m.dy, m.dx) * 180) / Math.PI;
+    zebra += `<g transform="translate(${m.x} ${m.y}) rotate(${ang})">${[-36, -18, 0, 18, 36].map((o) => `<rect x="-6" y="${o - 5}" width="44" height="10" fill="#fff" opacity=".9" transform="translate(-16 0)"/>`).join('')}</g>`;
+    crossings.push({ a: NODES[a], b: NODES[b], x: m.x, y: m.y, t: 0.5, ang });
+  });
+  // 橋：馬路跨過河的地方（E-F、D-G、J-I）
+  const bridges = ['E-F', 'D-G', 'J-I'].map((k) => { const [a, b] = k.split('-'); const E = edgePts(a, b); let best = 0.5, bd = 1e9; for (let t = 0.2; t <= 0.8; t += 0.02) { const p = along(E, t); const rx = 1480 + (p.y / 2200) * 140; const d = Math.abs(p.x - rx); if (d < bd) { bd = d; best = t; } } const p = along(E, best); return { ...p, ang: (Math.atan2(p.dy, p.dx) * 180) / Math.PI }; });
+  const ground = `<svg viewBox="0 0 ${W} ${D}" width="100%" height="100%">
+    <path d="${RIVER}" stroke="#7fd3ff" stroke-width="170" fill="none" stroke-linecap="round"/><path d="${RIVER}" stroke="#5ec3ee" stroke-width="110" fill="none"/>
+    <path d="${roadPath}" stroke="#c9ced8" stroke-width="118" fill="none" stroke-linecap="round"/>
+    <path d="${roadPath}" stroke="#8a8fa0" stroke-width="96" fill="none" stroke-linecap="round"/>
+    <path d="${roadPath}" stroke="#fff" stroke-width="5" fill="none" stroke-dasharray="34 34"/>
+    ${bridges.map((p) => `<g transform="translate(${p.x} ${p.y}) rotate(${p.ang})"><rect x="-120" y="-62" width="240" height="10" rx="5" fill="#c98b5e"/><rect x="-120" y="52" width="240" height="10" rx="5" fill="#c98b5e"/></g>`).join('')}
+    ${zebra}
+    ${Object.values(NODES).map((n) => `<circle cx="${n.x}" cy="${n.y}" r="56" fill="#8a8fa0"/>`).join('')}
+  </svg>`;
+  dio.addDecal({ x: 0, y: 0, w: W, h: D, z: 0.8, cls: 'road', html: ground });
   // 地點
   const markers = {};
   for (const [id, p] of Object.entries(PLACES)) {
     if (id === 'park') {
-      // 公園：草地、樹、溜滑梯
-      dio.addDecal({ x: p.x - 110, y: p.y - 110, w: 220, h: 200, z: 0.9, css: 'border-radius:40px;background:#7fd06a', cls: 'place' }).dataset.tap = `go:${id}`;
-      for (const [tx, ty] of [[p.x - 70, p.y - 60], [p.x + 70, p.y - 70], [p.x - 60, p.y + 60]]) dio.addSprite({ x: tx, y: ty, w: 80, h: 110, shadow: 0.6, tap: `go:${id}`, html: `<svg viewBox="0 0 80 110"><rect x="34" y="70" width="12" height="38" rx="5" fill="#a9744f"/><circle cx="40" cy="48" r="34" fill="#4fbf6e"/><circle cx="28" cy="36" r="10" fill="#8fe39a" opacity=".7"/></svg>` });
-      dio.addSprite({ x: p.x + 40, y: p.y + 50, w: 110, h: 100, shadow: 0.5, html: itemSvg('slide'), tap: `go:${id}` });
+      dio.addDecal({ x: p.x - 170, y: p.y - 150, w: 340, h: 300, z: 0.9, css: 'border-radius:46% 54% 40% 60% / 50% 40% 60% 50%;background:#7fd06a', cls: 'place' }).dataset.tap = `go:${id}`;
+      for (const [tx, ty] of [[p.x - 100, p.y - 80], [p.x + 100, p.y - 90], [p.x - 90, p.y + 80], [p.x + 20, p.y - 120]]) dio.addSprite({ x: tx, y: ty, w: 90, h: 120, shadow: 0.6, tap: `go:${id}`, html: `<svg viewBox="0 0 80 110"><rect x="34" y="70" width="12" height="38" rx="5" fill="#a9744f"/><circle cx="40" cy="48" r="34" fill="#4fbf6e"/><circle cx="28" cy="36" r="10" fill="#8fe39a" opacity=".7"/></svg>` });
+      dio.addSprite({ x: p.x + 40, y: p.y + 50, w: 120, h: 110, shadow: 0.5, html: itemSvg('slide'), tap: `go:${id}` });
     } else {
       BUILD[id](dio, p, `go:${id}`);
     }
-    markers[id] = dio.addSprite({ x: p.x, y: p.y, z: (p.h || 40) + 70, w: 120, h: 120, html: `<div class="inner">${p.icon}</div>`, cls: 'marker place-mark', shadow: 0, tap: `go:${id}` });
+    markers[id] = dio.addSprite({ x: p.x, y: p.y, z: (p.h || 40) + 70, w: 130, h: 130, html: `<div class="inner">${p.icon}</div>`, cls: 'marker place-mark', shadow: 0, tap: `go:${id}` });
   }
-  // 路燈（晚上會亮）
-  for (const [x, y] of [[XS[0] + 60, YS[1] - 60], [XS[2] - 60, YS[1] + 60], [XS[1] + 60, YS[0] + 60], [XS[1] - 60, YS[2] - 60], [XS[3] - 60, YS[1] - 60]]) {
-    dio.addSprite({ x, y, w: 40, h: 120, shadow: 0.3, cls: 'streetlight', html: `<svg viewBox="0 0 40 120"><rect x="17" y="20" width="6" height="98" fill="#4a3b6b"/><circle class="lamp" cx="20" cy="16" r="12" fill="#fff3a0"/></svg>` });
+  // 火車站後面的鐵軌，往東邊一直延伸出去（去郊區、海邊、山上）
+  dio.addDecal({ x: 2560, y: 480, w: 1400, h: 40, z: 0.9, css: 'background:repeating-linear-gradient(90deg,#8a6a4a 0 8px,transparent 8px 26px),linear-gradient(#bfc4cf 0 18%,transparent 18% 82%,#bfc4cf 82%)' });
+  // 一般的房子、店、公寓：讓城鎮有「有人住」的感覺（不能點）
+  const filler = [
+    // 住宅區：一排一排透天
+    ...[[180, 1360], [300, 1360], [420, 1360], [180, 760], [300, 820]].map(([x, y], i) => ['tou', x, y, ['#fff3e6', '#e6f4e8', '#e6eeff', '#fff0f0', '#fff8d6'][i % 5]]),
+    ...[[820, 900], [940, 900], [300, 1560], [420, 1560]].map(([x, y], i) => ['tou', x, y, ['#e6eeff', '#fff8d6', '#fff3e6', '#e6f4e8'][i % 4]]),
+    // 市中心：公寓和店面
+    ...[[2200, 760], [2400, 780], [2560, 1180], [2560, 1420], [1820, 1520], [2340, 1500], [2080, 250], [1780, 300]].map(([x, y], i) => ['apt', x, y, ['#c9d6ea', '#e6d6c4', '#d6c8ff', '#c8f0d6', '#ffd6a0', '#bfe6ff', '#ffe0a8', '#e6eeff'][i]]),
+    ...[[1820, 960], [2240, 1000]].map(([x, y], i) => ['shop', x, y, ['#ff8fbf', '#7ee06a'][i]]),
+  ];
+  for (const [k, x, y, c] of filler) {
+    if (k === 'tou') {
+      dio.addBox({ x: x - 50, y: y - 50, w: 100, d: 100, h: 150, color: c, faces: { s: `<svg viewBox="0 0 100 150" width="100%" height="100%" preserveAspectRatio="none">${[14, 66].map((yy) => `<rect x="12" y="${yy}" width="30" height="26" rx="4" fill="#bfe6ff"/><rect x="58" y="${yy}" width="30" height="26" rx="4" fill="#bfe6ff"/>`).join('')}<rect x="26" y="110" width="48" height="40" fill="#9aa3b5"/></svg>` } });
+    } else if (k === 'apt') {
+      dio.addBox({ x: x - 60, y: y - 50, w: 120, d: 100, h: 230, color: c, faces: { s: `<svg viewBox="0 0 120 230" width="100%" height="100%" preserveAspectRatio="none">${[14, 58, 102, 146, 190].map((yy) => [12, 48, 84].map((xx) => `<rect x="${xx}" y="${yy}" width="24" height="26" rx="3" fill="#fff" opacity=".7"/>`).join('')).join('')}</svg>` } });
+    } else {
+      dio.addBox({ x: x - 60, y: y - 40, w: 120, d: 80, h: 80, color: '#fffaf0', faces: { s: `<svg viewBox="0 0 120 80" width="100%" height="100%" preserveAspectRatio="none"><rect width="120" height="22" fill="${c}"/><path d="M0 22 ${[...Array(6)].map((_, i) => `Q${i * 20 + 10} 34 ${i * 20 + 20} 22`).join(' ')}" fill="${c}"/><rect x="14" y="36" width="92" height="44" fill="#bfe6ff"/></svg>` } });
+    }
   }
-  // 樹
-  for (const [x, y] of [[40, 40], [1760, 60], [40, 960], [1760, 960], [650, 980], [1150, 980], [1770, 500], [30, 500], [900, 30]]) {
-    dio.addSprite({ x, y, w: 80, h: 110, shadow: 0.6, html: `<svg viewBox="0 0 80 110"><rect x="34" y="70" width="12" height="38" rx="5" fill="#a9744f"/><circle cx="40" cy="48" r="34" fill="#4fbf6e"/></svg>` });
+  // 路燈（晚上會亮）：每個路口旁邊一支
+  for (const n of Object.values(NODES)) {
+    dio.addSprite({ x: n.x + 70, y: n.y - 70, w: 40, h: 120, shadow: 0.3, cls: 'streetlight', html: `<svg viewBox="0 0 40 120"><rect x="17" y="20" width="6" height="98" fill="#4a3b6b"/><circle class="lamp" cx="20" cy="16" r="12" fill="#fff3a0"/></svg>` });
+  }
+  // 樹：沿著河邊一排、城市外圍幾棵
+  const treeSvg = (c) => `<svg viewBox="0 0 80 110"><rect x="34" y="70" width="12" height="38" rx="5" fill="#a9744f"/><circle cx="40" cy="48" r="34" fill="${c}"/></svg>`;
+  for (let y = 120; y < D; y += 260) {
+    const rx = 1480 + (y / 2200) * 140;
+    dio.addSprite({ x: rx - 150, y, w: 80, h: 110, shadow: 0.6, html: treeSvg('#4fbf6e') });
+    dio.addSprite({ x: rx + 160, y: y + 120, w: 80, h: 110, shadow: 0.6, html: treeSvg('#5fc76a') });
+  }
+  for (const [x, y] of [[80, 120], [100, 1900], [900, 2100], [2900, 200], [2880, 2000], [2700, 1700], [2950, 1100], [60, 900], [1300, 120], [700, 1980]]) {
+    dio.addSprite({ x, y, w: 90, h: 120, shadow: 0.6, html: treeSvg(pick(['#4fbf6e', '#3f9f5a', '#6cc072'])) });
   }
   return { dio, markers, crossings };
 }
@@ -274,16 +336,19 @@ export async function mountTown(root, app) {
   app.onLeave(() => { setHint(null); setPlaying(false); dio.destroy(); });
   dio.setTint(roomTint());
   if (isDark()) root.classList.add('night');
-  const shan = dio.addSprite({ x: XS[1], y: YS[1] + 10, z: 1, w: 120, h: 136, html: shanSvg(), shadow: 0.7, tap: 'shan' });
-  // 叭叭停在現在的位置
-  const here = PLACES[app.trip.location];
-  const car = dio.addSprite({ x: XS[here.node[0]] + 20, y: YS[here.node[1]] + 20, z: 1, w: 120, h: 98, html: babaSvg(), shadow: 0.6, tap: 'baba' });
+  // 閃閃和叭叭在現在的位置旁邊；鏡頭從這裡開始（城市比畫面大，要看別的地方可以拉遠、兩指移動、或點上面的地點列）
+  const here = PLACES[app.trip.location] || PLACES.home;
+  const hn = NODES[here.node];
+  const shan = dio.addSprite({ x: hn.x - 60, y: hn.y + 70, z: 1, w: 120, h: 136, html: shanSvg(), shadow: 0.7, tap: 'shan' });
+  const car = dio.addSprite({ x: hn.x + 40, y: hn.y + 30, z: 1, w: 120, h: 98, html: babaSvg(), shadow: 0.6, tap: 'baba' });
+  dio.view.px = (here.x + hn.x) / 2; dio.view.py = (here.y + hn.y) / 2; dio.view.z = 0.8; dio.apply();
   T.markers[app.trip.location].el.classList.add('here');
 
   homeBtn(root, () => app.go('opening'));
   jars(root, app.profile.members);
   mountClock(root);
   rotateBtns(root, dio);
+  zoomBtns(root, dio);
   turnsScene(root);
   setPlaying(true);
   playMusic(isDark() ? 'lullaby' : 'town');
@@ -292,10 +357,12 @@ export async function mountTown(root, app) {
   else drawPlacedStickers(dio);
   if (app.profile.members.includes('yy')) roundBtn(root, 'btn-draw', DRAW_ICON, () => { setPlaying(false); app.go('draw'); });
   worldBtn(root, app);
-  setHint(() => T.markers.school.el);
   let going = false;
+  // 地點列：點一下鏡頭飛過去（標記會跳），再點一次就出發
+  placeBar(root, dio, PLACES, T.markers, app.trip.location, (id) => { if (!going) dio.el.dispatchEvent(new CustomEvent('tapname', { detail: `go:${id}` })); });
+  setHint(() => document.querySelector('.placebar button'));
 
-  dio.onTap(async (name) => {
+  const onTapTown = async (name) => {
     if (name.startsWith('go:')) {
       if (going) return;
       const to = name.slice(3);
@@ -322,7 +389,9 @@ export async function mountTown(root, app) {
       car.el.classList.remove('hop'); void car.el.offsetWidth; car.el.classList.add('hop');
       speak('baba', 'baba_hi', { node: car.el });
     }
-  });
+  };
+  dio.onTap(onTapTown);
+  dio.el.addEventListener('tapname', (e) => onTapTown(e.detail));
   if (!app.trip.seenTown) {
     app.trip.seenTown = true;
     await speak('shan', 'town_hello', { node: shan.el });
@@ -335,6 +404,28 @@ export async function mountTown(root, app) {
     await speak('shan', 'garbage_coming', { node: shan.el });
   }
   if (app.alive()) speak('shan', 'town_pick', { node: shan.el });
+}
+
+// ---- 地點列（城市比畫面大，不用到處找）：點一下鏡頭飛到那裡、標記跳一下；同一個再點一次就出發 ----
+export function placeBar(root, dio, places, markers, here, go) {
+  const bar = div('placebar ui', Object.entries(places).map(([id, p]) => `<button data-id="${id}" class="${id === here ? 'here' : ''}">${p.icon}</button>`).join(''));
+  root.appendChild(bar);
+  let sel = null;
+  bar.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    const b = e.target.closest('button');
+    if (!b) return;
+    const id = b.dataset.id;
+    sfx('tap');
+    if (sel === id) { go(id); return; }
+    sel = id;
+    bar.querySelectorAll('button').forEach((x) => x.classList.toggle('sel', x === b));
+    const p = places[id];
+    dio.animateTo({ px: p.x, py: p.y, z: Math.max(dio.view.z, 0.75) }, 700);
+    const m = markers[id]?.el;
+    if (m) { m.classList.remove('hop'); void m.offsetWidth; m.classList.add('hop'); }
+  });
+  return bar;
 }
 
 const DRAW_ICON = `<svg viewBox="0 0 100 100"><rect x="14" y="18" width="72" height="60" rx="10" fill="#fff"/><path d="M24 64 Q40 30 56 52 T80 40" stroke="#3ea8e0" stroke-width="7" fill="none" stroke-linecap="round"/><circle cx="66" cy="34" r="8" fill="#ffd23f"/><rect x="44" y="78" width="12" height="14" fill="#c98b5e"/></svg>`;
@@ -457,17 +548,19 @@ export async function mountRide(root, app) {
 
     // ---- 開一段路；ev：'light' 紅燈、'walker' 行人 ----
     async function drive(a, b, ev) {
-      const len = Math.hypot(b.x - a.x, b.y - a.y);
+      const E = edgePts(a.id, b.id);
+      const len = E.len;
       const dur = (len / speed) * 1000;
       let t = 0, last = performance.now(), paused = false;
       let evState = ev ? 'wait' : null;  // wait → active → stopped → done
       let light = null, walker = null, cross = null;
-      if (ev === 'light') light = dio.addSprite({ x: b.x - 50 * Math.sign(b.x - a.x || 0.0001) + 40, y: b.y - 50 * Math.sign(b.y - a.y || 0.0001) - 40, w: 46, h: 120, shadow: 0.3, html: lightSvg('green') });
+      if (ev === 'light') { const lp = along(E, 0.86); const nl = Math.hypot(lp.dx, lp.dy) || 1; light = dio.addSprite({ x: lp.x - (lp.dy / nl) * 80, y: lp.y + (lp.dx / nl) * 80, w: 46, h: 120, shadow: 0.3, html: lightSvg('green') }); }
       if (ev === 'walker') {
-        cross = T.crossings.find((c) => (c.a.id === a.id && c.b.id === b.id) || (c.a.id === b.id && c.b.id === a.id));
+        const tp = along(E, 0.5); const nl = Math.hypot(tp.dx, tp.dy) || 1;
+        cross = { x: tp.x, y: tp.y, nx: -tp.dy / nl, ny: tp.dx / nl };
       }
       // 停的位置：紅燈在路口前；行人在斑馬線前
-      const stopAt = ev === 'light' ? 0.82 : cross ? Math.max(0.2, Math.min(0.85, (Math.hypot(cross.x - a.x, cross.y - a.y) - 70) / len)) : 1;
+      const stopAt = ev === 'light' ? 0.8 : cross ? Math.max(0.2, Math.min(0.85, (len * 0.5 - 80) / len)) : 1;
       const trigger = Math.max(0.1, stopAt - 0.35);
       if (turnsOn() && ev && whoseTurn() !== 'yy') nextTurn({ say: false });
       await new Promise((resolve) => {
@@ -476,15 +569,13 @@ export async function mountRide(root, app) {
           const dt = now - last;
           last = now;
           if (!paused) t = Math.min(1, t + dt / dur);
-          car.move(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, 1);
+          { const cp = along(E, t); car.move(cp.x, cp.y, 1); }
           follow();
           if (evState === 'wait' && t >= trigger) {
             evState = 'active';
             if (ev === 'light') { light.el.innerHTML = lightSvg('red'); sfx('ding'); say('baba', 'ride_red', car.el); }
             else {
-              const dx = Math.abs(b.x - a.x) > 1;
-              walker = dio.addSprite({ x: cross.x + (dx ? 0 : -70), y: cross.y + (dx ? -70 : 0), w: 60, h: 116, shadow: 0.5, html: personSvg(pick(['dad', 'mom', 'grandma', 'uncle', 'auntie'])) });
-              walker.dx = dx;
+              walker = dio.addSprite({ x: cross.x - cross.nx * 75, y: cross.y - cross.ny * 75, w: 60, h: 116, shadow: 0.5, html: personSvg(pick(['dad', 'mom', 'grandma', 'uncle', 'auntie'])) });
               say('baba', 'ride_walker', car.el);
             }
             setHint(() => stopBtn);
@@ -506,7 +597,7 @@ export async function mountRide(root, app) {
                 await new Promise((res) => {
                   const w = (n2) => {
                     const k = Math.min(1, (n2 - t0) / 2200);
-                    walker.move(sx + (walker.dx ? 0 : 140 * k), sy + (walker.dx ? 140 * k : 0), Math.abs(Math.sin(k * 12)) * 6);
+                    walker.move(sx + cross.nx * 150 * k, sy + cross.ny * 150 * k, Math.abs(Math.sin(k * 12)) * 6);
                     if (k < 1 && alive) requestAnimationFrame(w); else res();
                   };
                   requestAnimationFrame(w);
@@ -535,14 +626,20 @@ export async function mountRide(root, app) {
     async function chooseDirection(a, b) {
       if (turnsOn() && whoseTurn() !== 'kk') nextTurn({ say: false });
       const opts = neighbors(a);
+      const destP = PLACES[to];
+      const zt = Math.max(0.42, Math.min(0.85, 700 / Math.max(1, Math.hypot(destP.x - a.x, destP.y - a.y))));
+      const AS = 90 * Math.max(1, 0.8 / zt);   // 鏡頭拉遠時箭頭跟著變大，手指才點得到
       const shadows = [];
       const arrows = opts.map((n) => {
-        const dx = Math.sign(n.x - a.x), dy = Math.sign(n.y - a.y);
+        const Ea = edgePts(a.id, n.id);
+        const q = along(Ea, Math.min(1, 130 / Ea.len));
+        const ql = Math.hypot(q.x - a.x, q.y - a.y) || 1;
+        const dx = (q.x - a.x) / ql, dy = (q.y - a.y) / ql;
         const ang = Math.atan2(dy, dx) * 180 / Math.PI;
         // 箭頭浮在屋頂上方（不會被房子擋住），地上留一個小圓點表示是哪條路
-        const gx = a.x + dx * 95, gy = a.y + dy * 95;
+        const gx = a.x + dx * (60 + AS * 0.6), gy = a.y + dy * (60 + AS * 0.6);
         shadows.push(dio.addDecal({ x: gx - 22, y: gy - 22, w: 44, h: 44, z: 2, cls: 'road-dot' }));
-        const d = dio.addDecal({ x: gx - 45, y: gy - 45, w: 90, h: 90, z: 150, cls: 'road-arrow', html: `<div style="transform:rotate(${ang}deg);width:100%;height:100%">${itemSvg('arrow')}</div>` });
+        const d = dio.addDecal({ x: gx - AS / 2, y: gy - AS / 2, w: AS, h: AS, z: 150, cls: 'road-arrow', html: `<div style="transform:rotate(${ang}deg);width:100%;height:100%">${itemSvg('arrow')}</div>` });
         d.dataset.tap = `dir:${n.id}`;
         if (n.id === b.id) d.dataset.ok = '1';
         return d;
@@ -555,7 +652,7 @@ export async function mountRide(root, app) {
       dio.lock(false);
       rot.show(true);
       stopBtn.style.visibility = 'hidden';   // 選方向時用不到停車鈕，讓出位置給轉小鎮的按鈕
-      dio.animateTo({ z: 0.85, px: (a.x + dest.x) / 2, py: (a.y + dest.y) / 2 }, 700);
+      dio.animateTo({ z: zt, px: (a.x + dest.x) / 2, py: (a.y + dest.y) / 2 }, 700);
       setHint(() => right);
       say('baba', 'ride_which', car.el);   // 不等說完：說的時候就可以點
       let lastWrong = 0;

@@ -4,6 +4,8 @@
 //   擺餐具：照桌上的虛線，幫爸爸、媽媽、阿嬤擺碗和筷子（岳岳一個人玩時再加湯匙）。空間配對，愷愷的強項。
 //   什麼能摸：檯面上的東西滑過來，可以吃的點一下放進籃子；熱鍋、刀子、熱水壺不要碰（用眼睛判斷的「先停一下」）。
 import { runRoom } from './room-base.js';
+import { isDark } from '../core/clock.js';
+import { streetWindow, stairDoor } from '../art/house.js';
 import { askChoice } from './kit.js';
 import { dumplingSvg, plateSvg as roundPlateSvg } from '../art/fun.js';
 import * as M from '../core/mult.js';
@@ -58,6 +60,8 @@ function buildKitchen() {
     w: 640, d: 600, wallH: 300, zoom: 0.98, cy: 0.6, wall: '#fff0d9', base: '#b9805a',
     floorCss: 'background: repeating-linear-gradient(45deg, #f2d4a4 0 34px, #e9c58f 34px 68px)',
   });
+  // 窗外看得到街道、門口看得到 Z 字型樓梯（11/24：房間不再是封閉的盒子）
+  dio.wallArt('w', { along: 40, up: 0, w: 110, h: 190, html: stairDoor() });
   // 流理台（靠北牆）
   dio.addBox({ x: 120, y: 0, w: 510, d: 84, h: 92, color: '#f7efe2',
     faces: { s: `<svg viewBox="0 0 510 92" width="100%" height="100%" preserveAspectRatio="none">${[0, 1, 2, 3, 4].map((i) => `<rect x="${8 + i * 101}" y="12" width="92" height="70" rx="8" fill="#ffe6c4"/><rect x="${44 + i * 101}" y="20" width="20" height="6" rx="3" fill="#c98b5e"/>`).join('')}</svg>` } });
@@ -67,7 +71,7 @@ function buildKitchen() {
   dio.addSprite({ x: 430, y: 48, z: 100, w: 66, h: 60, shadow: 0, html: kitchenItemSvg('pot') });
   // 吊櫃、窗戶
   dio.wallArt('n', { along: 140, up: 150, w: 200, h: 90, html: `<svg viewBox="0 0 200 90"><rect x="2" y="2" width="96" height="86" rx="8" fill="#ffd9a8"/><rect x="102" y="2" width="96" height="86" rx="8" fill="#ffd9a8"/><rect x="80" y="40" width="8" height="18" rx="3" fill="#c98b5e"/><rect x="112" y="40" width="8" height="18" rx="3" fill="#c98b5e"/></svg>` });
-  dio.wallArt('n', { along: 400, up: 150, w: 130, h: 100, html: `<svg viewBox="0 0 130 100"><rect x="4" y="4" width="122" height="92" rx="10" fill="#fff"/><rect x="12" y="12" width="106" height="76" rx="6" fill="#bfe6ff"/><path d="M65 12 V88 M12 50 H118" stroke="#fff" stroke-width="5"/></svg>` });
+  dio.wallArt('n', { along: 390, up: 140, w: 150, h: 112, html: streetWindow(isDark()), cls: 'window' });
   // 冰箱（靠西牆）
   dio.addBox({ x: 0, y: 30, w: 96, d: 150, h: 240, color: '#eaf4ff',
     faces: { e: `<svg viewBox="0 0 150 240" width="100%" height="100%" preserveAspectRatio="none"><path d="M6 92 H144" stroke="#c9d8ea" stroke-width="4"/><rect x="18" y="30" width="10" height="44" rx="5" fill="#9fb4cc"/><rect x="18" y="112" width="10" height="60" rx="5" fill="#9fb4cc"/><circle cx="110" cy="40" r="10" fill="#ff8fb8"/><rect x="90" y="140" width="34" height="24" rx="4" fill="#ffd23f"/></svg>` } });

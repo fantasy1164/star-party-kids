@@ -42,6 +42,11 @@ export function rotateBtns(root, dio) {
 }
 
 // 星星罐：一個人玩一個，一起玩兩個（各自的顏色）
+// 拉遠、拉近（也可以用兩隻手指捏合）
+export function zoomBtns(root, dio) {
+  const mk = (cls, sign, f) => roundBtn(root, cls, `<svg viewBox="0 0 100 100"><circle cx="44" cy="44" r="28" fill="none" stroke="#fff" stroke-width="10"/><path d="M64 64 L86 86" stroke="#fff" stroke-width="12" stroke-linecap="round"/><path d="M30 44 H58${sign === '+' ? ' M44 30 V58' : ''}" stroke="#fff" stroke-width="9" stroke-linecap="round"/></svg>`, () => dio.zoomBy(f));
+  return [mk('btn-zoom-in', '+', 1.35), mk('btn-zoom-out', '-', 1 / 1.35)];
+}
 export function jars(root, members) {
   const box = div('jars');
   const map = {};

@@ -496,6 +496,8 @@ export const LINES = {
   drum_free_end: { shan: '好酷的節奏！你是明星鼓手！' },
 
   // ---- 11/24：世界地圖、城市設施、海邊、山上、ABC ----
+  house_car: { shan: '坐叭叭出門囉！' },
+  house_stairs: { shan: '這是Ｚ字型樓梯！上下樓梯要扶好扶手，中間有童軍繩編的防墜網保護我們。' },
   town_go_library: { shan: '去圖書館找咕咕！' },
   ride_arrive_library: { baba: '到圖書館了！' },
   town_go_post: { shan: '去郵局找信信！' },

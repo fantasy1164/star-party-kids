@@ -15,7 +15,7 @@ import { huahuaSvg, xiuxiuSvg, guguSvg, xinxinSvg, ZOO, ABC_ART, MISC, PLACE_ICO
 import { boardTrain } from './world.js';
 
 const tree = () => `<svg viewBox="0 0 80 110"><rect x="34" y="70" width="12" height="38" rx="5" fill="#a9744f"/><circle cx="40" cy="48" r="34" fill="#4fbf6e"/></svg>`;
-const outdoor = (w, d, css) => createDiorama({ w, d, walls: false, zoom: 0.92, cy: 0.6, base: '#8fbf6a', rim: 24, floorCss: css || 'background: radial-gradient(circle at 40% 35%, #c4ee9f 0, #a3dc84 70%, #95d277 100%)' });
+const outdoor = (w, d, css) => createDiorama({ w, d, walls: false, zoom: 0.92, cy: 0.6, base: '#8fbf6a', rim: 24, skirt: '#a6d987', horizon: 'town', floorCss: css || 'background: radial-gradient(circle at 40% 35%, #c4ee9f 0, #a3dc84 70%, #95d277 100%)' });
 const indoor = (w, d, floor, wall) => createDiorama({ w, d, walls: true, zoom: 0.9, cy: 0.6, wall, floorCss: floor });
 const hello = (p) => (ph) => `${p}_hello_${ph === 'night' ? 'evening' : ph === 'morning' ? 'morning' : 'day'}`;
 const hardSolo = (R) => R.members.length === 1 && R.members[0] === 'yy';

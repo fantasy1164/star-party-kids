@@ -32,8 +32,13 @@ export function createDiorama(opt = {}) {
   const o = {
     w: 640, d: 640, wallH: 300, tilt: 56, angle: 45, zoom: 1, cy: 0.56,
     floor: '#e9c99f', floorCss: null, wall: '#f7ead6', base: '#c98b5e', rim: 26, walls: true, rotatable: true,
+    // open：戶外場景不畫「板子」的邊，地面一路延伸、淡進遠方（11/24：世界不要像一塊桌遊板）
+    open: null, skirt: '#a6d987', horizon: null,
     ...opt,
   };
+  if (o.open === null) o.open = !o.walls;
+  o.zmin = o.zmin ?? o.zoom * 0.55;
+  o.zmax = o.zmax ?? o.zoom * 1.9;
   // 結構：.dio（外框）> .dio-view（透視）> .dio-cam > .dio-world，調暗層與燈光層放在 .dio-view 外面。
   // 調暗層如果跟立體場景放在同一個透視容器裡，iPad 的 Chrome 會把它當成 z=0 的平面跟地板交錯，
   // 地板會變成一半暗一半亮（11/23 夜晚開場發現）。
@@ -99,6 +104,70 @@ export function createDiorama(opt = {}) {
     await animateTo({ a: cur + diff * 90 }, ms);
   }
 
+  // ---- 遠景：場景外圍一圈山丘、樹、樓房（看板，轉到哪都面向鏡頭），讓世界看起來沒有盡頭 ----
+  const HZ = {
+    hill: (c) => `<svg viewBox="0 0 200 100" preserveAspectRatio="none"><path d="M0 100 Q50 10 100 30 Q150 0 200 100Z" fill="${c}"/></svg>`,
+    peak: (c) => `<svg viewBox="0 0 200 160" preserveAspectRatio="none"><path d="M0 160 L70 30 L100 60 L140 0 L200 160Z" fill="${c}"/><path d="M128 22 L140 0 L152 24 L140 30Z" fill="#fff" opacity=".8"/></svg>`,
+    tree: (c) => `<svg viewBox="0 0 80 110"><rect x="34" y="70" width="12" height="38" rx="5" fill="#8a6a4a"/><circle cx="40" cy="48" r="34" fill="${c}"/></svg>`,
+    bldg: (c) => `<svg viewBox="0 0 60 140" preserveAspectRatio="none"><rect width="60" height="140" rx="4" fill="${c}"/>${[16, 40, 64, 88, 112].map((y) => `<rect x="10" y="${y}" width="14" height="12" fill="#fff" opacity=".5"/><rect x="36" y="${y}" width="14" height="12" fill="#fff" opacity=".5"/>`).join('')}</svg>`,
+    wave: () => `<svg viewBox="0 0 200 40" preserveAspectRatio="none"><path d="M0 40 Q25 10 50 30 T100 30 T150 30 T200 30 V40Z" fill="#9fdcff" opacity=".7"/></svg>`,
+  };
+  function addHorizon(kind) {
+    const cx = o.w / 2, cy = o.d / 2;
+    const r0 = Math.max(o.w, o.d) * 0.62;
+    const sets = {
+      town: [['hill', '#9fcf8a', 520, 160], ['bldg', '#c9d6ea', 70, 210], ['tree', '#5fb86a', 110, 150], ['bldg', '#e6d6c4', 80, 170]],
+      nature: [['hill', '#8fc77a', 600, 200], ['tree', '#4fa85a', 120, 170], ['hill', '#a6d987', 480, 140], ['tree', '#6cc072', 110, 150]],
+      mountain: [['peak', '#6aa86a', 640, 420], ['peak', '#7fb87a', 520, 320], ['tree', '#3f9f5a', 120, 170]],
+      sea: [['wave', '', 600, 60], ['hill', '#a6d987', 520, 150], ['wave', '', 480, 50]],
+    }[kind] || [];
+    const n = 22;
+    for (let i = 0; i < n; i++) {
+      const [k, c, w, h] = sets[i % sets.length];
+      const ang = (i / n) * Math.PI * 2 + (i % 3) * 0.07;
+      const rr = r0 + (i % 4) * 90 + (k === 'hill' || k === 'peak' ? 260 : 60);
+      addSprite({ x: cx + Math.cos(ang) * rr, y: cy + Math.sin(ang) * rr, w, h, shadow: 0, cls: 'horizon', html: HZ[k](c) });
+    }
+  }
+
+  // ---- 拉遠拉近：按鈕（zoomBy）、兩指捏合縮放＋兩指拖曳移動 ----
+  const clampZ = (z) => Math.max(o.zmin, Math.min(o.zmax, z));
+  const clampP = () => { view.px = Math.max(-o.w * 0.1, Math.min(o.w * 1.1, view.px)); view.py = Math.max(-o.d * 0.1, Math.min(o.d * 1.1, view.py)); };
+  function zoomBy(f, ms = 350) { return animateTo({ z: clampZ(view.z * f) }, ms); }
+  const pts = new Map();
+  let pinch = null;
+  const pinchState = () => {
+    const [a, b] = [...pts.values()];
+    return { d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+  };
+  el.addEventListener('pointerdown', (e) => {
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size === 2 && !locked) {
+      drag = null;   // 兩隻手指：不轉，改成縮放與移動
+      const st = pinchState();
+      pinch = { ...st, z: view.z, px: view.px, py: view.py };
+      lastDrag = Date.now();
+    }
+  }, true);
+  window.addEventListener('pointermove', (e) => {
+    if (!pts.has(e.pointerId)) return;
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (!pinch || pts.size < 2) return;
+    const st = pinchState();
+    view.z = clampZ(pinch.z * (st.d / Math.max(20, pinch.d)));
+    const k = stageScale() * view.z;
+    const sx = (st.mx - pinch.mx) / k, sy = (st.my - pinch.my) / k / Math.max(0.35, Math.cos((view.t * Math.PI) / 180));
+    const a = (-view.a * Math.PI) / 180;
+    view.px = pinch.px - (sx * Math.cos(a) - sy * Math.sin(a));
+    view.py = pinch.py - (sx * Math.sin(a) + sy * Math.cos(a));
+    clampP();
+    lastDrag = Date.now();
+    apply();
+  });
+  const endPt = (e) => { pts.delete(e.pointerId); if (pts.size < 2 && pinch) { pinch = null; lastDrag = Date.now(); } };
+  window.addEventListener('pointerup', endPt);
+  window.addEventListener('pointercancel', endPt);
+
   // ---- 手指轉房間 ----
   let locked = !o.rotatable;
   let drag = null;
@@ -107,7 +176,7 @@ export function createDiorama(opt = {}) {
   // 拖到哪就轉到哪（11/24：不再自動對齊斜角）；上下拖可以稍微抬頭、低頭；放手時順著手勢再滑一小段
   const TILT_MIN = o.tilt - 14, TILT_MAX = o.tilt + 10;
   el.addEventListener('pointerdown', (e) => {
-    if (locked || isUi(e.target)) return;
+    if (locked || isUi(e.target) || pts.size >= 2) return;
     drag = { x: e.clientX, y: e.clientY, a: view.a, t: view.t, moved: false, vx: 0, lx: e.clientX, lt: performance.now() };
     cancelAnimationFrame(raf);
   });
@@ -233,6 +302,23 @@ export function createDiorama(opt = {}) {
   }
 
   // 貼在地板（或家具頂面高度）上的平面：地毯、影子、標記
+  // 單面的直立牆片（只有從「正面」看得到；背面看會消失——娃娃屋轉到哪，靠近鏡頭的牆就不見）
+  // both：兩面都看得到（例如防墜網）
+  function addPanel({ x1, y1, x2, y2, z = 0, h, html = '', css = '', cls = '', both = false, tap = null }) {
+    const g = div(`dio-box panel3d ${cls}`);
+    g.style.cssText = `left:0;top:0;transform:translateZ(${z}px)`;
+    if (tap) g.dataset.tap = tap;
+    const mk = (a1, b1, a2, b2) => {
+      const p = vpanel(a1, b1, a2, b2, h, 'side wall');
+      p.el.style.background = css || '#fff3e6';
+      if (html) p.el.innerHTML = html;
+      g.appendChild(p.el);
+    };
+    mk(x1, y1, x2, y2);
+    if (both) mk(x2, y2, x1, y1);
+    world.appendChild(g);
+    return { el: g };
+  }
   function addDecal({ x, y, w, h, z = 0.6, html = '', cls = '', css = '' }) {
     const dd = div(`dio-decal ${cls}`, html);
     dd.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px;transform:translateZ(${z}px);${css}`;
@@ -242,8 +328,18 @@ export function createDiorama(opt = {}) {
 
   // ---- 地板底座、牆 ----
   const R = o.rim;
-  addBox({ x: -R, y: -R, z: -34, w: o.w + R * 2, d: o.d + R * 2, h: 34, color: o.base, cls: 'base' });
-  const floor = addDecal({ x: 0, y: 0, w: o.w, h: o.d, z: 0.3, cls: 'dio-floor', css: o.floorCss || `background:${o.floor}` });
+  let floor;
+  if (o.open) {
+    // 外圈地面：比場景大很多，從邊緣慢慢淡掉；場景本身的地板邊緣也柔化，看不到切口
+    const SK = Math.max(o.w, o.d) * 1.6;
+    addDecal({ x: -SK, y: -SK, w: o.w + SK * 2, h: o.d + SK * 2, z: 0.05, cls: 'dio-skirt',
+      css: `background:radial-gradient(closest-side, ${o.skirt} 0, ${o.skirt} 46%, transparent 100%)` });
+    floor = addDecal({ x: 0, y: 0, w: o.w, h: o.d, z: 0.3, cls: 'dio-floor open', css: o.floorCss || `background:${o.floor}` });
+    if (o.horizon) addHorizon(o.horizon);
+  } else {
+    addBox({ x: -R, y: -R, z: -34, w: o.w + R * 2, d: o.d + R * 2, h: 34, color: o.base, cls: 'base' });
+    floor = addDecal({ x: 0, y: 0, w: o.w, h: o.d, z: 0.3, cls: 'dio-floor', css: o.floorCss || `background:${o.floor}` });
+  }
   const walls = {};
   if (o.walls) {
     const H = o.wallH;
@@ -282,8 +378,8 @@ export function createDiorama(opt = {}) {
   apply();
   return {
     el, cam, world, view, walls, floor, o,
-    addBox, addGable, addSprite, addDecal, wallArt, alongWall,
-    animateTo, rotateBy, faceQuadrant, quadrant, snap, apply, setTint, glow,
+    addBox, addGable, addPanel, addSprite, addDecal, wallArt, alongWall,
+    animateTo, rotateBy, faceQuadrant, quadrant, snap, apply, setTint, glow, zoomBy, view,
     onRotate(fn) { rotHooks.push(fn); },
     lock(on) { locked = on; },
     // 剛剛是在轉房間（不是點東西）：點擊事件要忽略

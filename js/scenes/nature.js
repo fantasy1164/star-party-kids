@@ -27,7 +27,7 @@ export function mountAquarium(root, app) {
     id: 'aquarium', host: 'baibai', back: 'town',
     build() {
       // 海底隧道：藍色的地板，四周是珊瑚和石頭，魚躲在後面（要轉一轉才看得到）
-      const dio = createDiorama({ w: 760, d: 620, walls: false, zoom: 0.9, cy: 0.6, base: '#1d5a9a', rim: 26,
+      const dio = createDiorama({ w: 760, d: 620, walls: false, zoom: 0.9, cy: 0.6, base: '#1d5a9a', rim: 26, skirt: '#2f8fd0',
         floorCss: 'background: radial-gradient(circle at 50% 50%, #9fdcff 0, #5ab8ea 50%, #2f8fd0 100%)' });
       dio.addDecal({ x: 300, y: 0, w: 160, h: 620, z: 0.8, css: 'background:rgba(255,255,255,.35);border-radius:80px' });
       [[100, 120, '#ff8fbf'], [600, 140, '#ffb627'], [140, 480, '#a98bff'], [620, 470, '#ff5d73'], [380, 300, '#7ee06a']].forEach(([x, y, c]) => dio.addSprite({ x, y, w: 90, h: 110, shadow: 0.2, html: coral(c) }));
@@ -115,7 +115,7 @@ export function mountBeach(root, app) {
   return runRoom(root, app, {
     id: 'beach', host: 'jiajia', back: 'town',
     build() {
-      const dio = createDiorama({ w: 760, d: 600, walls: false, zoom: 0.92, cy: 0.6, base: '#3ea8e0', rim: 24,
+      const dio = createDiorama({ w: 760, d: 600, walls: false, zoom: 0.92, cy: 0.6, base: '#3ea8e0', rim: 24, skirt: '#5ec3ee', horizon: 'sea',
         floorCss: 'background: linear-gradient(180deg, #f6e3b0 0 58%, #bfe9ff 58% 62%, #5ec3ee 62% 100%)' });
       dio.addSprite({ x: 220, y: 180, w: 160, h: 170, shadow: 0.5, html: `<svg viewBox="0 0 100 110"><path d="M50 106 V30" stroke="#a9744f" stroke-width="5"/><path d="M6 36 Q50 -10 94 36Z" fill="#ff5d73"/><path d="M28 36 Q50 0 72 36" fill="#fff"/></svg>` });
       dio.addDecal({ x: 120, y: 250, w: 170, h: 90, z: 0.8, css: 'background:repeating-linear-gradient(90deg,#3ec7e0 0 20px,#fff 20px 40px);border-radius:10px' });
@@ -171,7 +171,7 @@ export function mountZoo(root, app) {
   return runRoom(root, app, {
     id: 'zoo', host: 'zhuzhu', back: 'town',
     build() {
-      const dio = createDiorama({ w: 800, d: 640, walls: false, zoom: 0.88, cy: 0.6, base: '#6fb85a', rim: 24,
+      const dio = createDiorama({ w: 800, d: 640, walls: false, zoom: 0.88, cy: 0.6, base: '#6fb85a', rim: 24, skirt: '#8fcf72', horizon: 'mountain',
         floorCss: 'background: radial-gradient(circle at 50% 50%, #b8e89a, #8fcf72)' });
       // 步道（十字）
       dio.addDecal({ x: 360, y: 0, w: 80, h: 640, z: 0.6, css: 'background:#e8cf95' });

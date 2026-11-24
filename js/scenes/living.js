@@ -3,6 +3,8 @@
 //   誰按電鈴？：從門上的小洞看是誰。爸爸、媽媽、阿嬤可以開門；不認識的人不開門，要去找大人（愷愷很會觀察，可以當看門孔的人）。
 //   明星舞台：跟著閃閃做動作（真的站起來做），再跟著拍子打鼓（讓岳岳動身體、練習抓時間點）。
 import { runRoom } from './room-base.js';
+import { isDark } from '../core/clock.js';
+import { streetWindow, stairDoor } from '../art/house.js';
 import { createDiorama } from '../engine/diorama.js';
 import { div, wait, burst, stageW, shuffle, pick } from '../core/dom.js';
 import { sfx, stopMusic, playMusic } from '../core/audio.js';
@@ -53,6 +55,9 @@ function buildLiving() {
     w: 640, d: 600, wallH: 300, zoom: 0.98, cy: 0.6, wall: '#f6eaff', base: '#b98a6a',
     floorCss: 'background: repeating-linear-gradient(0deg, #ecc89a 0 56px, #e0bb8b 56px 58px)',
   });
+  // 窗外看得到街道、門口看得到 Z 字型樓梯（11/24：房間不再是封閉的盒子）
+  dio.wallArt('e', { along: 200, up: 120, w: 180, h: 135, html: streetWindow(isDark()), cls: 'window' });
+  dio.wallArt('w', { along: 40, up: 0, w: 110, h: 190, html: stairDoor() });
   // 地毯
   dio.addDecal({ x: 190, y: 250, w: 280, h: 240, z: 0.6, css: 'border-radius:40px;background:radial-gradient(circle,#fff2b8 0 25%,#ffd5e5 25% 50%,#c9e9ff 50% 100%)' });
   // 電視櫃與電視（靠西牆，螢幕朝東）

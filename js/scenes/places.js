@@ -15,7 +15,7 @@ import { shaoSvg, VEHICLES, signSvg, DINOS, boneSvg, skullSvg, ANIMALS } from '.
 
 const hardSolo = (R) => R.members.includes('yy') && !turnsOn();
 const tree = (s = 1) => `<svg viewBox="0 0 80 110"><rect x="34" y="70" width="12" height="38" rx="5" fill="#a9744f"/><circle cx="40" cy="48" r="34" fill="#4fbf6e"/><circle cx="28" cy="36" r="10" fill="#8fe39a" opacity=".7"/></svg>`;
-const outdoor = (w, d, extra = {}) => createDiorama({ w, d, walls: false, zoom: 0.92, cy: 0.6, base: '#8fbf6a', rim: 24,
+const outdoor = (w, d, extra = {}) => createDiorama({ w, d, walls: false, zoom: 0.92, cy: 0.6, base: '#8fbf6a', rim: 24, skirt: '#a6d987', horizon: 'town',
   floorCss: 'background: radial-gradient(circle at 40% 35%, #c4ee9f 0, #a3dc84 70%, #95d277 100%)', ...extra });
 const lineOf = (prefix) => (ph) => `${prefix}_hello_${ph === 'night' ? 'evening' : ph === 'morning' ? 'morning' : 'day'}`;
 
@@ -395,7 +395,7 @@ export function mountFarm(root, app) {
   return runRoom(root, app, {
     id: 'farm', host: 'dada', back: 'town',
     build() {
-      const dio = outdoor(760, 620);
+      const dio = outdoor(760, 620, { horizon: 'nature' });
       // 穀倉（西北）＋屋頂
       dio.addBox({ x: 40, y: 40, w: 200, d: 150, h: 150, color: '#ff7a5a', faces: { s: `<svg viewBox="0 0 200 150" width="100%" height="100%"><rect x="70" y="60" width="60" height="90" fill="#c9503a"/><path d="M70 60 L130 150 M130 60 L70 150" stroke="#fff" stroke-width="6"/></svg>` } });
       dio.addBox({ x: 30, y: 30, w: 220, d: 170, h: 20, z: 150, color: '#c9503a', cls: 'soft' });

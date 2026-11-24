@@ -16,9 +16,9 @@ import { personSvg } from '../art/more.js';
 import { babaSvg, itemSvg } from '../art/town.js';
 import { ANIMALS } from '../art/fun.js';
 import { PLACE_ICON, ZOO, SEA, MISC } from '../art/world.js';
-import { backdrop, homeBtn, rotateBtns, jars, roundBtn } from '../ui/hud.js';
+import { backdrop, homeBtn, rotateBtns, jars, roundBtn, zoomBtns } from '../ui/hud.js';
 import { ICON2 } from '../art/more.js';
-import { seatbelt } from './town.js';
+import { seatbelt, placeBar } from './town.js';
 
 const S = (inner, vb = '0 0 100 100') => `<svg viewBox="${vb}" width="100%" height="100%">${inner}</svg>`;
 const tree = (c = '#4fbf6e') => S(`<rect x="34" y="70" width="12" height="38" rx="5" fill="#a9744f"/><circle cx="40" cy="48" r="34" fill="${c}"/><circle cx="28" cy="36" r="10" fill="#fff" opacity=".2"/>`, '0 0 80 110');
@@ -30,6 +30,7 @@ const monkey = () => S(`<circle cx="50" cy="40" r="22" fill="#a9744f"/><ellipse 
 const cablecar = () => S(`<path d="M0 10 L100 30" stroke="#4a3b6b" stroke-width="3"/><path d="M50 20 V36" stroke="#4a3b6b" stroke-width="4"/><rect x="28" y="36" width="44" height="40" rx="10" fill="#3ec7e0"/><rect x="34" y="42" width="32" height="16" rx="4" fill="#fff" opacity=".8"/>`);
 const building = (c = '#bfd3ef') => S(`<rect x="20" y="10" width="60" height="90" rx="4" fill="${c}"/>${[20, 40, 60].map((y) => `<rect x="30" y="${y}" width="14" height="12" fill="#fff" opacity=".8"/><rect x="56" y="${y}" width="14" height="12" fill="#fff" opacity=".8"/>`).join('')}`);
 const field = () => S(`<path d="M0 70 H100 V100 H0Z" fill="#9fd87f"/>${[10, 30, 50, 70, 90].map((x) => `<path d="M${x} 100 L${x + 6} 70" stroke="#5aa84a" stroke-width="3"/>`).join('')}`);
+const peak = (c = '#5aa84a', snow = true) => S(`<path d="M0 160 L70 30 L100 62 L140 0 L200 160Z" fill="${c}"/><path d="M0 160 L70 30 L80 160Z" fill="#000" opacity=".08"/>${snow ? '<path d="M128 22 L140 0 L152 24 L140 32Z" fill="#fff" opacity=".85"/>' : ''}`, '0 0 200 160');
 const seagull = () => S(`<path d="M10 50 Q30 30 50 50 Q70 30 90 50" stroke="#fff" stroke-width="7" fill="none" stroke-linecap="round"/>`);
 
 // ---- 區域 ----
@@ -64,7 +65,9 @@ function buildZone(zone) {
     sea: 'background: linear-gradient(0deg, #f6e3b0 0 52%, #bfe9ff 52% 54%, #5ec3ee 54% 100%)',
     mountain: 'background: radial-gradient(circle at 60% 40%, #9fd87f, #6fb85a)',
   };
-  const dio = createDiorama({ w: W, d: D, walls: false, zoom: 0.8, cy: 0.58, base: zone === 'sea' ? '#3ea8e0' : '#8fbf6a', rim: 30, floorCss: floors[zone] });
+  const skirt = { suburb: '#a6d987', sea: '#5ec3ee', mountain: '#7fc86a' }[zone];
+  const horizon = { suburb: 'nature', sea: 'sea', mountain: 'mountain' }[zone];
+  const dio = createDiorama({ w: W, d: D, walls: false, zoom: 0.8, zmin: 0.45, zmax: 1.6, cy: 0.58, skirt, horizon, floorCss: floors[zone] });
   const markers = {};
   const P = ZONE_PLACES[zone];
   // 進出這一區的地方：一小段公路＋小車站
@@ -100,7 +103,7 @@ function buildZone(zone) {
   }
   if (zone === 'mountain') {
     // 一層一層的山、動物園大門（上面一隻熊貓）、纜車
-    for (const [x, y, w, h, c] of [[620, 40, 360, 120, '#6fb85a'], [660, 80, 280, 220, '#5aa84a'], [700, 120, 200, 320, '#4f9a44'], [40, 40, 260, 90, '#7fc86a'], [70, 70, 200, 170, '#6fb85a']]) dio.addBox({ x, y, w, d: w * 0.7, h: h * 0.6, color: c });
+    for (const [x, y, w, h, c] of [[800, 160, 420, 330, '#5aa84a'], [640, 80, 320, 240, '#6fb85a'], [170, 120, 380, 280, '#4f9a44'], [940, 420, 300, 220, '#6fb85a']]) dio.addSprite({ x, y, w, h, shadow: 0, html: peak(c) });
     const p = P.zoo, tap = 'go:zoo';
     dio.addBox({ x: p.x - 110, y: p.y - 20, w: 34, d: 40, h: 120, color: '#a9744f', tap });
     dio.addBox({ x: p.x + 76, y: p.y - 20, w: 34, d: 40, h: 120, color: '#a9744f', tap });
@@ -132,6 +135,7 @@ export async function mountZone(root, app) {
   jars(root, app.profile.members);
   mountClock(root);
   rotateBtns(root, dio);
+  zoomBtns(root, dio);
   turnsScene(root);
   worldBtn(root, app);
   setPlaying(true);
@@ -139,7 +143,8 @@ export async function mountZone(root, app) {
   const first = Object.keys(ZONE_PLACES[zone])[0];
   setHint(() => T.markers[first].el);
   let going = false;
-  dio.onTap(async (name) => {
+  placeBar(root, dio, ZONE_PLACES[zone], T.markers, app.trip.location, (id) => onTapZone(`go:${id}`));
+  const onTapZone = async (name) => {
     if (name.startsWith('go:')) {
       if (going) return;
       going = true;
@@ -154,7 +159,8 @@ export async function mountZone(root, app) {
       sfx('boing'); shan.el.classList.remove('hop'); void shan.el.offsetWidth; shan.el.classList.add('hop');
       speak('shan', `zone_hello_${zone}`, { node: shan.el });
     }
-  });
+  };
+  dio.onTap(onTapZone);
   if (!app.trip.seenZone?.[zone]) {
     app.trip.seenZone = { ...(app.trip.seenZone || {}), [zone]: true };
     await speak('shan', `zone_hello_${zone}`, { node: shan.el });
@@ -165,21 +171,27 @@ export async function mountZone(root, app) {
 export async function mountWorld(root, app) {
   backdrop(root);
   const W = 1200, D = 900;
-  const dio = createDiorama({ w: W, d: D, walls: false, zoom: 0.62, cy: 0.56, base: '#3ea8e0', rim: 30,
-    floorCss: 'background:linear-gradient(90deg,transparent 49.6%,#7fd3ff 49.6% 50.4%,transparent 50.4%),linear-gradient(0deg,transparent 49.4%,#7fd3ff 49.4% 50.6%,transparent 50.6%),#3ea8e0' });
+  // 一座自然的島：彎彎曲曲的海岸線，城市在西北、平原（郊區）在東北、沙灘在西南、山在東南；
+  // 高速公路和鐵路彎彎地把四區連起來；四周是一直延伸到天邊的海
+  const island = 'M130 170 Q250 40 520 78 Q760 26 990 120 Q1150 210 1118 420 Q1170 640 1040 790 Q860 890 600 852 Q330 890 170 770 Q50 610 92 420 Q56 260 130 170Z';
+  const map = `<svg viewBox="0 0 ${W} ${D}" width="100%" height="100%">
+    <path d="${island}" fill="#f2dca6" stroke="#bfe9ff" stroke-width="26"/>
+    <path d="${island}" fill="#9fd87f" transform="translate(600 450) scale(.94) translate(-600 -450)"/>
+    <path d="M150 140 Q330 80 520 150 Q560 300 430 380 Q250 420 140 330Z" fill="#cfd6e0"/>
+    <path d="M680 110 Q900 70 1060 180 Q1090 330 960 400 Q760 410 660 300Z" fill="#c6e88a"/>
+    ${[0, 1, 2, 3, 4, 5].map((i) => `<path d="M${700 + i * 55} 150 L${740 + i * 55} 380" stroke="#e8d36a" stroke-width="22" opacity=".8"/>`).join('')}
+    <path d="M90 520 Q200 480 330 560 Q420 660 330 800 Q200 820 120 700Z" fill="#f6e3b0"/>
+    <path d="M60 640 Q160 640 220 720 Q240 820 140 860 Q60 820 40 720Z" fill="#7fd3ff"/>
+    <path d="M660 520 Q880 470 1080 560 Q1100 720 980 800 Q780 840 680 720Z" fill="#6fb85a"/>
+    <path d="M330 260 Q640 200 900 250 M330 260 Q300 480 300 700 M900 250 Q960 480 880 700" stroke="#8a8fa0" stroke-width="26" fill="none" stroke-linecap="round"/>
+    <path d="M300 700 Q600 640 880 700" stroke="#8a8fa0" stroke-width="26" fill="none" stroke-linecap="round"/>
+    <path d="M360 300 Q620 360 860 300 Q980 520 860 690" stroke="#a9744f" stroke-width="10" fill="none" stroke-dasharray="4 10"/>
+  </svg>`;
+  const dio = createDiorama({ w: W, d: D, walls: false, zoom: 0.62, zmin: 0.4, zmax: 1.3, cy: 0.56, skirt: '#3ea8e0', horizon: 'sea', floorCss: 'background:transparent' });
+  dio.addDecal({ x: 0, y: 0, w: W, h: D, z: 0.6, html: map });
   root.appendChild(dio.el);
   app.onLeave(() => { setHint(null); setPlaying(false); dio.destroy(); });
   dio.setTint(roomTint());
-  // 四塊陸地（城市在西北、郊區在東北、海邊在西南、山上在東南），中間有高速公路和鐵路連起來
-  const land = (x, y, w, d, css) => dio.addDecal({ x, y, w, d, h: d, z: 1, css: `border-radius:60px;${css}` });
-  land(30, 30, 540, 400, 'background:#c9d3de');
-  land(630, 30, 540, 400, 'background:repeating-linear-gradient(90deg,#9fd87f 0 40px,#e8d36a 40px 60px)');
-  land(30, 470, 540, 400, 'background:linear-gradient(135deg,#f6e3b0 0 55%,#7fd3ff 55%)');
-  land(630, 470, 540, 400, 'background:#7fc86a');
-  dio.addDecal({ x: 280, y: 200, w: 640, h: 26, z: 1.5, css: 'background:#8a8fa0;border-radius:13px' });
-  dio.addDecal({ x: 280, y: 200, w: 26, h: 500, z: 1.5, css: 'background:#8a8fa0;border-radius:13px' });
-  dio.addDecal({ x: 280, y: 680, w: 640, h: 26, z: 1.5, css: 'background:#8a8fa0;border-radius:13px' });
-  dio.addDecal({ x: 900, y: 200, w: 26, h: 500, z: 1.5, css: 'background:repeating-linear-gradient(0deg,#8a6a4a 0 6px,#d9c8a8 6px 20px);border-radius:6px' });
   // 城市：一堆小樓
   [[120, 120, 60, 140, '#bfd3ef'], [200, 100, 70, 200, '#ffd6a0'], [300, 140, 60, 120, '#d6c8ff'], [400, 110, 80, 170, '#c8f0d6'], [160, 260, 90, 90, '#ffe0a8'], [380, 280, 70, 110, '#ffb8c0']].forEach(([x, y, w, h, c]) => dio.addBox({ x, y, w, d: w, h, color: c, tap: 'zone:city' }));
   // 郊區：穀倉、風車、牛
@@ -193,7 +205,7 @@ export async function mountWorld(root, app) {
   dio.addSprite({ x: 470, y: 560, w: 70, h: 130, shadow: 0.4, tap: 'zone:sea', html: lighthouse() });
   dio.addSprite({ x: 420, y: 790, z: 2, w: 90, h: 70, shadow: 0, tap: 'zone:sea', html: sailboat() });
   // 山上：一層一層的山＋纜車＋熊貓
-  [[680, 520, 420, 60, '#6fb85a'], [730, 560, 320, 130, '#5aa84a'], [790, 600, 200, 210, '#4f9a44']].forEach(([x, y, w, h, c]) => dio.addBox({ x, y, w, d: w * 0.65, h, color: c, tap: 'zone:mountain' }));
+  [[860, 640, 300, 230, '#5aa84a'], [760, 690, 220, 170, '#6fb85a'], [990, 700, 220, 170, '#4f9a44']].forEach(([x, y, w, h, c]) => dio.addSprite({ x, y, w, h, shadow: 0.2, tap: 'zone:mountain', html: peak(c) }));
   dio.addSprite({ x: 1080, y: 560, z: 180, w: 100, h: 80, shadow: 0, tap: 'zone:mountain', html: cablecar() });
   // 區域標記
   const pos = { city: [300, 230, 250], suburb: [900, 230, 200], sea: [300, 700, 170], mountain: [900, 700, 300] };
@@ -206,6 +218,7 @@ export async function mountWorld(root, app) {
   jars(root, app.profile.members);
   mountClock(root);
   rotateBtns(root, dio);
+  zoomBtns(root, dio);
   turnsScene(root);
   setPlaying(true);
   playMusic('world');
