@@ -102,7 +102,7 @@ export const PLACES = {
   // 公共設施區（南邊）
   fire: { node: 'J', x: 880, y: 1640, screen: 'fire', icon: PLACE_ICON.fire, h: 190 },
   police: { node: 'J', x: 1330, y: 1640, screen: 'police', icon: badgeIcon(), h: 140 },
-  clinic: { node: 'I', x: 2320, y: 1760, screen: 'clinic', icon: itemSvg('heal'), h: 140 },
+  clinic: { node: 'I', x: 2380, y: 1760, screen: 'clinic', icon: itemSvg('heal'), h: 250 },
   // 名人堂（11/24）：河邊，認識明星小鎮的每一位明星
   fame: { node: 'E', x: 1350, y: 770, screen: 'fame', icon: PLACE_ICON.fame, h: 170 },
 };
@@ -274,15 +274,37 @@ const BUILD = {
     }
   },
   // 診所：白色方方的、屋頂上一個大大的綠色十字（四面都看得到）
+  // 醫院（11/24，參考大雅區清泉醫院：地區醫院、24 小時急診、院內停車場、門口有公車站）：
+  // 六層樓白色大樓、一條一條藍色玻璃窗，屋頂大紅十字；前面兩層樓的大廳加遮雨棚；旁邊急診入口停著救護車；停車場和公車站牌
   clinic(dio, p, tap) {
-    const w = 170, d = 130, h = 92;
-    const x = p.x - w / 2, y = p.y - d / 2;
-    const front = face(w, h, `<rect x="0" y="0" width="${w}" height="12" fill="#4cd07d"/>${win(14, 26)}${win(w - 44, 26)}<rect x="${w / 2 - 22}" y="${h - 52}" width="44" height="52" rx="4" fill="#bfe6ff" stroke="#fff" stroke-width="4"/>`);
-    const sideF = face(d, h, `<rect x="0" y="0" width="${d}" height="12" fill="#4cd07d"/>${win(20, 30)}${win(d - 50, 30)}`);
-    dio.addBox({ x, y, w, d, h, color: '#ffffff', tap, faces: { s: front, n: front, e: sideF, w: sideF } });
-    const cw = 30, cl = 100, ch = 30;
-    dio.addBox({ x: p.x - cl / 2, y: p.y - cw / 2, z: h, w: cl, d: cw, h: ch, color: '#4cd07d', tap });
-    dio.addBox({ x: p.x - cw / 2, y: p.y - cl / 2, z: h, w: cw, d: cl, h: ch, color: '#4cd07d', tap });
+    // 主大樓
+    const tw = 200, td = 120, th = 210;
+    const tx = p.x - tw / 2 + 10, ty = p.y - 120;
+    const band = (w, h, floors) => face(w, h, `${[...Array(floors)].map((_, i) => `<rect x="6" y="${8 + i * (h / floors)}" width="${w - 12}" height="${h / floors - 14}" rx="3" fill="#8fc9ef"/>${[...Array(Math.floor(w / 34))].map((__, k) => `<rect x="${6 + (k + 1) * 34}" y="${8 + i * (h / floors)}" width="3" height="${h / floors - 14}" fill="#f6f8fb"/>`).join('')}`).join('')}`);
+    dio.addBox({ x: tx, y: ty, w: tw, d: td, h: th, color: '#f6f3ec', tap, faces: { s: band(tw, th, 6), n: band(tw, th, 6), e: band(td, th, 6), w: band(td, th, 6) } });
+    // 屋頂：紅十字招牌（兩面都看得到）、機房
+    const cross = `<svg viewBox="0 0 60 60" width="100%" height="100%"><rect width="60" height="60" rx="8" fill="#fff"/><rect x="22" y="8" width="16" height="44" rx="3" fill="#e53935"/><rect x="8" y="22" width="44" height="16" rx="3" fill="#e53935"/></svg>`;
+    dio.addPanel({ x1: p.x - 20, y1: ty + td / 2, x2: p.x + 40, y2: ty + td / 2, z: th, h: 60, css: '#ffffff', html: cross, both: true, tap });
+    dio.addBox({ x: tx + 20, y: ty + 14, z: th, w: 50, d: 40, h: 22, color: '#c9ced8', tap });
+    // 前面的大廳（兩層樓、比較寬）＋玻璃大門＋遮雨棚
+    const lw = 260, ld = 80, lh = 64;
+    const lx = p.x - lw / 2, ly = ty + td - 10;
+    const lobby = face(lw, lh, `<rect x="0" y="0" width="${lw}" height="10" fill="#4fb3a9"/><rect x="${lw / 2 - 46}" y="18" width="92" height="${lh - 18}" fill="#bfe6ff" stroke="#fff" stroke-width="4"/><path d="M${lw / 2} 18 V${lh}" stroke="#fff" stroke-width="4"/>${[16, lw - 76].map((xx) => `<rect x="${xx}" y="18" width="60" height="26" rx="3" fill="#8fc9ef"/>`).join('')}`);
+    const lside = face(ld, lh, `<rect width="${ld}" height="10" fill="#4fb3a9"/><rect x="14" y="18" width="${ld - 28}" height="26" rx="3" fill="#8fc9ef"/>`);
+    dio.addBox({ x: lx, y: ly, w: lw, d: ld, h: lh, color: '#f6f3ec', tap, faces: { s: lobby, e: lside, w: lside } });
+    dio.addBox({ x: p.x - 60, y: ly + ld, z: 44, w: 120, d: 46, h: 8, color: '#ffffff', tap });   // 遮雨棚
+    for (const cx of [p.x - 54, p.x + 48]) dio.addBox({ x: cx, y: ly + ld + 38, w: 6, d: 6, h: 44, color: '#d6dbe4', tap });
+    // 急診入口（西邊）：紅色門框、救護車
+    dio.addBox({ x: lx - 36, y: ly + 10, w: 36, d: 60, h: 46, color: '#e53935', tap, faces: { w: face(60, 46, `<rect x="10" y="12" width="40" height="34" fill="#ffe0e0"/>`) } });
+    dio.addSprite({ x: lx - 90, y: ly + 70, w: 110, h: 74, shadow: 0.5, tap, html: `<svg viewBox="0 0 110 74"><rect x="4" y="16" width="74" height="42" rx="8" fill="#fff"/><path d="M78 26 H94 L106 42 V58 H78Z" fill="#fff"/><path d="M82 30 H93 L101 42 H82Z" fill="#bfe6ff"/><rect x="4" y="40" width="102" height="6" fill="#e53935"/><rect x="30" y="22" width="8" height="22" fill="#e53935"/><rect x="23" y="29" width="22" height="8" fill="#e53935"/><rect x="40" y="8" width="16" height="8" rx="3" fill="#ff4a4a"/><circle cx="24" cy="60" r="9" fill="#3a3550"/><circle cx="86" cy="60" r="9" fill="#3a3550"/></svg>` });
+    // 停車場（東邊）：白線、兩台車
+    const px = lx + lw + 20, py = ly - 60;
+    dio.addDecal({ x: px, y: py, w: 170, h: 150, z: 1.1, css: 'background: repeating-linear-gradient(90deg, #fff 0 4px, transparent 4px 56px), #9aa0aa' });
+    const car = (c) => `<svg viewBox="0 0 80 50"><rect x="6" y="20" width="68" height="20" rx="8" fill="${c}"/><path d="M18 20 Q24 6 40 6 Q56 6 62 20Z" fill="${c}"/><path d="M24 19 Q28 10 40 10 Q52 10 56 19Z" fill="#bfe6ff"/><circle cx="20" cy="42" r="7" fill="#3a3550"/><circle cx="60" cy="42" r="7" fill="#3a3550"/></svg>`;
+    dio.addSprite({ x: px + 30, y: py + 60, w: 60, h: 38, shadow: 0.4, html: car('#7ec8ff') });
+    dio.addSprite({ x: px + 142, y: py + 120, w: 60, h: 38, shadow: 0.4, html: car('#ffd23f') });
+    // 門口的公車站牌
+    dio.addSprite({ x: p.x + 150, y: ly + ld + 70, w: 40, h: 110, shadow: 0.3, html: `<svg viewBox="0 0 40 110"><rect x="18" y="30" width="4" height="80" fill="#8a8fa0"/><rect x="4" y="4" width="32" height="32" rx="6" fill="#2f7fe0"/><rect x="10" y="12" width="20" height="14" rx="3" fill="#fff"/><rect x="12" y="15" width="16" height="6" fill="#2f7fe0"/><circle cx="14" cy="28" r="2.5" fill="#fff"/><circle cx="26" cy="28" r="2.5" fill="#fff"/></svg>` });
   },
   // 警察局：深藍色、屋頂上有紅藍警示燈、門口一個大大的星星徽章、停著一台警車
   police(dio, p, tap) {
@@ -384,7 +406,7 @@ export function buildTown() {
       dio.addSprite({ x: rx - 150, y, w: 80, h: 110, shadow: 0.6, html: treeSvg('#4fbf6e') });
     dio.addSprite({ x: rx + 160, y: y + 120, w: 80, h: 110, shadow: 0.6, html: treeSvg('#5fc76a') });
   }
-  for (const [x, y] of [[80, 120], [100, 1900], [900, 2100], [2900, 200], [2880, 2000], [2700, 1700], [2950, 1100], [60, 900], [1300, 120], [700, 1980]]) {
+  for (const [x, y] of [[80, 120], [100, 1900], [900, 2100], [2900, 200], [2880, 2000], [2790, 1600], [2950, 1100], [60, 900], [1300, 120], [700, 1980]]) {
     dio.addSprite({ x, y, w: 90, h: 120, shadow: 0.6, html: treeSvg(pick(['#4fbf6e', '#3f9f5a', '#6cc072'])) });
   }
   dio.seal();   // 之後加的（閃閃、叭叭、坐車時的車子和行人）用 CSS，才能動
