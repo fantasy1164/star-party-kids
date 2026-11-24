@@ -298,42 +298,46 @@ const BUILD = {
       return face(w, h, a);
     };
     const X = p.x, Y = p.y;
-    // ---- 三棟高樓（大廳後面） ----
-    const blocks = [
-      { x: X - 150, y: Y - 190, w: 96, d: 96, h: 250, bay: true },
-      { x: X - 56, y: Y - 210, w: 120, d: 110, h: 286 },
-      { x: X + 64, y: Y - 196, w: 104, d: 100, h: 272 },
-    ];
-    for (const b of blocks) {
-      const f = towerFace(b.w, b.h, { from: 3, bay: b.bay });
-      const sf = towerFace(b.d, b.h, { from: 3 });
-      dio.addBox({ x: b.x, y: b.y, w: b.w, d: b.d, h: b.h, color: CREAM, tap, faces: { s: f, n: sf, e: sf, w: sf } });
-    }
-    // 中間那棟樓頂：機房＋直立招牌
-    const mid = blocks[1];
-    dio.addBox({ x: mid.x + 30, y: mid.y + 20, z: mid.h, w: 56, d: 46, h: 40, color: '#e2dac4', tap });
-    dio.addPanel({ x1: mid.x + 34, y1: mid.y + 66, x2: mid.x + 82, y2: mid.y + 66, z: mid.h + 40, h: 30, css: '#2f8f9a', both: true, tap,
-      html: `<svg viewBox="0 0 96 60" width="100%" height="100%"><text x="48" y="42" font-size="30" text-anchor="middle" fill="#fff" font-weight="700" font-family="sans-serif">清泉</text></svg>` });
-    // 右邊那棟樓頂：綠色大看板
-    const rb = blocks[2];
-    dio.addPanel({ x1: rb.x + 6, y1: rb.y + rb.d + 1, x2: rb.x + rb.w - 6, y2: rb.y + rb.d + 1, z: rb.h - 52, h: 52, css: '#3fae5a', tap,
-      html: `<svg viewBox="0 0 92 52" width="100%" height="100%">${[12, 26, 40].map((y) => `<rect x="8" y="${y - 4}" width="${60 + (y % 3) * 6}" height="6" rx="3" fill="#fff" opacity=".9"/>`).join('')}<rect x="72" y="8" width="14" height="36" rx="3" fill="#ff5d73"/></svg>` });
+    // ---- 主大樓：正方形，面向路口的那個角往內縮（L 形），兩面內縮的牆在中間交成一條內凹的直線 ----
+    // 照片從西南邊看：內縮的兩面牆一面朝南、一面朝西；左邊（西北塊）西牆有圓弧玻璃窗和直立「清泉醫院」招牌，
+    // 右邊（東南塊）南牆頂端是綠色大看板；內角後面有一座比較高的樓梯間／機房
+    const S = 230, N = 110, TH = 260;
+    const x0 = X - S / 2 + 10, y0 = Y - 260;
+    const northD = S - N;   // 北半邊（整排）的深度
+    const nb = { x: x0, y: y0, w: S, d: northD };
+    const se = { x: x0 + N, y: y0 + northD, w: S - N, d: N };
+    // 北半邊：南牆（只有西邊那段露出來，就是內縮的那面牆）、西牆有圓弧窗
+    dio.addBox({ x: nb.x, y: nb.y, w: nb.w, d: nb.d, h: TH, color: CREAM, tap,
+      faces: { s: towerFace(nb.w, TH, { from: 3 }), w: towerFace(nb.d, TH, { from: 3, bay: true }), n: towerFace(nb.w, TH, { from: 3 }), e: towerFace(nb.d, TH, { from: 3 }) } });
+    // 東南塊：往南突出；西牆就是另一面內縮的牆
+    dio.addBox({ x: se.x, y: se.y, w: se.w, d: se.d, h: TH, color: CREAM, tap,
+      faces: { s: towerFace(se.w, TH, { from: 3 }), w: towerFace(se.d, TH, { from: 3 }), e: towerFace(se.d, TH, { from: 3 }) } });
+    // 內角後面的樓梯間／機房（比主樓高兩層）
+    dio.addBox({ x: x0 + N - 10, y: y0 + northD - 70, z: TH, w: 70, d: 60, h: 52, color: '#e2dac4', tap,
+      faces: { s: towerFace(70, 52, {}), w: towerFace(60, 52, {}) } });
+    // 西北塊西牆頂端：直立的「清泉醫院」招牌（藍綠色字）
+    dio.addPanel({ x1: x0 - 1, y1: y0 + 14, x2: x0 - 1, y2: y0 + 54, z: TH - 120, h: 116, css: '#f4efe2', tap,
+      html: `<svg viewBox="0 0 40 116" width="100%" height="100%">${['清', '泉', '醫', '院'].map((c, k) => `<text x="20" y="${26 + k * 27}" font-size="24" text-anchor="middle" fill="#2f8f9a" font-weight="700" font-family="sans-serif">${c}</text>`).join('')}</svg>` });
+    // 東南塊南牆頂端：綠色大看板
+    dio.addPanel({ x1: se.x + 4, y1: se.y + se.d + 1, x2: se.x + se.w - 4, y2: se.y + se.d + 1, z: TH - 56, h: 56, css: '#3fae5a', tap,
+      html: `<svg viewBox="0 0 112 56" width="100%" height="100%">${[12, 26, 40].map((y, k) => `<rect x="8" y="${y - 4}" width="${62 + k * 6}" height="6" rx="3" fill="#fff" opacity=".9"/>`).join('')}<rect x="86" y="8" width="18" height="40" rx="3" fill="#ff5d73"/></svg>` });
     // ---- 前面三層樓的大廳 ----
     const pw = 320, pd = 150, ph = 78;
     const px = X - pw / 2, py = Y - pd + 40;
+    const ec = pw / 2 - 60;   // 大門在內縮的那面牆正下方（照片）
     const podium = face(pw, ph, `
       ${[0, 1].map((r) => `<rect x="0" y="${r * 26 + 2}" width="${pw}" height="16" fill="${WIN}"/>${[...Array(10)].map((_, k) => `<rect x="${k * 32 + 30}" y="${r * 26 + 2}" width="3" height="16" fill="${CREAM}"/>`).join('')}<rect x="0" y="${r * 26 + 18}" width="${pw}" height="7" fill="${MAROON}"/>`).join('')}
-      <rect x="${pw / 2 - 50}" y="54" width="100" height="24" fill="#4a5060"/><rect x="${pw / 2 - 46}" y="57" width="92" height="21" fill="#6c7a8c"/>
-      <rect x="${pw / 2 + 56}" y="54" width="40" height="24" fill="#e6eef2"/>${[0, 1, 2, 3].map((k) => `<path d="M${pw / 2 + 56 + k * 10} 54 V78" stroke="#c4d2da" stroke-width="1"/>`).join('')}${[0, 1, 2].map((k) => `<path d="M${pw / 2 + 56} ${60 + k * 6} H${pw / 2 + 96}" stroke="#c4d2da" stroke-width="1"/>`).join('')}
+      <rect x="${ec - 50}" y="54" width="100" height="24" fill="#4a5060"/><rect x="${ec - 46}" y="57" width="92" height="21" fill="#6c7a8c"/>
+      <rect x="${ec + 56}" y="54" width="40" height="24" fill="#e6eef2"/>${[0, 1, 2, 3].map((k) => `<path d="M${ec + 56 + k * 10} 54 V78" stroke="#c4d2da" stroke-width="1"/>`).join('')}${[0, 1, 2].map((k) => `<path d="M${ec + 56} ${60 + k * 6} H${ec + 96}" stroke="#c4d2da" stroke-width="1"/>`).join('')}
       ${[20, 70, pw - 90, pw - 40].map((x) => `<rect x="${x}" y="58" width="28" height="14" fill="${WIN}"/>`).join('')}`);
     const podSide = face(pd, ph, `${[0, 1].map((r) => `<rect x="0" y="${r * 26 + 2}" width="${pd}" height="16" fill="${WIN}"/><rect x="0" y="${r * 26 + 18}" width="${pd}" height="7" fill="${MAROON}"/>`).join('')}<rect x="20" y="58" width="40" height="14" fill="${WIN}"/><rect x="${pd - 60}" y="58" width="40" height="14" fill="${WIN}"/>`);
     dio.addBox({ x: px, y: py, w: pw, d: pd, h: ph, color: CREAM, tap, faces: { s: podium, e: podSide, w: podSide, n: podSide } });
     // 「清泉醫院」大招牌（大廳正中間、往上突出一點）
-    dio.addBox({ x: X - 70, y: py + pd - 4, z: ph - 10, w: 140, d: 10, h: 44, color: '#f4efe2', tap,
+    dio.addBox({ x: X - 130, y: py + pd - 4, z: ph - 10, w: 140, d: 10, h: 44, color: '#f4efe2', tap,
       faces: { s: `<svg viewBox="0 0 140 44" width="100%" height="100%" preserveAspectRatio="none"><rect x="3" y="3" width="134" height="38" fill="#f7f3e8" stroke="#d9d0bb" stroke-width="2"/><text x="70" y="33" font-size="26" text-anchor="middle" fill="#2f8f9a" font-weight="700" font-family="sans-serif" letter-spacing="6">清泉醫院</text></svg>` } });
     // 白色長遮雨棚＋兩根柱子
-    dio.addBox({ x: X - 110, y: py + pd, z: 26, w: 190, d: 38, h: 7, color: '#ffffff', tap });
-    for (const cx of [X - 104, X + 70]) dio.addBox({ x: cx, y: py + pd + 30, w: 6, d: 6, h: 26, color: '#dfe3ea', tap });
+    dio.addBox({ x: X - 165, y: py + pd, z: 26, w: 190, d: 38, h: 7, color: '#ffffff', tap });
+    for (const cx of [X - 159, X + 15]) dio.addBox({ x: cx, y: py + pd + 30, w: 6, d: 6, h: 26, color: '#dfe3ea', tap });
     // ---- 左邊：急診室（紅色招牌、白色雨棚）＋救護車 ----
     const ex = px - 86, ey = py + 50;
     dio.addBox({ x: ex, y: ey, w: 86, d: 100, h: 30, color: CREAM, tap, faces: { s: face(86, 30, `<rect x="0" y="0" width="86" height="11" fill="#e53935"/><rect x="10" y="2" width="9" height="7" fill="#fff"/><rect x="12.5" y="2" width="4" height="7" fill="#e53935"/><rect x="10" y="4" width="9" height="3" fill="#e53935"/><rect x="26" y="4" width="50" height="3" rx="1.5" fill="#fff"/><rect x="18" y="14" width="50" height="16" fill="#6c7a8c"/>`) } });
@@ -426,7 +430,7 @@ export function buildTown() {
     ...[[180, 1360], [300, 1360], [420, 1360], [180, 760], [300, 820]].map(([x, y], i) => ['tou', x, y, ['#fff3e6', '#e6f4e8', '#e6eeff', '#fff0f0', '#fff8d6'][i % 5]]),
     ...[[820, 900], [940, 900], [300, 1560], [420, 1560]].map(([x, y], i) => ['tou', x, y, ['#e6eeff', '#fff8d6', '#fff3e6', '#e6f4e8'][i % 4]]),
     // 市中心：公寓和店面
-    ...[[2200, 760], [2400, 780], [2560, 1180], [2560, 1420], [1820, 1520], [2340, 1500], [2080, 250], [1780, 300]].map(([x, y], i) => ['apt', x, y, ['#c9d6ea', '#e6d6c4', '#d6c8ff', '#c8f0d6', '#ffd6a0', '#bfe6ff', '#ffe0a8', '#e6eeff'][i]]),
+    ...[[2200, 760], [2400, 780], [2560, 1180], [2560, 1420], [1820, 1520], [2080, 250], [1780, 300]].map(([x, y], i) => ['apt', x, y, ['#c9d6ea', '#e6d6c4', '#d6c8ff', '#c8f0d6', '#ffd6a0', '#ffe0a8', '#e6eeff'][i]]),
     ...[[1820, 960], [2240, 1000]].map(([x, y], i) => ['shop', x, y, ['#ff8fbf', '#7ee06a'][i]]),
   ];
   const TOU_ORDER = ['stone', 'euro', 'modern', 'brick', 'euro', 'stone', 'brick', 'modern', 'euro'];
