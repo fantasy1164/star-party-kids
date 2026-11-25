@@ -787,6 +787,15 @@ export async function mountRide(root, app) {
   const follow = () => { if (!following) return; dio.view.px = car.x; dio.view.py = car.y; dio.apply(); };
   dio.view.z = 1.25;
   follow();
+  // 把鏡頭轉到「車子往旗子的方向朝畫面上方」，並拉遠到車子和旗子都看得到
+  // （畫面往上＝世界的 (-sin a, -cos a)，所以 a = atan2(-dx, -dy)；取離現在角度最近的轉法）
+  function lookAtFlag(ms) {
+    const fx = path[path.length - 1].x + 30, fy = path[path.length - 1].y - 30, dx = fx - car.x, dy = fy - car.y;
+    const want = Math.atan2(-dx, -dy) * 180 / Math.PI;
+    const a = dio.view.a + ((((want - dio.view.a) % 360) + 540) % 360 - 180);
+    const zt = Math.max(0.42, Math.min(1.0, 620 / Math.max(1, Math.hypot(dx, dy))));
+    dio.animateTo({ a, z: zt, px: car.x + dx * 0.42, py: car.y + dy * 0.42 }, ms);   // 中心偏向車子一點，車子不會貼在畫面最下緣
+  }
 
   try {
     // 1. 繫安全帶
@@ -808,7 +817,15 @@ export async function mountRide(root, app) {
       if (stopPressed) stopPressed();
       else if (Date.now() - lastNoNeed > 3000) { lastNoNeed = Date.now(); say('baba', 'ride_go_ok', car.el); }
     });
-    await say('baba', full ? 'ride_start' : 'ride_start_short', car.el);
+    // 出發前：拉遠、把小鎮轉到「旗子在前面（畫面上方）」，讓小孩真的看到旗子，再回到跟著車子
+    dio.lock(false);   // 11/25：開車途中也可以轉小鎮（鏡頭照樣跟著車子）
+    following = false;
+    lookAtFlag(full ? 1300 : 800);
+    await Promise.all([say('baba', full ? 'ride_start' : 'ride_start_short', car.el), wait(full ? 2200 : 1200)]);
+    chk();
+    dio.animateTo({ z: 1.25, px: car.x, py: car.y }, 700);   // 不用 await：小孩在動畫中轉小鎮會打斷它
+    await wait(700);
+    following = true;
     chk();
     if (full) stopBtn.style.display = '';
     // 這一趟要遇到的狀況：紅燈一次、行人一次（完整版才有）
@@ -953,7 +970,6 @@ export async function mountRide(root, app) {
       // 拉遠一點，車子和旗子都在畫面裡；這時候可以轉小鎮，從哪個角度看都可以
       following = false;
       const dest = PLACES[to];
-      dio.lock(false);
       rot.show(true);
       stopBtn.style.visibility = 'hidden';   // 選方向時用不到停車鈕，讓出位置給轉小鎮的按鈕
       dio.animateTo({ z: zt, px: (a.x + dest.x) / 2, py: (a.y + dest.y) / 2 }, 700);
@@ -987,8 +1003,8 @@ export async function mountRide(root, app) {
       rot.pulse(false);
       rot.show(false);
       stopBtn.style.visibility = '';
-      dio.lock(true);
-      await dio.animateTo({ z: 1.25, px: car.x, py: car.y }, 600);
+      dio.animateTo({ z: 1.25, px: car.x, py: car.y }, 600);   // 不用 await：被手指打斷時不會卡住
+      await wait(600);
       following = true;
       if (alive) say('baba', 'ride_right_way', car.el);
     }
