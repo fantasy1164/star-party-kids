@@ -485,6 +485,8 @@ export const LINES = {
   belt_done: { baba: '喀！扣好了，好安全！' },
   ride_start: { baba: '出發囉！看到旗子了嗎？那是我們要去的地方。' },
   ride_start_short: { baba: '出發囉！' },
+  ride_tunnel: { baba: '前面要進隧道囉！裡面會暗暗的，一下下就出來了。' },
+  ride_tunnel_out: { baba: '出隧道了，亮亮的！' },
   ride_which: { baba: '路口到了！要往哪邊走，才會到旗子那裡？' },
   ride_turn_look: { baba: '找不到旗子嗎？轉一轉小鎮，找找紅色的旗子在哪裡！' },
   ride_wrong_way: { baba: '那邊比較遠喔，看看旗子在哪裡？' },

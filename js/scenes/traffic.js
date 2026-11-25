@@ -29,7 +29,15 @@ const FLEET = [
 export function startTraffic(dio, roads, { alive, player = null }) {
   let siren = false;
   let onYield = null;
-  const { NODES, neighbors, edgePts, along, MRT_LINE, TRAIN_LINE, PLACES } = roads;
+  const { NODES, neighbors, edgePts, along, MRT_LINE, TRAIN_LINE, PLACES, heightAt = () => 0, hwyPt = null, HWY = null } = roads;
+  // 開進山裡（隧道）就看不見；一半在裡面就半透明
+  const inside = (x, y, len = 0, dx = 1, dy = 0) => {
+    if (!len) return heightAt(x, y) > 30 ? 1 : 0;
+    const l = Math.hypot(dx, dy) || 1; let n = 0;
+    for (let k = -2; k <= 2; k++) if (heightAt(x + (dx / l) * len * k / 4, y + (dy / l) * len * k / 4) > 30) n++;
+    return n / 5;
+  };
+  const veil = (el, f) => { const o = f >= 1 ? '0' : f > 0 ? String(1 - f) : ''; if (el.style.opacity !== o) el.style.opacity = o; };
   const ids = Object.keys(NODES);
   const cars = FLEET.map(([kind, art, w, h, speed], i) => {
     const a = NODES[ids[(i * 3) % ids.length]];
@@ -76,7 +84,9 @@ export function startTraffic(dio, roads, { alive, player = null }) {
     const p = along(v.E, Math.min(1, v.t));
     const l = Math.hypot(p.dx, p.dy) || 1;
     const off = lane(v.kind) + (v.pull || 0) * 46;   // 讓路時往右邊的路邊靠
-    v.sp.move(p.x - (p.dy / l) * off, p.y + (p.dx / l) * off, 1);
+    const x = p.x - (p.dy / l) * off, y = p.y + (p.dx / l) * off;
+    v.sp.move(x, y, 1);
+    veil(v.sp.el, inside(x, y));
     facing(v, p.dx, p.dy);
   }
 
@@ -102,6 +112,7 @@ export function startTraffic(dio, roads, { alive, player = null }) {
         m.t = Math.min(1, m.t + s / dur);
         const e = m.t < 0.5 ? 2 * m.t * m.t : 1 - (-2 * m.t + 2) ** 2 / 2;
         m.sp.move(x0 + (x1 - x0) * e, m.y, m.z);
+        if (m.sp === train) veil(train.el, inside(m.sp.x, m.y, 210));   // 火車開進東山的隧道
         if (m.t >= 1) { m.t = 0; if (stop) m.hold = stop; else m.k++; }
       }
       if (m.k >= m.legs.length) { movers.splice(i, 1); m.resolve(); }
@@ -133,6 +144,29 @@ export function startTraffic(dio, roads, { alive, player = null }) {
     }
   })();
 
+  // ---- 高架快速道路上的車：兩個方向各跑，從西山的隧道進出 ----
+  const hw = [];
+  if (hwyPt && HWY) {
+    const HL = (() => { let L = 0, p = hwyPt(0); for (let i = 1; i <= 60; i++) { const q = hwyPt(i / 60); L += Math.hypot(q.x - p.x, q.y - p.y); p = q; } return L; })();
+    [['car', () => carSvg('#ffb627'), 0.1, 1], ['car', () => carSvg('#2f7fe0'), 0.55, 1], ['bus', () => VEHICLES.bus, 0.3, -1], ['van', () => vanSvg(), 0.8, -1]].forEach(([kind, art, t0, dir]) => {
+      const sp = dio.addSprite({ x: 0, y: 0, z: HWY.z, w: kind === 'bus' ? 100 : 74, h: kind === 'bus' ? 80 : 48, html: `<div class="veh">${art()}</div>`, shadow: 0.3, tap: `veh:${kind}`, live: true });
+      sp.el.classList.add('vehicle');
+      hw.push({ sp, inner: sp.el.firstElementChild, t: t0, dir, speed: (dir > 0 ? 150 : 135) / HL, flip: false });
+    });
+  }
+  function stepHwy(s) {
+    for (const v of hw) {
+      v.t += v.speed * s * v.dir;
+      if (v.t > 1.04) v.t = -0.04; if (v.t < -0.04) v.t = 1.04;
+      const p = hwyPt(Math.max(0, Math.min(1, v.t)));
+      const l = Math.hypot(p.dx, p.dy) || 1, off = 22 * v.dir;
+      const x = p.x - (p.dy / l) * off, y = p.y + (p.dx / l) * off;
+      v.sp.move(x, y, HWY.z);
+      veil(v.sp.el, heightAt(x, y) > HWY.z + 6 || v.t < 0 || v.t > 1 ? 1 : 0);
+      facing(v, p.dx * v.dir, p.dy * v.dir);
+    }
+  }
+
   let last = performance.now(), acc = 0;
   const tick = (now) => {
     if (!alive()) { movers.forEach((m) => m.resolve()); return; }
@@ -140,7 +174,7 @@ export function startTraffic(dio, roads, { alive, player = null }) {
     last = now;
     if (!stillNow() && !document.hidden) {
       acc += dt;
-      if (acc >= 33) { const s = acc / 1000; acc = 0; stepCars(s); stepMovers(s); }
+      if (acc >= 33) { const s = acc / 1000; acc = 0; stepCars(s); stepMovers(s); stepHwy(s); }
     }
     requestAnimationFrame(tick);
   };

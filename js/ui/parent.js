@@ -18,6 +18,7 @@ const NAMES = {
   'bath.brush': '刷牙', 'bath.wash': '洗手', 'bath.haz': '找危險',
   'kitchen.plate': '我的餐盤', 'kitchen.table': '擺餐具', 'kitchen.safe': '什麼能摸', 'kitchen.dumpling': '分水餃',
   'living.tv': '關電視', 'living.door': '誰按電鈴', 'living.stage': '明星舞台',
+  'ride.route': '坐車認路',
   'school.robot': '修理機器人', 'school.blocks': '積木排排站', 'school.hop': '跳跳口訣', 'school.song': '口訣唱唱', 'school.abc': 'ABC',
   'market.list': '購物清單', 'market.pay': '付錢', 'market.bag': '裝袋子',
   'park.trash': '垃圾分類', 'park.animals': '找小動物', 'park.queue': '溜滑梯排隊', 'park.dino': '挖恐龍化石',

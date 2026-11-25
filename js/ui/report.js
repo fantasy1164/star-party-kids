@@ -3,7 +3,7 @@
 import { KIDS } from '../config.js';
 import { state } from '../core/store.js';
 import { kidHead } from '../art/stars.js';
-import { dayStats, rangeStats, lastDays, today, avgFocusMin, DOMAINS, domainOf } from '../core/stats.js';
+import { dayStats, rangeStats, lastDays, today, avgFocusMin, DOMAINS, domainOf, rideStruggle } from '../core/stats.js';
 import { moodFace, MOOD_NAME, moodChart, barChart, stackChart, pairedChart, lineChart, C } from './charts.js';
 
 const WEEK = '日一二三四五六';
@@ -24,6 +24,7 @@ function highlights(id, st, names) {
   if (st.moodS != null && st.moodE != null && st.moodE > st.moodS) out.push('✨ 玩完心情變好了');
   const quits = Object.entries(st.games).filter(([, r]) => r[4] > 0).map(([k]) => gameName(names, k));
   if (quits.length >= 2) out.push(`🟡 中途離開了 ${quits.length} 關（${join(quits.slice(0, 3))}），可能太難或分心了，可以陪他玩一次`);
+  if (rideStruggle(id)) out.push('🧭 坐車認路最近比較常卡住，遊戲已經自動多幫一點：對的箭頭一開始就發亮、早一點提示轉一轉小鎮');
   if (st.moodS != null && st.moodS <= 2) out.push('💛 玩之前心情不太好，可以抱抱他、聊聊今天發生的事');
   else if (st.moodE != null && st.moodE <= 2) out.push('💛 玩完心情不太好，可以問問他哪一關卡住了');
   return out;

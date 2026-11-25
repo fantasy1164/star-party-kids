@@ -1321,3 +1321,12 @@ body.turn-kk .glowy > svg { filter: drop-shadow(0 0 10px #ff6a2b); }
 .parent .kidsw { display: inline-flex; background: #e9dfcc; border-radius: 14px; padding: 4px; gap: 4px; margin-left: 12px; vertical-align: middle; }
 .parent .pbody .kidsw button { margin: 0; padding: 8px 20px; border-radius: 10px; font-size: 19px; background: transparent; color: #6b5636; }
 .parent .pbody .kidsw button.on { background: #fff; font-weight: 700; color: #222; box-shadow: 0 2px 6px rgba(0,0,0,.1); }
+
+/* ---- 隧道（11/25）：坐車開進山裡，畫面慢慢變暗，一盞一盞燈往後跑（不會突然全黑） ---- */
+.tunnel-fx { position: absolute; inset: 0; z-index: 15; pointer-events: none; opacity: 0; transition: opacity .7s ease;
+  background: radial-gradient(ellipse at 50% 58%, rgba(60,45,30,.25) 0, rgba(20,14,30,.78) 62%, rgba(10,8,18,.9) 100%); }
+.tunnel-fx::before { content: ''; position: absolute; left: 0; right: 0; top: 12%; height: 26px;
+  background: repeating-linear-gradient(90deg, transparent 0 120px, rgba(255,200,90,.9) 120px 170px, transparent 170px 240px); filter: blur(3px);
+  animation: tunnelLights .8s linear infinite; }
+@keyframes tunnelLights { to { background-position: -240px 0; } }
+.in-tunnel .tunnel-fx { opacity: 1; }

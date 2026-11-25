@@ -21,6 +21,7 @@ import { babaSvg, itemSvg, ITEM } from '../art/town.js';
 import { VEHICLES, helmetSvg, shaoSvg } from '../art/fun.js';
 import { PLACE_ICON, MISC, garbageTruckSvg, recycleTruckSvg } from '../art/world.js';
 import { mountZone, worldBtn } from './world.js';
+import { gameBegin, gameEnd, rideStruggle } from '../core/stats.js';
 import { startTraffic } from './traffic.js';
 import { ambulanceSvg, freshTruckSvg, postVanSvg, bookmobileSvg, LOAD_ART } from '../art/traffic.js';
 import { FOODS } from '../art/more.js';
@@ -52,6 +53,32 @@ const RIVER = 'M1480 -60 Q1620 500 1520 1000 T1640 2260';
 const MRT_LINE = { y: 1212, x0: 1260, x1: 2190, z: 128 };
 const TRAIN_LINE = { y: 500, stop: 2975, far: 3260 };   // 停在車站東邊的月台（停在車站正後面會被畫到屋頂上）
 Object.entries(NODES).forEach(([id, n]) => { n.id = id; });
+// ---- 山谷地形（11/25 E 版）：小鎮夾在西邊的大山和東北、東邊的山之間；北邊一座小山丘，A–D 的路從山丘下的隧道穿過；
+// 東邊的山有火車隧道；一條高架快速道路從西山的隧道出來，跨過兩條馬路往南開（同一個地方有好幾層）。
+// 地面還是平的（路、房子都在 z=0），山是一圈一圈的多邊形疊起來的軟膠山。heightAt() 給「這裡山有多高」：
+// 坐車、路上的車到了山裡面（隧道）就看不見。
+const HILLS = [
+  { id: 'west', cx: -260, cy: 1100, rx: 440, ry: 1350, h: 420, c: '#86c46e' },
+  { id: 'north', cx: 830, cy: 300, rx: 265, ry: 170, h: 230, c: '#93cf74' },
+  { id: 'ne', cx: 2650, cy: -130, rx: 430, ry: 310, h: 300, c: '#8cc96f' },
+  { id: 'east', cx: 3480, cy: 520, rx: 340, ry: 460, h: 380, c: '#80bf68' },
+];
+const hillProfile = (r) => (r >= 1 ? 0 : Math.pow(1 - r ** 4, 0.6));   // 山腳很陡、山頂圓圓的（隧道口才有地方放）
+export function heightAt(x, y) {
+  let z = 0;
+  for (const H of HILLS) { const r = Math.hypot((x - H.cx) / H.rx, (y - H.cy) / H.ry); if (r < 1) z = Math.max(z, H.h * hillProfile(r)); }
+  return z;
+}
+// 高架快速道路：從西山的隧道出來，往東南跨過 B–C、C–J 兩條路，開出小鎮南邊
+const HWY = { p0: [-60, 1440], c: [700, 1700], p1: [1500, 2400], z: 100 };
+const tunnelEdge = (a, b) => edgePts(a, b).pts.some((p) => heightAt(p.x, p.y) > 30);
+const hwyPt = (t) => {
+  const [a, c, b] = [HWY.p0, HWY.c, HWY.p1];
+  const x = (1 - t) ** 2 * a[0] + 2 * (1 - t) * t * c[0] + t * t * b[0], y = (1 - t) ** 2 * a[1] + 2 * (1 - t) * t * c[1] + t * t * b[1];
+  const dx = 2 * (1 - t) * (c[0] - a[0]) + 2 * t * (b[0] - c[0]), dy = 2 * (1 - t) * (c[1] - a[1]) + 2 * t * (b[1] - c[1]);
+  return { x, y, dx, dy };
+};
+
 const qpt = (p0, c, p1, t) => ({ x: (1 - t) ** 2 * p0.x + 2 * (1 - t) * t * c[0] + t * t * p1.x, y: (1 - t) ** 2 * p0.y + 2 * (1 - t) * t * c[1] + t * t * p1.y });
 // 一條馬路的折線（a → b 方向），以及各點的累積長度
 const edgeCache = {};
@@ -496,6 +523,78 @@ const BUILD = {
   },
 };
 
+// ---- 山、隧道口、高架快速道路（11/25 E 版） ----
+function tunnelPortal(dio, x, y, dx, dy, { z0 = 0, h = 120, w = 160 } = {}) {
+  // 隧道口：一面石頭牆，中間一個黑黑的拱門；牆面跟路垂直
+  const l = Math.hypot(dx, dy) || 1, px = -dy / l, py = dx / l;
+  const svg = `<svg viewBox="0 0 160 120" preserveAspectRatio="none"><rect width="160" height="120" fill="#c9bfae"/>
+    ${[0, 1, 2, 3].map((r) => [0, 1, 2, 3, 4].map((c) => `<rect x="${c * 34 + (r % 2) * 17 - 8}" y="${r * 30 + 2}" width="30" height="26" rx="5" fill="#b3a892"/>`).join('')).join('')}
+    <path d="M28 120 V64 A52 52 0 0 1 132 64 V120Z" fill="#2a2433"/><path d="M28 120 V64 A52 52 0 0 1 132 64 V120" fill="none" stroke="#e8dfcf" stroke-width="8"/>
+    <circle cx="56" cy="58" r="4" fill="#ffd23f"/><circle cx="104" cy="58" r="4" fill="#ffd23f"/></svg>`;
+  dio.addPanel({ x1: x + px * w / 2, y1: y + py * w / 2, x2: x - px * w / 2, y2: y - py * w / 2, z: z0, h, html: svg, both: true });
+}
+function buildTerrain(dio) {
+  // 山：一圈一圈往內縮、往上疊，每一片依朝向打光（軟膠玩具的亮暗）
+  const RINGS = [1, 0.97, 0.93, 0.87, 0.79, 0.69, 0.57, 0.43, 0.27, 0];
+  for (const H of HILLS) {
+    const seg = H.rx > 400 ? 56 : 40;
+    const ring = (r, i) => { const a = (i / seg) * Math.PI * 2; return [H.cx + Math.cos(a) * H.rx * r, H.cy + Math.sin(a) * H.ry * r, H.h * hillProfile(r) + 0.5]; };
+    for (let k = 0; k < RINGS.length - 1; k++) {
+      for (let i = 0; i < seg; i++) {
+        const a = ring(RINGS[k], i), b = ring(RINGS[k], i + 1), c = ring(RINGS[k + 1], i + 1), d = ring(RINGS[k + 1], i);
+        const pts = RINGS[k + 1] === 0 ? [a, b, c] : [a, b, c, d];
+        const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [d[0] - a[0], d[1] - a[1], d[2] - a[2]];
+        let n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+        if (n[2] < 0) n = n.map((x) => -x);
+        const L = Math.hypot(...n) || 1;
+        const tone = k >= RINGS.length - 3 ? lit(H.c, 0, 0, 1) : H.c;
+        dio.addPolygon({ pts, color: lit(tone, n[0] / L, n[1] / L, n[2] / L) });
+      }
+    }
+    // 山上的樹（踩在山坡的高度上）
+    const trees = Math.round((H.rx * H.ry) / 26000);
+    for (let i = 0; i < trees; i++) {
+      const a = i * 2.39996, r = 0.25 + 0.6 * ((i * 0.618) % 1);
+      const x = H.cx + Math.cos(a) * H.rx * r, y = H.cy + Math.sin(a) * H.ry * r;
+      if (x < -200 || x > W + 300 || y < -200 || y > D + 200) continue;
+      dio.addSprite({ x, y, z: heightAt(x, y) - 4, w: 70, h: 110, shadow: 0, html: `<svg viewBox="0 0 70 110"><rect x="31" y="78" width="8" height="30" rx="3" fill="#8a6a4a"/><path d="M35 4 L64 82 H6Z" fill="${i % 3 ? '#3f9f5a' : '#4fb36a'}"/><path d="M35 4 L50 44 H20Z" fill="#7fd08a" opacity=".5"/></svg>` });
+    }
+  }
+  // 隧道口：路穿過山的地方（找山腳的高度剛好變高的那一點）
+  for (const [a, b] of EDGES) {
+    const E = edgePts(a, b);
+    let prev = heightAt(E.pts[0].x, E.pts[0].y);
+    for (let t = 0.01; t <= 1; t += 0.01) {
+      const p = along(E, t), h = heightAt(p.x, p.y);
+      if ((prev < 30) !== (h < 30)) tunnelPortal(dio, p.x, p.y, p.dx, p.dy);
+      prev = h;
+    }
+  }
+  // 火車隧道（東山）
+  { const x = HILLS[3].cx - HILLS[3].rx * Math.sqrt(1 - ((TRAIN_LINE.y - HILLS[3].cy) / HILLS[3].ry) ** 2) - 4; tunnelPortal(dio, x, TRAIN_LINE.y + 6, 1, 0, { w: 150, h: 130 }); }
+  // 高架快速道路：橋面（上面、兩側、欄杆）、中線、橋墩；從西山的隧道出來
+  const N = 90, z = HWY.z, half = 46;
+  const P = [...Array(N + 1)].map((_, i) => { const q = hwyPt(i / N); const l = Math.hypot(q.dx, q.dy) || 1; return { ...q, nx: -q.dy / l, ny: q.dx / l }; });
+  let portal = false;
+  for (let i = 0; i < N; i++) {
+    const a = P[i], b = P[i + 1];
+    if (heightAt(b.x, b.y) > z + 6) continue;   // 還在山裡
+    if (!portal) { portal = true; tunnelPortal(dio, a.x, a.y, a.dx, a.dy, { z0: z - 30, h: 150, w: 140 }); }
+    const L = (p, s, zz) => [p.x + p.nx * s, p.y + p.ny * s, zz];
+    dio.addPolygon({ pts: [L(a, half, z), L(b, half, z), L(b, -half, z), L(a, -half, z)], color: '#b8bdc8' });
+    for (const s of [half, -half]) {
+      dio.addPolygon({ pts: [L(a, s, z - 14), L(b, s, z - 14), L(b, s, z), L(a, s, z)], color: lit('#d8dde6', a.nx * Math.sign(s), a.ny * Math.sign(s), 0) });
+      dio.addPolygon({ pts: [L(a, s, z), L(b, s, z), L(b, s, z + 12), L(a, s, z + 12)], color: '#eef1f6' });
+    }
+    if (i % 2 === 0) dio.addPolygon({ pts: [L(a, 2.5, z + 0.6), L(b, 2.5, z + 0.6), L(b, -2.5, z + 0.6), L(a, -2.5, z + 0.6)], color: '#ffffff' });
+    // 橋墩：每隔一段一根，不要立在馬路上
+    if (i % 6 === 3 && heightAt(a.x, a.y) < 10) {
+      const onRoad = EDGES.some(([u, v]) => edgePts(u, v).pts.some((q) => Math.hypot(q.x - a.x, q.y - a.y) < 80));
+      if (!onRoad) dio.addBox({ x: a.x - 11, y: a.y - 11, w: 22, d: 22, h: z - 14, color: '#d8dde6' });
+    }
+  }
+}
+
 // ---- 小鎮模型（小鎮地圖和坐車都用） ----
 export function buildTown() {
   const festNow = syncFestPlace();
@@ -506,7 +605,7 @@ export function buildTown() {
   const crossings = [];
   let zebra = '';
   EDGES.forEach(([a, b], i) => {
-    if (i % 3 === 2) return;   // 不是每條路都有斑馬線
+    if (i % 3 === 2 || tunnelEdge(a, b)) return;   // 不是每條路都有斑馬線；隧道裡沒有
     const E = edgePts(a, b);
     const m = along(E, 0.5);
     const ang = (Math.atan2(m.dy, m.dx) * 180) / Math.PI;
@@ -525,6 +624,7 @@ export function buildTown() {
     ${Object.values(NODES).map((n) => `<circle cx="${n.x}" cy="${n.y}" r="56" fill="#8a8fa0"/>`).join('')}
   </svg>`;
   dio.addDecal({ x: 0, y: 0, w: W, h: D, z: 0.8, cls: 'road', html: ground, budget: 6e6 });
+  buildTerrain(dio);   // 山、隧道、高架快速道路
   // 地點
   const markers = {};
   for (const [id, p] of Object.entries(PLACES)) {
@@ -560,7 +660,7 @@ export function buildTown() {
   const filler = [
     // 住宅區：一排一排透天
     ...[[180, 1360], [300, 1360], [420, 1360], [180, 760], [300, 820]].map(([x, y], i) => ['tou', x, y, ['#fff3e6', '#e6f4e8', '#e6eeff', '#fff0f0', '#fff8d6'][i % 5]]),
-    ...[[820, 900], [940, 900], [300, 1560], [420, 1560]].map(([x, y], i) => ['tou', x, y, ['#e6eeff', '#fff8d6', '#fff3e6', '#e6f4e8'][i % 4]]),
+    ...[[820, 900], [940, 900], [180, 1960], [300, 1980]].map(([x, y], i) => ['tou', x, y, ['#e6eeff', '#fff8d6', '#fff3e6', '#e6f4e8'][i % 4]]),
     // 市中心：公寓和店面
     ...[[2200, 760], [2400, 780], [2560, 1180], [1820, 1520], [2080, 250], [1780, 300]].map(([x, y], i) => ['apt', x, y, ['#c9d6ea', '#e6d6c4', '#d6c8ff', '#ffd6a0', '#ffe0a8', '#e6eeff'][i]]),
     ...[[1820, 960], [2240, 1000]].map(([x, y], i) => ['shop', x, y, ['#ff8fbf', '#7ee06a'][i]]),
@@ -600,7 +700,7 @@ export function buildTown() {
       dio.addSprite({ x: rx - 150, y, w: 80, h: 110, shadow: 0.6, html: treeSvg('#4fbf6e') });
     dio.addSprite({ x: rx + 160, y: y + 120, w: 80, h: 110, shadow: 0.6, html: treeSvg('#5fc76a') });
   }
-  for (const [x, y] of [[80, 120], [100, 1900], [900, 2100], [2900, 200], [2880, 2000], [2790, 1600], [2950, 1100], [60, 900], [1300, 120], [700, 1980]]) {
+  for (const [x, y] of [[80, 120], [100, 1900], [900, 2100], [2900, 200], [2880, 2000], [2790, 1600], [2950, 1100], [60, 900], [1300, 120], [700, 1980]].filter(([x, y]) => heightAt(x, y) < 1)) {
     dio.addSprite({ x, y, w: 90, h: 120, shadow: 0.6, html: treeSvg(pick(['#4fbf6e', '#3f9f5a', '#6cc072'])) });
   }
   dio.seal();   // 之後加的（閃閃、叭叭、坐車時的車子和行人）用 CSS，才能動
@@ -644,7 +744,7 @@ export async function mountTown(root, app) {
   placeBar(root, dio, PLACES, T.markers, app.trip.location, (id) => { if (!going) dio.el.dispatchEvent(new CustomEvent('tapname', { detail: `go:${id}` })); }, shan.el);
   setHint(() => document.querySelector('.placebar button'));
   // 路上的車、高架捷運、火車（11/25）：一直有車在跑，點車子閃閃會說是什麼車
-  if (state.settings.traffic !== false) startTraffic(dio, { NODES, neighbors, edgePts, along, MRT_LINE, TRAIN_LINE, PLACES }, { alive: () => app.alive() });
+  if (state.settings.traffic !== false) startTraffic(dio, { NODES, neighbors, edgePts, along, MRT_LINE, TRAIN_LINE, PLACES, heightAt, hwyPt, HWY }, { alive: () => app.alive() });
   let lastVeh = 0;
 
   const onTapTown = async (name) => {
@@ -768,7 +868,7 @@ export async function mountRide(root, app) {
   const T = buildTown();
   const { dio } = T;
   root.appendChild(dio.el);
-  app.onLeave(() => { alive = false; stopSiren(); setHint(null); setPlaying(false); dio.destroy(); });
+  app.onLeave(() => { alive = false; stopSiren(); gameEnd(false); setHint(null); setPlaying(false); dio.destroy(); });
   dio.setTint(roomTint());
   if (isDark()) root.classList.add('night');
   dio.lock(true);
@@ -785,12 +885,24 @@ export async function mountRide(root, app) {
   const big = ['bus', 'fire', 'garbage'].includes(vehicle), long = ['ambulance', 'fresh', 'postvan', 'book'].includes(vehicle);
   const car = dio.addSprite({ x: path[0].x, y: path[0].y, z: 1, w: big || long ? 132 : 110, h: big ? 110 : long ? 90 : 90, html: vhtml, shadow: 0.6, live: true });
   car.el.classList.add('ride-car');
+  // 隧道（11/25）：車子開進山裡就看不見，畫面變成隧道裡（暗暗的、一盞一盞燈往後跑），出來再變亮。
+  // 岳岳：快到隧道口先預告，畫面慢慢變暗（不會突然全黑），不加回音之類的聲音
+  const tunnelFx = div('tunnel-fx');
+  root.appendChild(tunnelFx);
+  let inTunnel = false, tunnelSaid = false;
+  const setTunnel = (on) => {
+    if (on === inTunnel) return;
+    inTunnel = on;
+    root.classList.toggle('in-tunnel', on);
+    car.el.style.opacity = on ? '0' : '';
+    if (!on && tunnelSaid && alive) say('baba', 'ride_tunnel_out', car.el);
+  };
   // 路上的車流（11/25 坐車時也有）：靠近小孩的車會停下來等；開警笛時靠邊讓路
   const traffic = state.settings.traffic !== false
-    ? startTraffic(dio, { NODES, neighbors, edgePts, along, MRT_LINE, TRAIN_LINE, PLACES }, { alive: () => alive, player: () => ({ x: car.x, y: car.y }) })
+    ? startTraffic(dio, { NODES, neighbors, edgePts, along, MRT_LINE, TRAIN_LINE, PLACES, heightAt, hwyPt, HWY }, { alive: () => alive, player: () => ({ x: car.x, y: car.y }) })
     : null;
   drawPlacedStickers(dio);
-  const flag = dio.addSprite({ x: path[path.length - 1].x + 30, y: path[path.length - 1].y - 30, z: 1, w: 90, h: 240, shadow: 0.4,
+  const flag = dio.addSprite({ x: path[path.length - 1].x + 30, y: path[path.length - 1].y - 30, z: 1, w: 90, h: 240, shadow: 0.4, live: true,   // live：永遠畫在山和房子上面，從哪個角度都看得到
     html: `<svg viewBox="0 0 90 240"><rect x="10" y="10" width="7" height="228" rx="3" fill="#8a8fa0"/><path d="M17 14 H84 L70 40 L84 66 H17Z" fill="#ff5d73"/><circle cx="13" cy="10" r="8" fill="#ffd23f"/></svg>` });
   flag.el.classList.add('goal-flag');
   T.markers[to].el.classList.add('target');
@@ -825,6 +937,7 @@ export async function mountRide(root, app) {
     chk();
     // 警車、消防車、救護車：按警笛，路上的車靠邊讓路
     if (SIREN[vehicle]) { await sirenTask(root, app, vehicle, car, traffic, () => alive); chk(); }
+    if (full) gameBegin(app.profile.members, 'ride.route');   // 學習紀錄：認路、停車（錯幾次、有沒有靠提示）
     // 2. 開車
     const stopBtn = document.createElement('button');
     stopBtn.className = 'bigbtn stopbtn ui';
@@ -851,10 +964,12 @@ export async function mountRide(root, app) {
     // 這一趟要遇到的狀況：紅燈一次、行人一次（完整版才有）
     const segs = path.length - 1;
     const events = {};
-    if (full && segs >= 1) {
-      const order = shuffle([...Array(segs).keys()]);
+    // 有隧道的那段路不放紅燈、行人（隧道裡看不到）
+    const open = [...Array(segs).keys()].filter((i) => !tunnelEdge(path[i].id, path[i + 1].id));
+    if (full && open.length) {
+      const order = shuffle(open);
       events[order[0]] = 'light';
-      if (segs >= 2) events[order[1]] = 'walker';
+      if (order.length >= 2) events[order[1]] = 'walker';
       else events[order[0]] = pick(['light', 'walker']);
     }
     const speed = full ? 260 : 520;   // 每秒幾個單位
@@ -893,6 +1008,7 @@ export async function mountRide(root, app) {
     if (full || !arr) await say('baba', full ? `ride_arrive_${to}` : 'ride_arrive_short', car.el);
     chk();
     if (full) { await say('baba', 'ride_lookback', car.el); chk(); }
+    gameEnd(true);
     app.trip.location = to;
     app.go(PLACES[to].screen);
 
@@ -928,7 +1044,10 @@ export async function mountRide(root, app) {
           const dt = now - last;
           last = now;
           if (!paused) t = Math.min(1, t + dt / dur);
-          { const cp = along(E, t); car.move(cp.x, cp.y, 1); }
+          { const cp = along(E, t); car.move(cp.x, cp.y, 1);
+            const hz = heightAt(cp.x, cp.y);
+            if (!tunnelSaid && hz < 30) { const ah = along(E, Math.min(1, t + 260 / len)); if (heightAt(ah.x, ah.y) > 30) { tunnelSaid = true; say('baba', 'ride_tunnel', car.el); } }
+            setTunnel(hz > 30); }
           follow();
           if (evState === 'wait' && t >= trigger) {
             evState = 'active';
@@ -1007,7 +1126,10 @@ export async function mountRide(root, app) {
         return d;
       });
       const right = arrows.find((d) => d.dataset.ok);
-      if (levelNow(app.profile) === 'easy' || (turnsOn() && whoseTurn() === 'kk')) right.classList.add('glow');
+      // 岳岳最近坐車常卡住（靠提示或中途離開占六成以上）：對的箭頭一開始就發亮、早一點提示轉一轉（見 stats.rideStruggle）
+      const chooser = whoseTurn() || app.profile.members[0];
+      const assist = rideStruggle(chooser);
+      if (levelNow(app.profile) === 'easy' || (turnsOn() && whoseTurn() === 'kk') || assist) right.classList.add('glow');
       // 拉遠一點，車子和旗子都在畫面裡；這時候可以轉小鎮，從哪個角度看都可以
       following = false;
       const dest = PLACES[to];
@@ -1019,7 +1141,7 @@ export async function mountRide(root, app) {
       let lastWrong = 0;
       let wrongs = 0;
       // 一陣子沒選、或選錯兩次：提醒可以轉一轉找旗子
-      const lookTimer = setTimeout(() => { if (alive) { rot.pulse(true); say('baba', 'ride_turn_look', car.el); } }, 9000);
+      const lookTimer = setTimeout(() => { if (alive) { rot.pulse(true); say('baba', 'ride_turn_look', car.el); } }, assist ? 5000 : 9000);
       await new Promise((resolve) => {
         const handler = (e) => {
           if (dio.justDragged()) return;   // 剛剛是在轉小鎮，不是點箭頭

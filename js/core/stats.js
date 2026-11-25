@@ -99,9 +99,16 @@ const BY_GAME = {
   'beach.sun': 'health', 'beach.shells': 'space', 'beach.safe': 'safe',
   'zoo.find': 'space', 'zoo.food': 'health', 'zoo.rules': 'safe',
   'fest.cn_clean': 'care', 'fest.mo_help': 'care', 'fest.fa_help': 'care', 'fest.dr_safe': 'safe', 'fest.md_bbq': 'safe',
+  'ride.route': 'space',
   'fest.cn_lantern': 'learn', 'fest.md_story': 'learn', 'fest.md_phase': 'space', 'fest.dr_egg': 'space', 'fest.xm_tree': 'space', 'fest.xm_advent': 'learn',
 };
 const BY_SCENE = { bedroom: 'care', bath: 'care', kitchen: 'health', living: 'care', school: 'learn', market: 'learn', park: 'space', clinic: 'health', farm: 'health', police: 'safe', fire: 'safe', mrt: 'safe', library: 'learn', post: 'social', garbage: 'care', fest: 'social' };
+// 坐車認路最近有沒有一直卡住：最近 7 天坐了 3 趟以上，靠提示＋中途離開占六成以上 → 給多一點幫忙
+export function rideStruggle(id) {
+  let n = 0, bad = 0;
+  for (const day of lastDays(7)) { const r = state.kids[id]?.log?.[day]?.g?.['ride.route']; if (r) { n += r[0]; bad += r[3] + r[4]; } }
+  return n >= 3 && bad / n >= 0.6;
+}
 export const domainOf = (key) => BY_GAME[key] || BY_SCENE[key.split('.')[0]] || 'learn';
 
 // ---- 統計 ----
