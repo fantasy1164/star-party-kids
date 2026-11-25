@@ -1330,3 +1330,11 @@ body.turn-kk .glowy > svg { filter: drop-shadow(0 0 10px #ff6a2b); }
   animation: tunnelLights .8s linear infinite; }
 @keyframes tunnelLights { to { background-position: -240px 0; } }
 .in-tunnel .tunnel-fx { opacity: 1; }
+
+/* ---- 世界地圖（台灣，11/26）：以後會開放的地方、雲、鯨魚噴水 ---- */
+.marker.locked > .inner { background: radial-gradient(circle at 35% 30%, #fff, #ece6da 60%, #cfc6b4); filter: grayscale(.6); opacity: .9; animation: none; }
+.marker.locked .emo { font-size: 54px; line-height: 1; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; opacity: .7; }
+.marker.locked .lock { position: absolute; right: -2px; top: -4px; font-size: 34px; font-style: normal; }
+.dio-sprite.cloud { opacity: .85; pointer-events: none; }
+.dio-sprite.whale .spout { opacity: 0; animation: spout 6s ease-out infinite; transform-origin: 50px 30px; }
+@keyframes spout { 0%, 70% { opacity: 0; transform: scaleY(.3); } 78% { opacity: 1; transform: scaleY(1); } 92% { opacity: 0; transform: scaleY(1.2); } }

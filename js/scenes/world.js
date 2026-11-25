@@ -10,10 +10,12 @@ import { speak } from '../core/voice.js';
 import { sfx, playMusic } from '../core/audio.js';
 import { isDark, roomTint } from '../core/clock.js';
 import { turnsScene, turnsOn, nextTurn, whoseTurn, levelNow } from '../core/turns.js';
-import { setHint, setPlaying, mountClock } from '../core/session.js';
+import { setHint, setPlaying, mountClock, stillNow } from '../core/session.js';
 import { shanSvg, kidSvg, starIcon } from '../art/stars.js';
 import { personSvg } from '../art/more.js';
 import { babaSvg, itemSvg } from '../art/town.js';
+import { VEHICLES } from '../art/fun.js';
+import { carSvg } from '../art/traffic.js';
 import { ANIMALS } from '../art/fun.js';
 import { PLACE_ICON, ZOO, SEA, MISC } from '../art/world.js';
 import { backdrop, homeBtn, rotateBtns, jars, roundBtn, zoomBtns } from '../ui/hud.js';
@@ -169,53 +171,164 @@ export async function mountZone(root, app) {
 }
 
 // ======================= 世界地圖 =======================
+// ======================= 世界地圖：台灣（11/26） =======================
+// 用孩子真的住的地方當世界：明星小鎮在中部（台中）、動物園在北部（木柵，旁邊有貓空纜車）、
+// 海生館和沙灘在南部（屏東）、郊區的農場在小鎮南邊的平原（彰化）；中央山脈在中間偏東。
+// 灰色加鎖的是「以後會開放」的地方，點了閃閃說還在蓋。海上、天上有會動的東西（火車、車子、船、鯨魚、海鳥、飛機、雲），
+// 讓世界有「很大、很遠」的感覺。坐車、坐火車要「往北、往南」。
+const TW_W = 1600, TW_D = 2600;
+// 台灣海岸線（順時針，從北邊的富貴角開始）
+const TW_COAST = [[980, 120], [1080, 180], [1160, 270], [1130, 420], [1110, 620], [1080, 900], [1050, 1200], [1010, 1500], [960, 1800], [900, 2050], [850, 2280], [800, 2470], [740, 2500], [700, 2400], [660, 2300], [590, 2150], [540, 2000], [480, 1800], [440, 1600], [430, 1400], [450, 1200], [500, 1000], [560, 820], [640, 640], [740, 460], [830, 300], [900, 180]];
+// 平滑的封閉曲線（Catmull-Rom）：給 SVG 路徑、也給「在不在島上」用
+function smoothLoop(P, n = 8) {
+  const out = [];
+  for (let i = 0; i < P.length; i++) {
+    const p0 = P[(i - 1 + P.length) % P.length], p1 = P[i], p2 = P[(i + 1) % P.length], p3 = P[(i + 2) % P.length];
+    for (let k = 0; k < n; k++) {
+      const t = k / n, t2 = t * t, t3 = t2 * t;
+      out.push([0, 1].map((j) => 0.5 * (2 * p1[j] + (-p0[j] + p2[j]) * t + (2 * p0[j] - 5 * p1[j] + 4 * p2[j] - p3[j]) * t2 + (-p0[j] + 3 * p1[j] - 3 * p2[j] + p3[j]) * t3)));
+    }
+  }
+  return out;
+}
+const COAST = smoothLoop(TW_COAST);
+const coastPath = 'M' + COAST.map(([x, y]) => `${x.toFixed(0)} ${y.toFixed(0)}`).join(' L') + 'Z';
+const inIsland = (x, y) => { let c = false; for (let i = 0, j = COAST.length - 1; i < COAST.length; j = i++) { const [xi, yi] = COAST[i], [xj, yj] = COAST[j]; if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c; } return c; };
+const segDist = (x, y, P) => { let d = 1e9; for (let i = 0; i < P.length - 1; i++) { const [ax, ay] = P[i], [bx, by] = P[i + 1], dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy || 1; const u = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / L2)); d = Math.min(d, Math.hypot(x - ax - dx * u, y - ay - dy * u)); } return d; };
+const coastDist = (x, y) => segDist(x, y, [...COAST, COAST[0]]);
+// 中央山脈的稜線（北邊從台北盆地東南開始，一路往南到恆春半島）
+const RIDGE = [[1000, 400], [985, 700], [935, 1000], [905, 1300], [880, 1600], [840, 1900], [800, 2200], [765, 2380]];
+const ss01 = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+function twGround(x, y) {
+  if (!inIsland(x, y)) return 0;
+  const d = segDist(x, y, RIDGE);
+  const taper = ss01(330, 520, y) * (1 - 0.45 * ss01(2050, 2420, y));   // 北邊台北盆地、南邊恆春比較低
+  return 250 * Math.exp(-((d / 175) ** 2)) * taper * ss01(0, 70, coastDist(x, y));
+}
+// 路線：國道（西部，台北 → 屏東）、鐵路（在國道旁邊）
+const HIGHWAY = [[950, 330], [790, 430], [660, 620], [610, 840], [600, 1000], [540, 1230], [480, 1500], [490, 1800], [570, 2060], [690, 2300]];
+const RAILWAY = HIGHWAY.map(([x, y], i) => [x - 34 + (i === 0 ? 20 : 0), y + 10]);
+const linePath = (P) => 'M' + P.map(([x, y]) => `${x} ${y}`).join(' L');
+// 沿著折線走：t（0~1）→ 位置和方向
+function polyAt(P, t) {
+  const L = []; let tot = 0;
+  for (let i = 0; i < P.length - 1; i++) { const l = Math.hypot(P[i + 1][0] - P[i][0], P[i + 1][1] - P[i][1]); L.push(l); tot += l; }
+  let d = Math.max(0, Math.min(1, t)) * tot;
+  for (let i = 0; i < L.length; i++) { if (d <= L[i] || i === L.length - 1) { const u = Math.min(1, d / L[i]); const [ax, ay] = P[i], [bx, by] = P[i + 1]; return { x: ax + (bx - ax) * u, y: ay + (by - ay) * u, dx: bx - ax, dy: by - ay }; } d -= L[i]; }
+  return { x: P[0][0], y: P[0][1], dx: 1, dy: 0 };
+}
+// 四個可以去的地方（真實的相對位置）
+const TW_ZONES = { city: [620, 1000], suburb: [520, 1450], sea: [720, 2310], mountain: [960, 350] };
+// 以後會開放的地方
+const SOON = [
+  { id: 'sunmoon', x: 820, y: 1210, icon: '🚣' }, { id: 'hehuan', x: 930, y: 960, icon: '🏔️' },
+  { id: 'huadong', x: 1040, y: 1650, icon: '🌊' }, { id: 'penghu', x: 230, y: 1520, icon: '⛴️' }, { id: 'airport', x: 800, y: 400, icon: '✈️' },
+];
+const cloudSvg = () => S(`<ellipse cx="60" cy="44" rx="42" ry="22" fill="#fff"/><ellipse cx="38" cy="38" rx="24" ry="20" fill="#fff"/><ellipse cx="80" cy="34" rx="22" ry="18" fill="#fff"/>`, '0 0 120 70');
+const whaleSvg = () => S(`<path d="M10 58 Q20 34 56 34 Q86 36 94 52 L108 40 L106 70 L94 62 Q80 76 50 74 Q20 74 10 58Z" fill="#4f6f9a"/><path d="M18 62 Q50 72 84 64" stroke="#c9d8ef" stroke-width="6" fill="none"/><circle cx="24" cy="52" r="3" fill="#1d2433"/><g class="spout"><path d="M44 30 Q40 12 30 8 M46 30 Q48 10 56 4 M48 30 Q56 16 66 14" stroke="#bfe9ff" stroke-width="5" fill="none" stroke-linecap="round"/></g>`, '0 0 120 80');
+const ferrySvg = () => S(`<path d="M8 50 H112 L100 72 H20Z" fill="#fff"/><rect x="28" y="30" width="62" height="20" rx="4" fill="#e9f3ff"/><rect x="34" y="34" width="50" height="8" fill="#3ea8e0"/><rect x="66" y="16" width="10" height="16" fill="#ff5d5d"/><path d="M8 50 H112" stroke="#3ea8e0" stroke-width="4"/>`, '0 0 120 80');
+const boatSvg = () => S(`<path d="M10 50 H90 L80 66 H20Z" fill="#ff8a3d"/><rect x="36" y="32" width="26" height="18" fill="#fff"/><path d="M62 12 V50" stroke="#8a6a4a" stroke-width="3"/>`, '0 0 100 80');
+const planeSvg = () => S(`<path d="M10 44 L96 40 Q112 40 112 48 Q112 54 96 54 L10 52Z" fill="#fff"/><path d="M50 46 L30 16 H42 L70 46Z M50 50 L30 80 H42 L70 50Z" fill="#dfe8f5"/><path d="M14 44 L6 28 H16 L26 44Z" fill="#3ea8e0"/>${[0, 1, 2, 3, 4].map((i) => `<circle cx="${60 + i * 8}" cy="46" r="2.2" fill="#3ea8e0"/>`).join('')}`, '0 0 120 96');
+const birdSvg = () => S(`<path d="M10 50 Q30 30 50 50 Q70 30 90 50" stroke="#fff" stroke-width="7" fill="none" stroke-linecap="round"/>`);
+const trainTW = () => S(`<rect x="4" y="18" width="70" height="30" rx="10" fill="#ff8a3d"/><rect x="78" y="18" width="70" height="30" rx="8" fill="#ff8a3d"/>${[12, 30, 48, 86, 104, 122].map((x) => `<rect x="${x}" y="24" width="14" height="10" rx="2" fill="#e9f6ff"/>`).join('')}<rect x="4" y="38" width="144" height="4" fill="#fff"/>`, '0 0 152 60');
+
 export async function mountWorld(root, app) {
   backdrop(root);
-  const W = 1200, D = 900;
-  // 一座自然的島：彎彎曲曲的海岸線，城市在西北、平原（郊區）在東北、沙灘在西南、山在東南；
-  // 高速公路和鐵路彎彎地把四區連起來；四周是一直延伸到天邊的海
-  const island = 'M130 170 Q250 40 520 78 Q760 26 990 120 Q1150 210 1118 420 Q1170 640 1040 790 Q860 890 600 852 Q330 890 170 770 Q50 610 92 420 Q56 260 130 170Z';
+  const W = TW_W, D = TW_D;
+  // 地面大圖：海、台灣、海岸沙灘、平原的田、城市、國道、鐵路、澎湖、綠島、蘭嶼、指北針
   const map = `<svg viewBox="0 0 ${W} ${D}" width="100%" height="100%">
-    <path d="${island}" fill="#f2dca6" stroke="#bfe9ff" stroke-width="26"/>
-    <path d="${island}" fill="#9fd87f" transform="translate(600 450) scale(.94) translate(-600 -450)"/>
-    <path d="M150 140 Q330 80 520 150 Q560 300 430 380 Q250 420 140 330Z" fill="#cfd6e0"/>
-    <path d="M680 110 Q900 70 1060 180 Q1090 330 960 400 Q760 410 660 300Z" fill="#c6e88a"/>
-    ${[0, 1, 2, 3, 4, 5].map((i) => `<path d="M${700 + i * 55} 150 L${740 + i * 55} 380" stroke="#e8d36a" stroke-width="22" opacity=".8"/>`).join('')}
-    <path d="M90 520 Q200 480 330 560 Q420 660 330 800 Q200 820 120 700Z" fill="#f6e3b0"/>
-    <path d="M60 640 Q160 640 220 720 Q240 820 140 860 Q60 820 40 720Z" fill="#7fd3ff"/>
-    <path d="M660 520 Q880 470 1080 560 Q1100 720 980 800 Q780 840 680 720Z" fill="#6fb85a"/>
-    <path d="M330 260 Q640 200 900 250 M330 260 Q300 480 300 700 M900 250 Q960 480 880 700" stroke="#8a8fa0" stroke-width="26" fill="none" stroke-linecap="round"/>
-    <path d="M300 700 Q600 640 880 700" stroke="#8a8fa0" stroke-width="26" fill="none" stroke-linecap="round"/>
-    <path d="M360 300 Q620 360 860 300 Q980 520 860 690" stroke="#a9744f" stroke-width="10" fill="none" stroke-dasharray="4 10"/>
+    <defs><linearGradient id="mt" x1="0" x2="1"><stop offset="0" stop-color="#7cc46a"/><stop offset=".5" stop-color="#4f9a44"/><stop offset="1" stop-color="#6fb85a"/></linearGradient></defs>
+    <rect width="${W}" height="${D}" fill="#3ea8e0"/>
+    ${[...Array(70)].map((_, i) => { const x = 40 + ((i * 0.6180339) % 1) * (W - 140), y = 60 + ((i * 0.7548776) % 1) * (D - 120); return inIsland(x + 30, y) ? '' : `<path d="M${x} ${y} q16 -10 32 0 q16 10 32 0" stroke="#bfe9ff" stroke-width="6" fill="none" opacity=".6" stroke-linecap="round"/>`; }).join('')}
+    <path d="${coastPath}" fill="#f2dca6" stroke="#9fdcff" stroke-width="40"/>
+    <path d="${coastPath}" fill="#a4d97f" transform="translate(800 1300) scale(.975) translate(-800 -1300)"/>
+    <path d="M${RIDGE.map(([x, y]) => `${x} ${y}`).join(' L')}" stroke="url(#mt)" stroke-width="300" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".55"/>
+    ${[...Array(9)].map((_, i) => `<path d="M${450 + (i % 3) * 40} ${1380 + Math.floor(i / 3) * 50} l60 20" stroke="#e3d36a" stroke-width="20" opacity=".7" stroke-linecap="round"/>`).join('')}
+    <ellipse cx="620" cy="1000" rx="120" ry="95" fill="#d3d9e2"/><ellipse cx="950" cy="330" rx="95" ry="70" fill="#d3d9e2" opacity=".8"/><ellipse cx="560" cy="2070" rx="80" ry="60" fill="#d3d9e2" opacity=".7"/><ellipse cx="490" cy="1740" rx="60" ry="45" fill="#d3d9e2" opacity=".6"/>
+    <ellipse cx="820" cy="1210" rx="34" ry="24" fill="#7fd3ff"/>
+    <path d="${linePath(HIGHWAY)}" stroke="#8a8fa0" stroke-width="22" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="${linePath(HIGHWAY)}" stroke="#fff" stroke-width="2.5" stroke-dasharray="14 14" fill="none"/>
+    <path d="${linePath(RAILWAY)}" stroke="#a9744f" stroke-width="10" fill="none" stroke-dasharray="4 8" stroke-linecap="round"/>
+    ${[[200, 1500, 50, 34], [260, 1560, 30, 22], [180, 1580, 24, 18], [1290, 1930, 34, 26], [1330, 2260, 46, 32]].map(([x, y, rx, ry]) => `<ellipse cx="${x}" cy="${y}" rx="${rx + 10}" ry="${ry + 10}" fill="#f2dca6"/><ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="#a4d97f"/>`).join('')}
+    <path d="M450 1560 Q330 1500 230 1520" stroke="#fff" stroke-width="4" stroke-dasharray="10 12" fill="none" opacity=".7"/>
+    <g transform="translate(1400 300)"><circle r="90" fill="#fff" opacity=".9"/><path d="M0 -70 L26 10 H-26Z" fill="#ff5d5d"/><path d="M0 70 L26 -10 H-26Z" fill="#c9ced8"/><text y="-90" text-anchor="middle" font-size="64" font-weight="800" fill="#fff" stroke="#3a3550" stroke-width="6" paint-order="stroke">北</text></g>
   </svg>`;
-  const dio = createDiorama({ gl: true, w: W, d: D, walls: false, zoom: 0.62, zmin: 0.4, zmax: 1.3, cy: 0.56, skirt: '#3ea8e0', horizon: 'sea', floorCss: 'background:transparent' });
-  dio.addDecal({ x: 0, y: 0, w: W, h: D, z: 0.6, html: map, budget: 6e6 });
+  const dio = createDiorama({ gl: true, w: W, d: D, walls: false, zoom: 0.55, zmin: 0.2, zmax: 1.2, cy: 0.56, skirt: '#3ea8e0', horizon: 'sea', floorCss: 'background:transparent', groundZ: twGround });
+  if (dio.gl) dio.addTerrain({ html: map, ground: twGround, cell: 50, margin: 0 });
+  else dio.addDecal({ x: 0, y: 0, w: W, h: D, z: 0.6, html: map, budget: 6e6 });
   root.appendChild(dio.el);
-  app.onLeave(() => { setHint(null); setPlaying(false); dio.destroy(); });
+  let alive = true;
+  app.onLeave(() => { alive = false; setHint(null); setPlaying(false); dio.destroy(); });
   dio.setTint(roomTint());
-  // 城市：一堆小樓
-  [[120, 120, 60, 140, '#bfd3ef'], [200, 100, 70, 200, '#ffd6a0'], [300, 140, 60, 120, '#d6c8ff'], [400, 110, 80, 170, '#c8f0d6'], [160, 260, 90, 90, '#ffe0a8'], [380, 280, 70, 110, '#ffb8c0']].forEach(([x, y, w, h, c]) => dio.addBox({ x, y, w, d: w, h, color: c, tap: 'zone:city' }));
+  const gz = (x, y) => twGround(x, y);
+  // 城市（台中）：一群小樓
+  [[540, 930, 50, 120, '#bfd3ef'], [600, 900, 56, 170, '#ffd6a0'], [670, 930, 46, 110, '#d6c8ff'], [560, 1010, 60, 90, '#c8f0d6'], [650, 1010, 50, 140, '#ffb8c0'], [700, 990, 40, 80, '#ffe0a8']].forEach(([x, y, w, h, c]) => dio.addBox({ x, y, w, d: w, h, color: c, tap: 'zone:city' }));
+  // 台北（動物園那一區）：101 和幾棟樓
+  dio.addBox({ x: 905, y: 300, w: 26, d: 26, h: 230, color: '#9fd0c8', tap: 'zone:mountain' });
+  [[860, 330, 40, 90, '#d6dceb'], [950, 280, 36, 70, '#e8d6c8']].forEach(([x, y, w, h, c]) => dio.addBox({ x, y, w, d: w, h, color: c, tap: 'zone:mountain' }));
+  dio.addSprite({ x: 1010, y: 380, z: gz(1010, 380) + 90, w: 100, h: 80, shadow: 0, tap: 'zone:mountain', html: cablecar() });
   // 郊區：穀倉、風車、牛
-  dio.addBox({ x: 760, y: 140, w: 110, d: 110, h: 70, color: '#e0503a', tap: 'zone:suburb' });
-  dio.addGable({ x: 760, y: 140, w: 110, d: 110, z: 70, h: 54, over: 8, color: '#7a3b30', wallColor: '#e0503a', ridge: 'y', tap: 'zone:suburb' });
-  dio.addSprite({ x: 1020, y: 300, w: 90, h: 100, shadow: 0.4, tap: 'zone:suburb', html: windmill() });
-  dio.addSprite({ x: 700, y: 340, w: 70, h: 60, shadow: 0.4, tap: 'zone:suburb', html: itemSvg('cow') });
-  // 海邊：海生館（藍色波浪屋頂）、燈塔、帆船
-  dio.addBox({ x: 120, y: 540, w: 180, d: 110, h: 60, color: '#f4f8ff', tap: 'zone:sea' });
-  ['#3ea8e0', '#5ec3ee', '#2f8fd0'].forEach((c, i) => dio.addGable({ x: 120 + i * 60, y: 540, w: 60, d: 110, z: 60, h: 34 + (i % 2) * 14, over: 3, color: c, ridge: 'y', tap: 'zone:sea' }));
-  dio.addSprite({ x: 470, y: 560, w: 70, h: 130, shadow: 0.4, tap: 'zone:sea', html: lighthouse() });
-  dio.addSprite({ x: 420, y: 790, z: 2, w: 90, h: 70, shadow: 0, tap: 'zone:sea', html: sailboat() });
-  // 山上：一層一層的山＋纜車＋熊貓
-  [[860, 640, 300, 230, '#5aa84a'], [760, 690, 220, 170, '#6fb85a'], [990, 700, 220, 170, '#4f9a44']].forEach(([x, y, w, h, c]) => dio.addSprite({ x, y, w, h, shadow: 0.2, tap: 'zone:mountain', html: peak(c) }));
-  dio.addSprite({ x: 1080, y: 560, z: 180, w: 100, h: 80, shadow: 0, tap: 'zone:mountain', html: cablecar() });
-  // 區域標記
-  const pos = { city: [300, 230, 250], suburb: [900, 230, 200], sea: [300, 700, 170], mountain: [900, 700, 300] };
+  dio.addBox({ x: 540, y: 1470, w: 80, d: 80, h: 54, color: '#e0503a', tap: 'zone:suburb' });
+  dio.addGable({ x: 540, y: 1470, w: 80, d: 80, z: 54, h: 40, over: 6, color: '#7a3b30', wallColor: '#e0503a', ridge: 'y', tap: 'zone:suburb' });
+  dio.addSprite({ x: 470, y: 1520, w: 80, h: 90, shadow: 0.4, tap: 'zone:suburb', html: windmill() });
+  dio.addSprite({ x: 640, y: 1540, w: 60, h: 50, shadow: 0.4, tap: 'zone:suburb', html: itemSvg('cow') });
+  // 南部：海生館（藍色波浪屋頂）、鵝鑾鼻燈塔、沙灘的椰子樹
+  dio.addBox({ x: 620, y: 2330, w: 140, d: 80, h: 46, color: '#f4f8ff', tap: 'zone:sea' });
+  ['#3ea8e0', '#5ec3ee', '#2f8fd0'].forEach((c, i) => dio.addGable({ x: 620 + i * 46.6, y: 2330, w: 46.6, d: 80, z: 46, h: 28 + (i % 2) * 12, over: 3, color: c, ridge: 'y', tap: 'zone:sea' }));
+  dio.addSprite({ x: 790, y: 2470, z: gz(790, 2470), w: 60, h: 120, shadow: 0.4, tap: 'zone:sea', html: lighthouse() });
+  [[700, 2440], [740, 2420], [820, 2380]].forEach(([x, y]) => dio.addSprite({ x, y, z: gz(x, y), w: 60, h: 80, shadow: 0.3, tap: 'zone:sea', html: palm() }));
+  // 山上的樹
+  for (let i = 0; i < 70; i++) {
+    const t = (i * 0.618) % 1, side = ((i * 7) % 5) - 2;
+    const p = polyAt(RIDGE, t), l = Math.hypot(p.dx, p.dy) || 1;
+    const x = p.x + (-p.dy / l) * side * 70, y = p.y + (p.dx / l) * side * 70;
+    if (!inIsland(x, y) || SOON.some((s) => Math.hypot(s.x - x, s.y - y) < 80)) continue;
+    dio.addSprite({ x, y, z: gz(x, y) - 2, w: 50, h: 70, shadow: 0, html: tree(i % 3 ? '#3f9f5a' : '#4fb36a') });
+  }
+  // 區域標記（踩在地形上）
   const markers = {};
-  for (const [z, [x, y, h]] of Object.entries(pos)) markers[z] = dio.addSprite({ x, y, z: h, w: 140, h: 140, cls: 'marker place-mark', shadow: 0, tap: `zone:${z}`, html: `<div class="inner">${ZONES[z].icon}</div>` });
+  for (const [z, [x, y]] of Object.entries(TW_ZONES)) markers[z] = dio.addSprite({ x, y, z: gz(x, y) + (z === 'mountain' ? 250 : 110), w: 140, h: 140, cls: 'marker place-mark', shadow: 0, tap: `zone:${z}`, html: `<div class="inner">${ZONES[z].icon}</div>` });
+  // 以後會開放：灰色加鎖
+  for (const s of SOON) dio.addSprite({ x: s.x, y: s.y, z: gz(s.x, s.y) + 90, w: 110, h: 110, cls: 'marker place-mark locked', shadow: 0, tap: `soon:${s.id}`, html: `<div class="inner"><span class="emo">${s.icon}</span></div><i class="lock">🔒</i>` });
   dio.seal();
   const here = app.trip.zone || 'city';
   markers[here].el.classList.add('here');
-  const shan = dio.addSprite({ x: 600, y: 450, z: 1, w: 120, h: 136, html: shanSvg(), shadow: 0.7, tap: 'shan' });
+  const [hx, hy] = TW_ZONES[here];
+  const shan = dio.addSprite({ x: hx + 110, y: hy + 60, z: gz(hx + 110, hy + 60) + 1, w: 120, h: 136, html: shanSvg(), shadow: 0.7, tap: 'shan' });
+  dio.view.px = hx; dio.view.py = hy + 120; dio.view.a = 0;   // 北邊朝上，「往北、往南」才對得起來
+  dio.apply(true);
+
+  // ---- 會動的東西 ----
+  const live = (o) => dio.addSprite({ ...o, live: true, abs: true });
+  const face = (sp, dx) => { const f = dx < 0; if (sp.flip !== f) { sp.flip = f; sp.el.firstElementChild.style.transform = f ? 'scaleX(-1)' : ''; } };
+  const movers = [];
+  // 火車（往北、往南各一列）、國道上的車
+  [[0.1, 1, 'train'], [0.6, -1, 'train'], [0.3, 1, 'car', '#ffb627'], [0.75, -1, 'car', '#2f7fe0'], [0.5, 1, 'bus']].forEach(([t, dir, k, c]) => {
+    const P = k === 'train' ? RAILWAY : HIGHWAY;
+    const art = k === 'train' ? trainTW() : k === 'bus' ? VEHICLES.bus : carSvg(c);
+    const sp = live({ x: 0, y: 0, z: 0, w: k === 'train' ? 150 : k === 'bus' ? 70 : 56, h: k === 'train' ? 60 : k === 'bus' ? 56 : 36, shadow: 0.3, html: `<div class="veh">${art}</div>` });
+    movers.push({ step: (s) => { t += dir * s * (k === 'train' ? 0.035 : 0.025); if (t > 1) t -= 1; if (t < 0) t += 1; const p = polyAt(P, t); sp.move(p.x, p.y, gz(p.x, p.y) + 6); face(sp, p.dx * dir); } });
+  });
+  // 澎湖的渡輪（來回）、漁船、鯨魚（東邊外海，偶爾噴水）、海鳥
+  { const sp = live({ x: 450, y: 1560, z: 2, w: 90, h: 60, shadow: 0, html: `<div class="veh">${ferrySvg()}</div>` }); let t = 0;
+    movers.push({ step: (s) => { t += s * 0.05; const u = (Math.sin(t) + 1) / 2; const x = 450 - 220 * u, y = 1560 - 40 * Math.sin(u * Math.PI); sp.move(x, y, 2); face(sp, -Math.cos(t)); } }); }
+  [[300, 900, 140], [260, 2200, 110], [1300, 1100, 160]].forEach(([cx, cy, r], i) => { const sp = live({ x: cx, y: cy, z: 2, w: 60, h: 48, shadow: 0, html: `<div class="veh">${boatSvg()}</div>` }); let a = i * 2; movers.push({ step: (s) => { a += s * 0.12; sp.move(cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.6, 2); face(sp, -Math.sin(a)); } }); });
+  { const sp = live({ x: 1350, y: 1500, z: 1, w: 140, h: 94, shadow: 0, cls: 'whale', html: `<div class="veh">${whaleSvg()}</div>` }); let t = 0;
+    movers.push({ step: (s) => { t += s * 0.04; sp.move(1350 + Math.sin(t) * 90, 1500 + t * 0 + Math.cos(t * 0.7) * 160, 1); face(sp, Math.cos(t)); } }); }
+  [[1250, 800], [350, 1900], [380, 600]].forEach(([cx, cy], i) => { const sp = live({ x: cx, y: cy, z: 140, w: 46, h: 46, shadow: 0, html: birdSvg() }); let a = i; movers.push({ step: (s) => { a += s * 0.5; sp.move(cx + Math.cos(a) * 80, cy + Math.sin(a) * 50, 140 + Math.sin(a * 3) * 10); } }); });
+  // 飛機：從西南邊的海飛過整個台灣到東北（很高，看得到影子）
+  { const sp = live({ x: 0, y: 0, z: 620, w: 150, h: 120, shadow: 0.25, html: `<div class="veh">${planeSvg()}</div>` }); let t = 0.2;
+    movers.push({ step: (s) => { t += s * 0.018; if (t > 1.15) t = -0.15; const x = 100 + 1400 * t, y = 2300 - 2100 * t; sp.move(x, y, 620); face(sp, 1); } }); }
+  // 雲：很高、慢慢飄，影子掃過大地
+  [[300, 500], [1100, 900], [500, 1500], [1200, 2000], [800, 2300], [900, 150]].forEach(([x0, y]) => { const sp = live({ x: x0, y, z: 720, w: 260, h: 150, shadow: 0.18, cls: 'cloud', html: cloudSvg() }); let x = x0; movers.push({ step: (s) => { x += s * 14; if (x > W + 300) x = -300; sp.move(x, y, 720); } }); });
+  let last = performance.now(), acc = 0;
+  const tick = (now) => {
+    if (!alive) return;
+    const dt = Math.min(0.1, (now - last) / 1000); last = now; acc += dt;
+    if (acc >= 0.033) { if (!stillNow()) for (const m of movers) m.step(acc); acc = 0; }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+
   homeBtn(root, () => app.go('town'));
   jars(root, app.profile.members);
   mountClock(root);
@@ -225,8 +338,15 @@ export async function mountWorld(root, app) {
   setPlaying(true);
   playMusic('world');
   setHint(() => markers[here === 'city' ? 'sea' : 'city'].el);
-  let going = false;
+  let going = false, lastSoon = 0;
   dio.onTap(async (name) => {
+    if (name.startsWith('soon:')) {
+      if (Date.now() - lastSoon < 1500) return;
+      lastSoon = Date.now();
+      sfx('soft');
+      speak('shan', `world_soon_${name.slice(5)}`, { node: shan.el });
+      return;
+    }
     if (!name.startsWith('zone:') || going) {
       if (name === 'shan') { sfx('boing'); speak('shan', 'world_hello', { node: shan.el }); }
       return;
