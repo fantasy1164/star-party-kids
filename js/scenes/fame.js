@@ -40,18 +40,18 @@ export async function mountFame(root, app) {
   }
 
   // ---- 展示台：後排高、前排矮；閃閃在前排正中間 ----
-  // 後排 10 位、前排 10 位（11/24 加入謝醫生、11/26 加入日月潭的鹿鹿）
-  const order = [...CAST.slice(1, 11), ...CAST.slice(11, 15), CAST[0], ...CAST.slice(15)];
-  const spots = [
-    ...[...Array(10)].map((_, i) => ({ x: 128 + i * 116, y: 250, h: 90 })),
-    ...[...Array(10)].map((_, i) => ({ x: 120 + i * 118, y: 520, h: 40 })),
-  ];
+  // 後排、前排各一半（人數變多時自動排；閃閃在前排正中間）——11/26 已經 23 位
+  const others = CAST.slice(1);
+  const nb = Math.ceil(CAST.length / 2), nf = CAST.length - nb, mid = Math.floor(nf / 2);
+  const order = [...others.slice(0, nb), ...others.slice(nb, nb + mid), CAST[0], ...others.slice(nb + mid)];
+  const row = (n, y, h) => { const step = Math.min(118, 1130 / Math.max(1, n - 1)); return [...Array(n)].map((_, i) => ({ x: W / 2 + (i - (n - 1) / 2) * step, y, h, bw: Math.min(96, step - 8) })); };
+  const spots = [...row(nb, 250, 90), ...row(nf, 520, 40)];
   const met = (id) => !!state.met[id];
   const seats = order.map((c, i) => {
     const s = spots[i];
     const lit = met(c.id);
     const band = `<svg viewBox="0 0 96 100" width="100%" height="100%" preserveAspectRatio="none"><rect y="${s.h > 60 ? 18 : 8}" width="96" height="${s.h > 60 ? 22 : 14}" fill="${lit ? c.color : '#bdb6a8'}"/></svg>`;
-    dio.addBox({ x: s.x - 48, y: s.y - 48, w: 96, d: 96, h: s.h, color: lit ? '#fff3d6' : '#ddd6c8', top: lit ? '#ffd23f' : '#cfc8bb', faces: { s: band }, tap: `ch:${c.id}` });
+    dio.addBox({ x: s.x - s.bw / 2, y: s.y - 48, w: s.bw, d: 96, h: s.h, color: lit ? '#fff3d6' : '#ddd6c8', top: lit ? '#ffd23f' : '#cfc8bb', faces: { s: band }, tap: `ch:${c.id}` });
     return { c, ...s };
   });
   dio.seal();
@@ -59,7 +59,7 @@ export async function mountFame(root, app) {
   // 明星（會跳、會說話：用 CSS）
   const sp = {};
   for (const s of seats) {
-    sp[s.c.id] = dio.addSprite({ x: s.x, y: s.y + 6, z: s.h, w: 104, h: 114, html: s.c.svg(), cls: met(s.c.id) ? '' : 'sil', shadow: 0.45, tap: `ch:${s.c.id}`, live: true });
+    sp[s.c.id] = dio.addSprite({ x: s.x, y: s.y + 6, z: s.h, w: Math.min(104, s.bw + 8), h: Math.min(114, (s.bw + 8) * 1.1), html: s.c.svg(), cls: met(s.c.id) ? '' : 'sil', shadow: 0.45, tap: `ch:${s.c.id}`, live: true });
   }
   const shan = sp.shan;
 

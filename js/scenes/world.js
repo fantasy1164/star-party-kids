@@ -22,7 +22,8 @@ import { backdrop, homeBtn, rotateBtns, jars, roundBtn, zoomBtns } from '../ui/h
 import { ICON2 } from '../art/more.js';
 import { seatbelt, placeBar } from './town.js';
 import { buildCities } from './worldcity.js';
-import { LAKE } from '../art/lake.js';
+import { LAKE, BOARD } from '../art/lake.js';
+import { FAR_ICON, xiangxiangSvg, guiguiSvg, AIR, PH, HH } from '../art/far.js';
 
 const S = (inner, vb = '0 0 100 100') => `<svg viewBox="${vb}" width="100%" height="100%">${inner}</svg>`;
 const tree = (c = '#4fbf6e') => S(`<rect x="34" y="70" width="12" height="38" rx="5" fill="#a9744f"/><circle cx="40" cy="48" r="34" fill="${c}"/><circle cx="28" cy="36" r="10" fill="#fff" opacity=".2"/>`, '0 0 80 110');
@@ -44,6 +45,9 @@ export const ZONES = {
   sea: { icon: PLACE_ICON.beach, music: 'sea', entry: 'beach' },
   mountain: { icon: ZOO.panda, music: 'zoo', entry: 'zoo' },
   lake: { icon: LAKE.rowboat, music: 'lake', entry: 'pier' },   // 日月潭（11/26）
+  airport: { icon: FAR_ICON.airport, music: 'airport', entry: 'airport' },   // 機場（桃園）
+  penghu: { icon: FAR_ICON.penghu, music: 'sea', entry: 'penghu' },   // 澎湖：坐飛機或坐船
+  hehuan: { icon: FAR_ICON.hehuan, music: 'snow', entry: 'hehuan' },   // 合歡山：開山路
 };
 // 各區域的地點（城市的在 town.js）
 const ZONE_PLACES = {
@@ -51,6 +55,9 @@ const ZONE_PLACES = {
   sea: { aquarium: { x: 300, y: 520, screen: 'aquarium', icon: PLACE_ICON.aquarium, h: 150 }, beach: { x: 720, y: 440, screen: 'beach', icon: PLACE_ICON.beach, h: 120 } },
   mountain: { zoo: { x: 450, y: 420, screen: 'zoo', icon: PLACE_ICON.zoo, h: 170 } },
   lake: { pier: { x: 330, y: 560, screen: 'pier', icon: LAKE.rowboat, h: 110 }, thao: { x: 790, y: 330, screen: 'thao', icon: LAKE.pestle, h: 150 } },
+  airport: { airport: { x: 500, y: 330, screen: 'airport', icon: FAR_ICON.airport, h: 190 } },
+  penghu: { penghu: { x: 470, y: 420, screen: 'penghu', icon: FAR_ICON.penghu, h: 120 } },
+  hehuan: { hehuan: { x: 520, y: 380, screen: 'hehuan', icon: FAR_ICON.hehuan, h: 170 } },
 };
 export const zoneOfScreen = (screen) => {
   for (const [z, ps] of Object.entries(ZONE_PLACES)) for (const [id, p] of Object.entries(ps)) if (p.screen === screen) return [z, id];
@@ -71,15 +78,20 @@ function buildZone(zone) {
     sea: 'background: linear-gradient(0deg, #f6e3b0 0 52%, #bfe9ff 52% 54%, #5ec3ee 54% 100%)',
     mountain: 'background: radial-gradient(circle at 60% 40%, #9fd87f, #6fb85a)',
     lake: 'background: radial-gradient(circle at 50% 50%, #a6dd86, #7cc46a)',
+    airport: 'background: radial-gradient(circle at 50% 50%, #c8e6a8, #9fd27f)',
+    penghu: 'background: radial-gradient(ellipse at 45% 50%, #e9d9a6 0 40%, #bfe9ff 40% 44%, #5ec3ee 44% 100%)',
+    hehuan: 'background: radial-gradient(circle at 50% 45%, #ffffff, #dfeaf6 60%, #c9d9ec)',
   };
-  const skirt = { suburb: '#a6d987', sea: '#5ec3ee', mountain: '#7fc86a', lake: '#7cc46a' }[zone];
-  const horizon = { suburb: 'nature', sea: 'sea', mountain: 'mountain', lake: 'mountain' }[zone];
+  const skirt = { suburb: '#a6d987', sea: '#5ec3ee', mountain: '#7fc86a', lake: '#7cc46a', airport: '#9fd27f', penghu: '#5ec3ee', hehuan: '#c9d9ec' }[zone];
+  const horizon = { suburb: 'nature', sea: 'sea', mountain: 'mountain', lake: 'mountain', airport: 'nature', penghu: 'sea', hehuan: 'mountain' }[zone];
   const dio = createDiorama({ gl: true, w: W, d: D, walls: false, zoom: 0.8, zmin: 0.45, zmax: 1.6, cy: 0.58, skirt, horizon, floorCss: floors[zone] });
   const markers = {};
   const P = ZONE_PLACES[zone];
   // 進出這一區的地方：一小段公路＋小車站
-  dio.addDecal({ x: 0, y: 720, w: W, h: 60, z: 0.8, css: 'background:#8a8fa0' });
-  dio.addDecal({ x: 0, y: 748, w: W, h: 4, z: 1, css: 'background:repeating-linear-gradient(90deg,#fff 0 30px,transparent 30px 60px)' });
+  if (zone !== 'penghu') {   // 澎湖是坐飛機、坐船來的，沒有公路
+    dio.addDecal({ x: 0, y: 720, w: W, h: 60, z: 0.8, css: 'background:#8a8fa0' });
+    dio.addDecal({ x: 0, y: 748, w: W, h: 4, z: 1, css: 'background:repeating-linear-gradient(90deg,#fff 0 30px,transparent 30px 60px)' });
+  }
   if (zone === 'suburb') {
     // 田（一格一格）、穀倉、圓筒倉、風車、牛
     for (let i = 0; i < 6; i++) dio.addDecal({ x: 620 + (i % 2) * 170, y: 80 + Math.floor(i / 2) * 190, w: 150, h: 170, z: 0.7, css: `background:repeating-linear-gradient(90deg,${i % 3 ? '#8fd36a' : '#e8d36a'} 0 14px,#7cc35a 14px 18px);border-radius:10px` });
@@ -138,6 +150,40 @@ function buildZone(zone) {
     [[q.x - 90, q.y - 30], [q.x + 40, q.y - 60], [q.x + 60, q.y + 50]].forEach(([x, y]) => { dio.addBox({ x: x - 36, y: y - 28, w: 72, d: 56, h: 46, color: '#c99a6a', tap: tq }); dio.addGable({ x: x - 36, y: y - 28, z: 46, w: 72, d: 56, h: 34, over: 8, color: '#8a6a3a', wallColor: '#c99a6a', ridge: 'x', tap: tq }); });
     dio.addSprite({ x: q.x - 20, y: q.y + 40, w: 80, h: 80, shadow: 0.3, tap: tq, html: LAKE.pestle });
     for (const [x, y] of [[60, 420], [470, 700], [930, 420], [250, 720], [640, 60]]) dio.addSprite({ x, y, w: 80, h: 110, shadow: 0.6, html: tree(x % 3 ? '#3f9f5a' : '#4fbf6e') });
+  }
+  if (zone === 'airport') {
+    // 跑道（白色虛線、兩頭的數字）、航廈（玻璃）、塔台、停機坪的飛機
+    dio.addDecal({ x: 60, y: 560, w: 880, h: 90, z: 0.8, css: 'background:#6a7080;border-radius:12px' });
+    dio.addDecal({ x: 90, y: 601, w: 820, h: 8, z: 1, css: 'background:repeating-linear-gradient(90deg,#fff 0 40px,transparent 40px 80px)' });
+    const p = P.airport, tap = 'go:airport';
+    const glass = `<svg viewBox="0 0 400 110" width="100%" height="100%" preserveAspectRatio="none"><rect width="400" height="110" fill="#bfe6ff"/>${[...Array(10)].map((_, i) => `<rect x="${i * 40 + 18}" y="0" width="4" height="110" fill="#fff" opacity=".7"/>`).join('')}<rect x="170" y="60" width="60" height="50" fill="#3ea8e0"/></svg>`;
+    dio.addBox({ x: p.x - 200, y: p.y - 70, w: 400, d: 140, h: 110, color: '#e9f3ff', tap, faces: { s: glass, n: glass } });
+    dio.addBox({ x: p.x - 210, y: p.y - 80, z: 110, w: 420, d: 160, h: 14, color: '#f4f6fb', tap });
+    dio.addBox({ x: p.x + 250, y: p.y - 40, w: 50, d: 50, h: 200, color: '#e9eef5', tap });
+    dio.addBox({ x: p.x + 235, y: p.y - 55, z: 200, w: 80, d: 80, h: 40, color: '#7fc8f0', tap });
+    [[220, 470, 150, 110], [640, 470, 150, 110], [430, 640, 190, 140]].forEach(([x, y, w, h]) => dio.addSprite({ x, y, z: 2, w, h, shadow: 0.3, tap, html: AIR.plane }));
+    for (const [x, y] of [[60, 120], [940, 140], [80, 400], [940, 420]]) dio.addSprite({ x, y, w: 80, h: 110, shadow: 0.6, html: tree() });
+  }
+  if (zone === 'penghu') {
+    // 澎湖：沙灘、雙心石滬、玄武岩、跨海大橋、燈塔、海龜
+    const heart = (cx, cy, k) => `M${cx} ${cy + 40 * k} C${cx - 60 * k} ${cy} ${cx - 50 * k} ${cy - 40 * k} ${cx - 20 * k} ${cy - 36 * k} C${cx - 8 * k} ${cy - 34 * k} ${cx} ${cy - 26 * k} ${cx} ${cy - 20 * k} C${cx} ${cy - 26 * k} ${cx + 8 * k} ${cy - 34 * k} ${cx + 20 * k} ${cy - 36 * k} C${cx + 50 * k} ${cy - 40 * k} ${cx + 60 * k} ${cy} ${cx} ${cy + 40 * k}Z`;
+    dio.addDecal({ x: 0, y: 0, w: W, h: D, z: 0.7, budget: 1e6, html: `<svg viewBox="0 0 1000 800" width="100%" height="100%"><path d="${heart(760, 640, 1.5)}" fill="none" stroke="#8d96a3" stroke-width="12" stroke-dasharray="14 6"/><path d="${heart(870, 660, 1)}" fill="none" stroke="#a9b2bf" stroke-width="10" stroke-dasharray="12 6"/></svg>` });
+    const p = P.penghu, tap = 'go:penghu';
+    [3, 4, 5, 4, 3, 2].forEach((h, i) => dio.addSprite({ x: 200 + i * 34, y: 300 + (i % 2) * 10, w: 50, h: 60 + h * 16, shadow: 0.2, tap, html: `<svg viewBox="0 0 50 ${60 + h * 16}"><rect x="6" y="10" width="38" height="${50 + h * 16}" fill="#5b6170"/><path d="M6 10 L14 2 H36 L44 10Z" fill="#7d8494"/></svg>` }));
+    for (let i = 0; i < 6; i++) dio.addBox({ x: 40 + i * 70, y: 120, z: 0, w: 20, d: 20, h: 40, color: '#e9eef5' });
+    dio.addBox({ x: 30, y: 112, z: 40, w: 430, d: 36, h: 10, color: '#f4f6fb' });
+    dio.addSprite({ x: p.x, y: p.y + 20, w: 120, h: 90, shadow: 0.3, tap, html: PH.turtle });
+    dio.addSprite({ x: 840, y: 260, w: 80, h: 150, shadow: 0.4, html: lighthouse() });
+    for (const [x, y] of [[380, 520], [600, 330]]) dio.addSprite({ x, y, w: 60, h: 50, shadow: 0.2, html: PH.crab });
+  }
+  if (zone === 'hehuan') {
+    // 合歡山：雪山、松樹、武嶺的牌子、小雪人、觀星的草坡
+    for (const [x, y, w, h] of [[200, 120, 420, 330], [820, 130, 380, 300], [520, 60, 360, 280], [940, 520, 260, 200]]) dio.addSprite({ x, y, w, h, shadow: 0, html: peak('#7aa0c8', true) });
+    const pine = `<svg viewBox="0 0 80 120"><rect x="35" y="90" width="10" height="28" fill="#8a5a32"/><path d="M40 6 L70 50 H54 L74 80 H50 L78 100 H2 L30 80 H6 L26 50 H10Z" fill="#2f7f55"/><path d="M40 6 L54 26 H26Z M30 50 H50 L44 42 H36Z M22 80 H58 L52 72 H28Z" fill="#fff"/></svg>`;
+    for (const [x, y] of [[100, 520], [180, 620], [860, 640], [760, 600], [60, 300], [940, 330]]) dio.addSprite({ x, y, w: 80, h: 120, shadow: 0.4, html: pine });
+    const p = P.hehuan, tap = 'go:hehuan';
+    dio.addBox({ x: p.x - 70, y: p.y - 10, w: 140, d: 20, h: 60, color: '#8a5a32', tap, faces: { s: `<svg viewBox="0 0 140 60" width="100%" height="100%" preserveAspectRatio="none"><rect width="140" height="60" fill="#8a5a32"/><rect x="10" y="10" width="120" height="40" rx="6" fill="#f3e6c8"/><path d="M24 40 L48 18 L60 30 L78 14 L116 40Z" fill="#7aa0c8"/></svg>` } });
+    dio.addSprite({ x: p.x + 160, y: p.y + 120, w: 100, h: 110, shadow: 0.4, tap, html: HH.ball });
   }
   for (const [id, p] of Object.entries(P)) {
     markers[id] = dio.addSprite({ x: p.x, y: p.y, z: p.h + 60, w: 120, h: 120, html: `<div class="inner">${p.icon}</div>`, cls: 'marker place-mark', shadow: 0, tap: `go:${id}` });
@@ -241,11 +287,10 @@ function polyAt(P, t) {
   return { x: P[0][0], y: P[0][1], dx: 1, dy: 0 };
 }
 // 四個可以去的地方（真實的相對位置）
-const TW_ZONES = { city: [620, 1000], suburb: [520, 1450], sea: [720, 2310], mountain: [1065, 455], lake: [820, 1210] };   // 動物園在木柵（台北盆地東南邊的山上），101 在盆地裡
+const TW_ZONES = { city: [620, 1000], suburb: [520, 1450], sea: [720, 2310], mountain: [1065, 455], lake: [820, 1210], airport: [800, 400], penghu: [230, 1520], hehuan: [930, 960] };   // 動物園在木柵（台北盆地東南邊的山上），101 在盆地裡
 // 以後會開放的地方
 const SOON = [
-  { id: 'hehuan', x: 930, y: 960, icon: '🏔️' },
-  { id: 'huadong', x: 1040, y: 1650, icon: '🌊' }, { id: 'penghu', x: 230, y: 1520, icon: '⛴️' }, { id: 'airport', x: 800, y: 400, icon: '✈️' },
+  { id: 'huadong', x: 1040, y: 1650, icon: '🌊' },
 ];
 const cloudSvg = () => S(`<ellipse cx="60" cy="44" rx="42" ry="22" fill="#fff"/><ellipse cx="38" cy="38" rx="24" ry="20" fill="#fff"/><ellipse cx="80" cy="34" rx="22" ry="18" fill="#fff"/>`, '0 0 120 70');
 const whaleSvg = () => S(`<path d="M10 58 Q20 34 56 34 Q86 36 94 52 L108 40 L106 70 L94 62 Q80 76 50 74 Q20 74 10 58Z" fill="#4f6f9a"/><path d="M18 62 Q50 72 84 64" stroke="#c9d8ef" stroke-width="6" fill="none"/><circle cx="24" cy="52" r="3" fill="#1d2433"/><g class="spout"><path d="M44 30 Q40 12 30 8 M46 30 Q48 10 56 4 M48 30 Q56 16 66 14" stroke="#bfe9ff" stroke-width="5" fill="none" stroke-linecap="round"/></g>`, '0 0 120 80');
@@ -388,7 +433,8 @@ export async function mountWorld(root, app) {
     await speak('shan', `world_go_${to}`, { node: shan.el });
     if (!app.alive()) return;
     if (to === here) { app.go('town'); return; }
-    const mode = to === 'lake' || here === 'lake' ? 'car' : await pickTravel(root);   // 日月潭沒有火車，開山路去
+    const modes = travelModes(here, to);
+    const mode = modes.length === 1 ? modes[0] : await pickTravel(root, modes);
     if (!mode) { going = false; setPlaying(true); markers[to].el.classList.remove('hop'); return; }
     if (app.alive()) app.go('trip', { to, mode });
   });
@@ -396,10 +442,17 @@ export async function mountWorld(root, app) {
 }
 
 // 開車走高速公路，還是坐火車？
-function pickTravel(root) {
+// 怎麼去：澎湖要坐飛機或坐船；日月潭、合歡山只能開山路；其他開車或坐火車
+function travelModes(here, to) {
+  if (here === 'penghu' || to === 'penghu') return ['plane', 'boat'];
+  if (['lake', 'hehuan'].includes(here) || ['lake', 'hehuan'].includes(to)) return ['car'];
+  return ['car', 'train'];
+}
+const MODE_ART = { car: () => babaSvg(), train: () => PLACE_ICON.train, plane: () => AIR.plane, boat: () => ferrySvg() };
+function pickTravel(root, modes = ['car', 'train']) {
   return new Promise((resolve) => {
     const scrim = div('scrim');
-    const box = div('vpick ui', `<button class="vopt" data-v="car">${babaSvg()}</button><button class="vopt" data-v="train">${PLACE_ICON.train}</button><button class="vback">${ICON2.skip}</button>`);
+    const box = div('vpick ui', `${modes.map((m) => `<button class="vopt" data-v="${m}">${MODE_ART[m]()}</button>`).join('')}<button class="vback">${ICON2.skip}</button>`);
     root.append(scrim, box);
     speak('shan', 'pick_travel');
     const done = (v) => { scrim.remove(); box.remove(); resolve(v); };
@@ -485,13 +538,18 @@ export async function boardTrain(root, { say, alive, kind = 'train', glow = fals
 
 // ======================= 開山路去日月潭：暈車怎麼辦（11/26） =======================
 // 三個選擇：看遠方的山、開窗吹風（對）；低頭看平板（不對）。兩個對的都點到就好了。一起玩時輪流點。
-async function carSick(root, say, alive) {
+const carSick = (root, say, alive) => choiceMini(root, say, alive, { face: LAKE.sick, pre: 'sick', opts: { far: LAKE.lookFar, window: LAKE.window, tablet: LAKE.tablet }, bad: ['tablet'], need: 2 });
+// 坐飛機：起飛時耳朵悶悶的——吞口水、打哈欠、喝一小口水都可以；安全帶燈亮著不能站起來走
+const planeEars = (root, say, alive) => choiceMini(root, say, alive, { face: AIR.earFace, pre: 'ears', opts: { swallow: AIR.swallow, yawn: AIR.yawn, drink: AIR.drink, walk: AIR.walk }, bad: ['walk'], need: 2 });
+// 三四個選項：對的點到 need 個就好了，不對的說明為什麼；一起玩時輪流
+async function choiceMini(root, say, alive, { face, pre, opts, bad, need }) {
   const P = div('panel sickpanel');
   const scrim = div('scrim');
   root.append(scrim, P);
+  const isBad = (k) => bad.includes(k);
   try {
-    P.innerHTML = `<div class="sick-face">${LAKE.sick}</div><div class="sick-opts">${shuffle(['far', 'window', 'tablet']).map((k) => `<button class="sick-opt" data-k="${k}">${{ far: LAKE.lookFar, window: LAKE.window, tablet: LAKE.tablet }[k]}<i></i></button>`).join('')}</div>`;
-    await say('sick_intro');
+    P.innerHTML = `<div class="sick-face">${face}</div><div class="sick-opts">${shuffle(Object.keys(opts)).map((k) => `<button class="sick-opt" data-k="${k}">${opts[k]}<i></i></button>`).join('')}</div>`;
+    await say(`${pre}_intro`);
     if (!alive()) return;
     if (turnsOn()) await callTurn();
     const got = new Set();
@@ -502,34 +560,39 @@ async function carSick(root, say, alive) {
         const k = b.dataset.k;
         if (busy || got.has(k) || b.classList.contains('no')) return;
         busy = true;
-        if (k === 'tablet') { sfx('soft'); b.classList.add('no'); await say('sick_tablet'); }
+        if (isBad(k)) { sfx('soft'); b.classList.add('no'); await say(`${pre}_${k}`); }
         else {
           got.add(k); sfx('sparkle'); b.classList.add('yes');
           const r = stageRect(b); burst(r.x, r.y, { n: 12, stars: true });
-          await say(k === 'far' ? 'sick_far' : 'sick_window');
-          if (got.size === 2) { resolve(); return; }
+          await say(`${pre}_${k}`);
+          if (got.size >= need) { resolve(); return; }
           if (turnsOn()) nextTurn({ say: false });
         }
         busy = false;
-        const left = [...P.querySelectorAll('.sick-opt')].find((x) => x.dataset.k !== 'tablet' && !got.has(x.dataset.k));
+        const left = [...P.querySelectorAll('.sick-opt')].find((x) => !isBad(x.dataset.k) && !got.has(x.dataset.k));
         setHint(() => left);
       }));
-      setHint(() => [...P.querySelectorAll('.sick-opt')].find((x) => x.dataset.k !== 'tablet'));
+      setHint(() => [...P.querySelectorAll('.sick-opt')].find((x) => !isBad(x.dataset.k)));
       const t = setInterval(() => { if (!alive()) { clearInterval(t); resolve(); } }, 400);
     });
     if (!alive()) return;
     P.querySelector('.sick-face').classList.add('better');
     sfx('fanfare');
-    await say('sick_done');
+    await say(`${pre}_done`);
   } finally { setHint(null); P.remove(); scrim.remove(); }
 }
 
 // ======================= 跨區域的路程：看窗外找東西 =======================
+const TOWER = S('<rect x="42" y="40" width="16" height="56" fill="#e9eef5"/><path d="M28 40 H72 L66 18 H34Z" fill="#7fc8f0"/><rect x="30" y="14" width="40" height="6" fill="#e9eef5"/><path d="M50 14 V4" stroke="#ff5d5d" stroke-width="3"/>');
+const PINE = S('<rect x="45" y="76" width="10" height="20" fill="#8a5a32"/><path d="M50 6 L76 44 H62 L82 70 H60 L86 84 H14 L40 70 H18 L38 44 H24Z" fill="#2f7f55"/><path d="M50 6 L62 24 H38Z M40 44 H60 L54 38 H46Z" fill="#fff"/>');
 const SCENERY = {
   suburb: { things: { cow: itemSvg('cow'), windmill: windmill(), tree: tree(), field: field() }, targets: ['cow', 'windmill'], sky: '#bfe6ff', ground: '#9fd87f', far: '#8fcf8a' },
   sea: { things: { boat: sailboat(), lighthouse: lighthouse(), palm: palm(), gull: seagull() }, targets: ['boat', 'lighthouse'], sky: '#bfe6ff', ground: '#f2dca6', far: '#3ec7e0' },
   mountain: { things: { monkey: monkey(), cable: cablecar(), tree: tree('#3f9f5a'), tree2: tree() }, targets: ['monkey', 'cable'], sky: '#cfe8ff', ground: '#7fc86a', far: '#5aa84a' },
   lake: { things: { tea: LAKE.tea, deer: LAKE.deer, tree: tree('#3f9f5a'), mountain: LAKE.mountain }, targets: ['tea', 'deer'], sky: '#cfe8ff', ground: '#7fc86a', far: '#4f9a44' },
+  airport: { things: { plane: AIR.plane, tower: TOWER, tree: tree(), building: building() }, targets: ['plane', 'tower'], sky: '#d6e8ff', ground: '#9fd27f', far: '#a9b8cc' },
+  penghu: { things: { lighthouse: lighthouse(), gull: seagull(), boat: sailboat(), turtle: PH.turtle }, targets: ['lighthouse', 'turtle'], sky: '#bfe6ff', ground: '#5ec3ee', far: '#3ea8e0' },
+  hehuan: { things: { pine: PINE, snowpeak: peak('#7aa0c8', true), tree: tree('#3f9f5a'), mountain: LAKE.mountain }, targets: ['pine', 'snowpeak'], sky: '#e6f0fa', ground: '#dfeaf6', far: '#7aa0c8' },
   city: { things: { mrt: PLACE_ICON.mrt, building: building(), building2: building('#ffd6a0'), tree: tree() }, targets: ['mrt', 'building'], sky: '#d6e8ff', ground: '#c9d3de', far: '#a9b8cc' },
 };
 
@@ -543,22 +606,26 @@ export async function mountTrip(root, app) {
   turnsScene(root);
   setPlaying(true);
   homeBtn(root, () => app.go('opening'));
-  const host = mode === 'car' ? 'baba' : 'xiuxiu';
+  const host = { car: 'baba', train: 'xiuxiu', plane: 'xiangxiang', boat: 'guigui' }[mode];
   const say = (id) => (alive ? speak(host, id) : Promise.resolve());
   try {
     // 出發前：開車要繫安全帶；坐火車要刷卡、站在黃線後面、先下後上
     playMusic('drive');
     if (mode === 'car') await seatbelt(root, app, true, () => alive);
+    else if (mode === 'plane') { await seatbelt(root, app, true, () => alive, { id: 'xiangxiang', svg: xiangxiangSvg, cls: 'plane' }); if (alive) await planeEars(root, say, () => alive); }
+    else if (mode === 'boat') await choiceMini(root, say, () => alive, { face: LAKE.sick, pre: 'sea', opts: { vest: LAKE.vest, far: LAKE.lookFar, deck: LAKE.window, run: BOARD.stand }, bad: ['run'], need: 3 });
     else await boardTrain(root, { say, alive: () => alive, glow: levelNow(app.profile) === 'easy' });
     if (!alive) return;
     // 路程：窗外的風景往後跑，看到要找的東西就點
-    const sc = SCENERY[to];
+    const air = mode === 'plane' || mode === 'boat';   // 坐飛機、坐船：窗外是天空和海（澎湖的風景），不管往哪裡
+    const sc = air ? SCENERY.penghu : SCENERY[to];
     const scene = div('trip-scene', `<div class="tsky" style="background:${isDark() ? '#26305e' : sc.sky}"></div><div class="tfar" style="background:${sc.far}"></div><div class="tground" style="background:${sc.ground}"></div><div class="troad ${mode}"></div><div class="tthings"></div>
-      <div class="tvehicle ${mode}">${mode === 'car' ? babaSvg() : PLACE_ICON.train}</div>${mode === 'train' ? '<div class="twindow"></div>' : ''}<div class="tlook"></div>`);
+      <div class="tvehicle ${mode}">${{ car: babaSvg(), train: PLACE_ICON.train, plane: AIR.plane, boat: ferrySvg() }[mode]}</div>${mode === 'train' ? '<div class="twindow"></div>' : ''}<div class="tlook"></div>`);
     root.appendChild(scene);
     const things = scene.querySelector('.tthings'), look = scene.querySelector('.tlook');
     playMusic(mode === 'car' ? 'drive' : 'trip');
-    await say(`trip_go_${to}`);
+    if (to === 'hehuan' && mode === 'car') scene.classList.add('curvy');
+    await say(mode === 'plane' ? 'trip_go_fly' : mode === 'boat' ? 'trip_go_sail' : `trip_go_${to}`);
     if (to === 'lake' && mode === 'car') { scene.classList.add('curvy'); await carSick(root, say, () => alive); if (!alive) return; }
     const targets = shuffle(sc.targets.slice());
     const easy = levelNow(app.profile) === 'easy';
@@ -603,7 +670,7 @@ export async function mountTrip(root, app) {
     }
     look.innerHTML = '';
     await wait(800);
-    await say(`trip_arrive_${to}`);
+    await say(mode === 'plane' ? 'trip_land' : mode === 'boat' ? 'trip_dock' : `trip_arrive_${to}`);
     if (!alive) return;
     app.trip.zone = to;
     app.trip.location = to === 'city' ? (mode === 'train' ? 'train' : 'home') : ZONES[to].entry;

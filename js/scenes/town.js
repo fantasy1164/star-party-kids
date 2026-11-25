@@ -1511,7 +1511,7 @@ async function helmet(root, app, alive) {
   const pnl = div('panel helmetpanel');
   root.append(scrim, pnl);
   pnl.innerHTML = `<div class="hkid">${kidHead(id, 260)}<div class="hspot"></div></div><div class="hhelmet">${helmetSvg()}</div>`;
-  const node = div('panel-host', babaSvg());
+  const node = div('panel-host', who.svg());
   root.appendChild(node);
   try {
     await speak('baba', 'helmet_go', { node });
@@ -1634,7 +1634,7 @@ export async function loadTask(root, app, job, alive) {
   const scrim = div('scrim');
   const pnl = div(`panel loadpanel ${job.cls || ''}`);
   root.append(scrim, pnl);
-  const node = div('panel-host', babaSvg());
+  const node = div('panel-host', who.svg());
   root.appendChild(node);
   const PW = 940;
   try {
@@ -1745,13 +1745,14 @@ async function sirenTask(root, app, vehicle, car, traffic, alive) {
 }
 
 // ---- 繫安全帶：把扣環拖到扣座 ----
-export async function seatbelt(root, app, full, alive) {
+// who：誰在說話（坐車是叭叭；坐飛機是翔翔，11/26）
+export async function seatbelt(root, app, full, alive, who = { id: 'baba', svg: babaSvg, cls: '' }) {
   const members = app.profile.members;
   const scrim = div('scrim');
-  const pnl = div('panel beltpanel2');
+  const pnl = div(`panel beltpanel2 ${who.cls || ''}`);
   root.append(scrim, pnl);
   pnl.innerHTML = `<div class="carseat-bg"></div>`;
-  const node = div('panel-host', babaSvg());
+  const node = div('panel-host', who.svg());
   root.appendChild(node);
   try {
     const belts = members.map((id, i) => {
@@ -1762,7 +1763,7 @@ export async function seatbelt(root, app, full, alive) {
       pnl.appendChild(seat);
       return { id, seat, buckle: seat.querySelector('.buckle'), clasp: seat.querySelector('.clasp'), done: false };
     });
-    await speak('baba', full ? 'belt_go' : 'belt_short', { node });
+    await speak(who.id, full ? 'belt_go' : 'belt_short', { node });
     if (!alive()) return;
     setHint(() => belts.find((b) => !b.done)?.buckle);
     await new Promise((resolve) => {
@@ -1806,7 +1807,7 @@ export async function seatbelt(root, app, full, alive) {
     });
     setHint(null);
     if (!alive()) return;
-    await speak('baba', 'belt_done', { node });
+    await speak(who.id, 'belt_done', { node });
   } finally {
     scrim.remove(); pnl.remove(); node.remove();
   }

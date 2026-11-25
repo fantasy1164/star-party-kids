@@ -441,6 +441,18 @@ const TRACKS = {
     melody: seq('E5 . G5 . A5 . . G5 E5 . D5 . . . . .  C5 . D5 . E5 . G5 . A5 . G5 . E5 . . .  D5 . E5 . G5 . . E5 D5 . C5 . . . . .  A4 . C5 . D5 . E5 . D5 . C5 . . . . .'),
     bass: seq('C3 . . . G2 . . . A2 . . . E3 . . .  F2 . . . C3 . . . G2 . . . . . . .  C3 . . . G2 . . . A2 . . . E3 . . .  F2 . . . G2 . . . C3 . . . . . . .'),
   },
+  // 機場：輕快、像廣播前的叮咚
+  airport: {
+    style: 'bg', bpm: 108, inst: 'toypiano', gain: 0.17,
+    melody: seq('E5 . G5 . C6 . G5 . A5 . F5 . D5 . . .  E5 . G5 . B5 . G5 . C6 . . . . . . .'),
+    bass: seq('C3 . . . E3 . . . F2 . . . G2 . . .  C3 . . . E3 . . . F2 . G2 . C3 . . .'),
+  },
+  // 合歡山：雪花一樣亮亮的音樂盒
+  snow: {
+    style: 'quiet', bpm: 80, inst: 'musicbox', gain: 0.16,
+    melody: seq('E5 . . B4 . . E5 . F#5 . G5 . . . . .  A5 . . G5 . . F#5 . E5 . D5 . . . . .  E5 . . B4 . . E5 . G5 . B5 . . . . .  A5 . G5 . F#5 . . D5 E5 . . . . . . .'),
+    bass: seq('E3 . . . B2 . . . C3 . . . G2 . . .  D3 . . . A2 . . . B2 . . . . . . .  E3 . . . B2 . . . C3 . . . G2 . . .  A2 . . . B2 . . . E3 . . . . . . .'),
+  },
   // 晚晚說：很輕，讓小孩聽得清楚口令
   listen: {
     style: 'quiet', bpm: 76, inst: 'marimba', gain: 0.12,
