@@ -62,6 +62,7 @@ function applyMusic(tc = 0.15) { if (ctx) musicBus.gain.setTargetAtTime(musicTar
 export function duck(on) {
   ducked = on;
   applyMusic();
+  applySiren();
 }
 
 // ---- 思考時間（岳岳對聲音很敏感，任何小聲音都會分心）----
@@ -73,6 +74,7 @@ export function think(on) {
   if (thinking === on) return;
   thinking = on;
   applyMusic(on ? 0.25 : 0.5);
+  applySiren();
   if (!on) { const fns = thinkEnd; thinkEnd = []; fns.forEach((fn) => fn()); }
 }
 export const isThinking = () => thinking;
@@ -81,7 +83,7 @@ export function onThinkEnd(fn) { if (thinking) thinkEnd.push(fn); else fn(); }
 // ---- 安靜模式（家長頁）：關掉背景音樂和裝飾音效，只留角色說話和對錯的聲音 ----
 let quietMode = false;
 const DECOR = new Set(['whoosh', 'boing', 'tick', 'pop', 'giggle', 'windup', 'curtain', 'squish', 'slide', 'burp']);
-export function setQuietMode(on) { quietMode = !!on; applyMusic(0.2); }
+export function setQuietMode(on) { quietMode = !!on; applyMusic(0.2); applySiren(); }
 
 // ---------- 基本合成 ----------
 function osc(c, dest, freq, t, dur, { type = 'sine', gain = 0.2, attack = 0.01, release = null, lp = 0, to = null } = {}) {
@@ -187,13 +189,41 @@ const SFX = {
   horn: (t) => { [0, 0.22].forEach((d) => { tone(392, t + d, 0.16, { type: 'square', gain: 0.05, lp: 1400 }); tone(494, t + d, 0.16, { type: 'square', gain: 0.04, lp: 1400 }); }); },
   beepbeep: (t) => { [0, 0.16].forEach((d) => tone(880, t + d, 0.1, { type: 'square', gain: 0.04, lp: 2400 })); },
   // 救護車：高低兩個音輪流（喔咿喔咿）
-  sirenAmb: (t) => { for (let i = 0; i < 6; i++) tone(i % 2 ? 660 : 880, t + i * 0.42, 0.4, { type: 'triangle', gain: 0.09, attack: 0.02, release: 0.05 }); },
+  sirenAmb: (t, dest) => { for (let i = 0; i < 6; i++) tone(i % 2 ? 660 : 880, t + i * 0.42, 0.4, { type: 'triangle', gain: 0.09, attack: 0.02, release: 0.05, dest }); },
   // 消防車：慢慢往上拉高、再慢慢降下來（嗚——）
-  sirenFire: (t) => { tone(500, t, 1.3, { type: 'sawtooth', to: 1150, gain: 0.05, lp: 2000, attack: 0.1, release: 0.05 }); tone(1150, t + 1.3, 1.2, { type: 'sawtooth', to: 520, gain: 0.05, lp: 2000, attack: 0.02, release: 0.3 }); },
+  sirenFire: (t, dest) => { tone(500, t, 1.3, { type: 'sawtooth', to: 1150, gain: 0.05, lp: 2000, attack: 0.1, release: 0.05, dest }); tone(1150, t + 1.3, 1.2, { type: 'sawtooth', to: 520, gain: 0.05, lp: 2000, attack: 0.02, release: 0.3, dest }); },
   // 警車：很快的上下滑（喔喔喔喔）
-  sirenPolice: (t) => { for (let i = 0; i < 9; i++) tone(700, t + i * 0.27, 0.26, { type: 'square', to: 1500, gain: 0.035, lp: 2600, attack: 0.01, release: 0.04 }); },
+  sirenPolice: (t, dest) => { for (let i = 0; i < 9; i++) tone(700, t + i * 0.27, 0.26, { type: 'square', to: 1500, gain: 0.035, lp: 2600, attack: 0.01, release: 0.04, dest }); },
   drum: (t) => { kick(ctx, sfxBus, t, 0.9); noise(t, 0.08, { freq: 1800, q: 0.8, gain: 0.25 }); },
 };
+// ---- 一路鳴笛（11/25）：坐警車、消防車、救護車按下警笛後一直響到目的地；
+// 有人說話時壓到 1/4（聽得清楚台詞），安靜模式、思考時間不響 ----
+const SIREN_LEN = { sirenAmb: 2.52, sirenFire: 2.6, sirenPolice: 2.43 };
+let siren = null;
+function sirenTarget() { return quietMode || thinking ? 0.0001 : ducked ? 0.25 : 1; }
+function applySiren(tc = 0.12) { if (ctx && siren) siren.g.gain.setTargetAtTime(sirenTarget(), ctx.currentTime, tc); }
+export function startSiren(name) {
+  stopSiren();
+  if (!ctx || !SIREN_LEN[name]) return;
+  const g = ctx.createGain();
+  g.gain.value = sirenTarget();
+  g.connect(sfxBus);
+  let next = ctx.currentTime + 0.02;
+  // 先排好一秒內要響的，每 0.3 秒補排（分頁切走時 ctx 暫停、時間不走，不會越排越多）
+  const pump = () => { while (next < ctx.currentTime + 1) { SFX[name](next, g); next += SIREN_LEN[name]; } };
+  pump();
+  siren = { g, iv: setInterval(pump, 300) };
+}
+export const sirenOn = () => (siren ? +siren.g.gain.value.toFixed(2) : 0);   // 測試用：現在的鳴笛音量（0＝沒在響）
+export function stopSiren() {
+  if (!siren) return;
+  const { g, iv } = siren;
+  siren = null;
+  clearInterval(iv);
+  if (ctx) g.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.08);
+  setTimeout(() => { try { g.disconnect(); } catch { /* 忽略 */ } }, 1500);
+}
+
 export function sfx(name) {
   if (!ctx || ctx.state !== 'running') return;
   if ((thinking || quietMode) && DECOR.has(name)) return;

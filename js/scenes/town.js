@@ -9,7 +9,7 @@
 import { createDiorama, lit } from '../engine/diorama.js';
 import { div, wait, burst, stageW, shuffle, pick, toStage, stageRect } from '../core/dom.js';
 import { speak } from '../core/voice.js';
-import { sfx, playMusic } from '../core/audio.js';
+import { sfx, playMusic, startSiren, stopSiren } from '../core/audio.js';
 import { isDark, roomTint, hour } from '../core/clock.js';
 import { turnsOn, turnsScene, whoseTurn, nextTurn, callTurn, levelNow } from '../core/turns.js';
 import { setHint, setPlaying, mountClock } from '../core/session.js';
@@ -768,7 +768,7 @@ export async function mountRide(root, app) {
   const T = buildTown();
   const { dio } = T;
   root.appendChild(dio.el);
-  app.onLeave(() => { alive = false; setHint(null); setPlaying(false); dio.destroy(); });
+  app.onLeave(() => { alive = false; stopSiren(); setHint(null); setPlaying(false); dio.destroy(); });
   dio.setTint(roomTint());
   if (isDark()) root.classList.add('night');
   dio.lock(true);
@@ -832,12 +832,11 @@ export async function mountRide(root, app) {
     stopBtn.style.cssText = 'left:calc(50% - 75px);bottom:24px;display:none';
     root.appendChild(stopBtn);
     let stopPressed = null;
-    let lastNoNeed = 0;
+    // 11/25：停車鈕只在紅燈、有人過馬路的時候出現，停好就收起來
     stopBtn.addEventListener('pointerdown', (e) => {
       e.stopPropagation();
       sfx('click');
       if (stopPressed) stopPressed();
-      else if (Date.now() - lastNoNeed > 3000) { lastNoNeed = Date.now(); say('baba', 'ride_go_ok', car.el); }
     });
     // 出發前：拉遠、把小鎮轉到「旗子在前面（畫面上方）」，讓小孩真的看到旗子，再回到跟著車子
     dio.lock(false);   // 11/25：開車途中也可以轉小鎮（鏡頭照樣跟著車子）
@@ -849,7 +848,6 @@ export async function mountRide(root, app) {
     await wait(700);
     following = true;
     chk();
-    if (full) stopBtn.style.display = '';
     // 這一趟要遇到的狀況：紅燈一次、行人一次（完整版才有）
     const segs = path.length - 1;
     const events = {};
@@ -883,6 +881,7 @@ export async function mountRide(root, app) {
     if (vehicle === 'garbage' && segs === 0) { await garbageStop(); chk(); }
     stopBtn.remove();
     traffic?.setSiren(false);
+    stopSiren();
     car.el.classList.remove('siren-on');
     if (vehicle === 'bus') { await say('baba', 'bus_off', car.el); chk(); }
     // 3. 到了
@@ -938,6 +937,7 @@ export async function mountRide(root, app) {
               walker = dio.addSprite({ x: cross.x - cross.nx * 75, y: cross.y - cross.ny * 75, w: 60, h: 116, shadow: 0.5, html: personSvg(pick(['dad', 'mom', 'grandma', 'uncle', 'auntie'])) });
               say('baba', 'ride_walker', car.el);
             }
+            stopBtn.style.display = '';
             setHint(() => stopBtn);
             stopPressed = () => { if (evState === 'active') { evState = 'stopping'; stopPressed = null; } };
           }
@@ -947,9 +947,11 @@ export async function mountRide(root, app) {
             paused = true;
             stopPressed = null;
             setHint(null);
+            const sb = stageRect(stopBtn);   // 收起來之前記下位置，星星從按鈕那裡冒出來
+            stopBtn.style.display = 'none';
             (async () => {
               sfx(late ? 'soft' : 'sparkle');
-              if (!late) burst(stageRect(stopBtn).x, stageRect(stopBtn).y - 60, { n: 14, stars: true, colors: ['#ffd23f', '#fff3a0'] });
+              if (!late) burst(sb.x, sb.y - 60, { n: 14, stars: true, colors: ['#ffd23f', '#fff3a0'] });
               await say('baba', late ? (ev === 'light' ? 'ride_red_late' : 'ride_walker_late') : 'ride_stop_good', car.el);
               if (ev === 'walker') {
                 // 行人走過斑馬線
@@ -1326,7 +1328,7 @@ async function sirenTask(root, app, vehicle, car, traffic, alive) {
     });
     setHint(null);
     if (!alive()) return;
-    sfx(SIREN[vehicle]);
+    startSiren(SIREN[vehicle]);   // 一路響到目的地；有人說話時自動變小聲
     btn.classList.add('on');
     car.el.style.setProperty('--sy', { police: '16%', fire: '20%', ambulance: '12%' }[vehicle]);
     car.el.classList.add('siren-on');
