@@ -37,6 +37,17 @@ export function configured() {
 }
 export function syncStatus() { return status; }
 export function onSyncStatus(fn) { listeners.add(fn); return () => listeners.delete(fn); }
+// 家長頁「雲端同步」分頁上的指示燈：回傳 { led, tip }
+//   off 灰（沒設定）、test 紫（測試時間，暫停）、busy 藍閃（同步中）、ok 綠、dirty 黃（有新進度等上傳）、error 紅閃
+export function syncLight(st = status) {
+  if (!configured()) return { led: 'off', tip: '還沒設定' };
+  if (testing || st.kind === 'test') return { led: 'test', tip: '測試中暫停' };
+  if (st.kind === 'busy') return { led: 'busy', tip: '同步中' };
+  if (st.kind === 'error') return { led: 'error', tip: '同步失敗' };
+  if (st.kind === 'dirty' || read(SYNC_META_KEY).dirty) return { led: 'dirty', tip: '等待上傳' };
+  if (st.kind === 'ok' || st.last) return { led: 'ok', tip: '已同步' };
+  return { led: 'off', tip: '還沒同步過' };
+}
 function emit(s) {
   status = { ...s, last: read(SYNC_META_KEY).synced || status.last };
   for (const fn of listeners) { try { fn(status); } catch { /* 忽略 */ } }

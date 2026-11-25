@@ -228,6 +228,17 @@ body.turn-kk .glowy > svg { filter: drop-shadow(0 0 10px #ff6a2b); }
 .parent .ptabs button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 16px 16px; border-radius: 16px; border: 0; background: transparent; color: #6b5636; font-size: 22px; text-align: left; }
 .parent .ptabs button .ic { font-size: 28px; width: 34px; text-align: center; }
 .parent .ptabs button.on { background: #fff; color: #333; font-weight: 700; box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+.parent .ptabs .tl { display: flex; flex-direction: column; line-height: 1.2; }
+/* 雲端同步指示燈 */
+.parent .sync-led { white-space: nowrap; display: flex; align-items: center; gap: 7px; margin-top: 3px; font-size: 16px; font-weight: 600; color: #8a7a5a; }
+.parent .led { flex: none; width: 15px; height: 15px; border-radius: 50%; background: #bdb5a8; box-shadow: inset 0 -2px 0 rgba(0,0,0,.15); }
+.parent .led.ok { background: #3fc26b; box-shadow: 0 0 8px #3fc26b; }
+.parent .led.dirty { background: #f5b82e; box-shadow: 0 0 8px #f5b82e; }
+.parent .led.busy { background: #3ea8e0; box-shadow: 0 0 8px #3ea8e0; animation: ledBlink .8s ease-in-out infinite; }
+.parent .led.error { background: #e5483b; box-shadow: 0 0 10px #e5483b; animation: ledBlink 1.2s ease-in-out infinite; }
+.parent .led.test { background: #9b7fd6; box-shadow: 0 0 6px #9b7fd6; }
+.parent .led.ok + .led-tip { color: #1a8a3a; } .parent .led.error + .led-tip { color: #c9462c; } .parent .led.dirty + .led-tip { color: #b07a00; }
+@keyframes ledBlink { 50% { opacity: .3; } }
 /* 右邊：內容（可以上下滑） */
 .parent .pbody { flex: 1; overflow-y: auto; touch-action: pan-y; padding: 34px 50px 80px; }
 .parent h2 { margin: 0 0 18px; font-size: 32px; }

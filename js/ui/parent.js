@@ -9,7 +9,7 @@ import * as fest from '../core/festival.js';
 import { timeMachineHtml, bindTimeMachine } from './timemachine.js';
 import { KIDS } from '../config.js';
 import * as M from '../core/mult.js';
-import { syncConfig, setSyncConfig, syncNow, syncStatus, onSyncStatus, configured, deviceName, pingCloud } from '../core/sync.js';
+import { syncConfig, setSyncConfig, syncNow, syncStatus, onSyncStatus, syncLight, configured, deviceName, pingCloud } from '../core/sync.js';
 
 const NAMES = {
   'bedroom.toys': '收玩具', 'bedroom.dress': '換衣服', 'bedroom.simon': '晚晚說',
@@ -163,7 +163,8 @@ export function openParent(root, onClose) {
       <button id="wipe" class="danger">清除全部進度</button>`,
   };
 
-  p.innerHTML = `<nav class="ptabs">${TABS.map(([id, ic, label]) => `<button data-tab="${id}"><span class="ic">${ic}</span>${label}</button>`).join('')}</nav>
+  const ledHtml = (l = syncLight()) => `<i class="led ${l.led}"></i><span class="led-tip">${l.tip}</span>`;
+  p.innerHTML = `<nav class="ptabs">${TABS.map(([id, ic, label]) => `<button data-tab="${id}"><span class="ic">${ic}</span><span class="tl">${label}${id === 'sync' ? `<span class="sync-led">${ledHtml()}</span>` : ''}</span></button>`).join('')}</nav>
     <section class="pbody"></section><button class="close">✕ 關閉</button>`;
   const body = p.querySelector('.pbody');
   const $ = (id) => body.querySelector(`#${id}`);
@@ -226,7 +227,10 @@ export function openParent(root, onClose) {
     }
   }
   p.querySelector('.ptabs').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) show(b.dataset.tab); });
-  const offSync = onSyncStatus((st) => { const el = body.querySelector('.sync-st'); if (el) el.innerHTML = syncText(st); });
+  const offSync = onSyncStatus((st) => {
+    const el = body.querySelector('.sync-st'); if (el) el.innerHTML = syncText(st);
+    const led = p.querySelector('.sync-led'); if (led) led.innerHTML = ledHtml(syncLight(st));
+  });
   p.querySelector('.close').onclick = () => { apply(); offSync(); p.remove(); onClose?.(); };
   p.addEventListener('pointerdown', (e) => e.stopPropagation());
   root.appendChild(p);
