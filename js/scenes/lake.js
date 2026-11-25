@@ -413,8 +413,7 @@ async function pestleGame(R) {
       const pile = div('ps-pile');
       el.appendChild(pile);
       shuffle(order.slice()).forEach((i) => pile.appendChild(mk(i)));
-      await say('luolu', 'th_pestle_sort');
-      chk();
+      say('luolu', 'th_pestle_sort');   // ADHD 健檢：邊說邊可以排
       let k = 0, wrongs = 0, lastWrong = 0;
       const want = () => pile.querySelector(`.ps[data-i="${k}"]`);
       setHint(() => want());

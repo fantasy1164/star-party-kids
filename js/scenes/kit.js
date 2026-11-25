@@ -129,10 +129,7 @@ export async function findGame(R, opt) {
   }
   const found = new Set();
   try {
-    await say(opt.host, opt.intro);
-    chk();
-    await callTurn();
-    chk();
+    // ADHD 健檢（11/26）：說明還在講的時候就可以點了（已經看到的人不用乾等）
     let hiddenSaid = false;
     setHint(() => {
       const left = opt.items.filter((it) => !found.has(it.id));
@@ -140,7 +137,7 @@ export async function findGame(R, opt) {
       if (vis.length) return sprites[vis[0].id].el;
       return left.length ? rot.r : null;
     });
-    await race(new Promise((resolve) => {
+    const all = new Promise((resolve) => {
       const off = R.listen(async (name) => {
         if (!name.startsWith('find:')) return;
         const id = name.slice(5);
@@ -165,7 +162,11 @@ export async function findGame(R, opt) {
         }
         if (turnsOn()) nextTurn({ say: false });
       });
-    }));
+    });
+    await race(Promise.race([say(opt.host, opt.intro), all]));
+    chk();
+    if (found.size < opt.items.length) { await callTurn(); chk(); }
+    await race(all);
     setHint(null);
     sfx('fanfare');
     await say(opt.host, opt.done);

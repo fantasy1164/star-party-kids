@@ -128,8 +128,7 @@ async function gateGame(R) {
       think(true);
       const onSpk = (e) => { e.stopPropagation(); call(); };
       spk.addEventListener('pointerdown', onSpk);
-      await call();
-      chk();
+      call();   // ADHD 健檢：廣播一開始就可以點，不用等播完
       setHint(() => right);
       await tapRound(R, row, {
         right: (b) => b === right,

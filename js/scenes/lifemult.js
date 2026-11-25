@@ -93,11 +93,14 @@ export async function lifeMult(R, roomId) {
       }
     };
     const race = (p) => Promise.race([p, skipP]);
+    // ADHD 健檢（11/26）：提示的幾組跟題目一起亮，不要等說完才開始（少等 3 秒）
+    const both = turnsOn() && members.includes('kk');
+    const litP = !both && pre ? light(pre) : null;
     await race(say('bibi', `life_${theme.id}`));
     if (skipped) return;
     chk();
     // 一起玩、輪到愷愷：先請愷愷數有幾盒
-    if (turnsOn() && members.includes('kk')) {
+    if (both) {
       await race(turnTo('kk'));
       if (skipped) return;
       groups.forEach((g) => g.classList.add('peek'));
@@ -109,7 +112,7 @@ export async function lifeMult(R, roomId) {
       await race(turnTo('yy'));
       if (skipped) return;
     }
-    if (pre) await light(pre);
+    if (pre) await (litP || light(pre));
     const qT = Date.now();
     const res = await race(askChoice(R, ans, M.choices(a, b, 3), a * b, { host: 'bibi', demo: async () => { groups.forEach((g) => { g.classList.remove('lit'); g.querySelector('.cnt').textContent = '?'; }); await light(b, 520); } }));
     if (res === 'skip') return;
