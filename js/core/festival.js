@@ -126,3 +126,17 @@ export function yearList(y = year()) {
   return list.sort((a, b) => a.date.localeCompare(b.date));
 }
 export const iso8601 = iso;
+// 家長頁月曆：某一年的節慶（含活動期間）和家人生日：[{ id, name, date, from, to }]，日期都是 YYYY-MM-DD
+export function festSpans(y) {
+  const list = calendar(y).map((f) => ({ id: f.id, name: FESTS[f.id].name, date: iso(f.day), from: iso(f.from), to: iso(f.to) }));
+  const cny = calendar(y).find((f) => f.id === 'cny');
+  if (cny) for (const [t, name] of [[cny.extra.eve, '除夕'], [cny.extra.lantern, '元宵']]) list.push({ id: 'cny', name, date: iso(t), from: iso(cny.from), to: iso(cny.to) });
+  for (const id of ['yy', 'kk', 'dad', 'mom', 'grandma']) {
+    const b = birthday(id);
+    if (!b) continue;
+    const date = `${y}-${b.slice(5)}`;
+    const kid = KIDS_IDS.includes(id);
+    list.push({ id: kid ? 'birthday' : 'pbirthday', name: `${PEOPLE[id]}生日`, date, from: kid ? date : iso(Date.UTC(y, +b.slice(5, 7) - 1, +b.slice(8, 10)) - 3 * DAY), to: date });
+  }
+  return list;
+}
