@@ -133,6 +133,12 @@ const INST = {
     osc(c, dest, f * 4, t, 0.35, { gain: g * 0.2, attack: 0.002 });
     osc(c, dest, f * 6.01, t, 0.12, { gain: g * 0.08, attack: 0.002 });
   },
+  // 杵音（日月潭，邵族）：長木杵敲石板——低沉的「咚」、很快收掉，加一點石頭的清脆
+  pestle(c, dest, f, t, g) {
+    osc(c, dest, f, t, 0.5, { gain: g * 1.1, attack: 0.002, to: f * 0.92 });
+    osc(c, dest, f * 2.76, t, 0.12, { type: 'triangle', gain: g * 0.3, attack: 0.001 });
+    osc(c, dest, f * 5.4, t, 0.05, { gain: g * 0.12, attack: 0.001 });
+  },
   // 玩具鋼琴：有點叮叮的金屬感
   toypiano(c, dest, f, t, g) {
     osc(c, dest, f, t, 0.6, { type: 'triangle', gain: g, attack: 0.004 });
@@ -194,6 +200,9 @@ const SFX = {
   sirenFire: (t, dest) => { tone(500, t, 1.3, { type: 'sawtooth', to: 1150, gain: 0.05, lp: 2000, attack: 0.1, release: 0.05, dest }); tone(1150, t + 1.3, 1.2, { type: 'sawtooth', to: 520, gain: 0.05, lp: 2000, attack: 0.02, release: 0.3, dest }); },
   // 警車：很快的上下滑（喔喔喔喔）
   sirenPolice: (t, dest) => { for (let i = 0; i < 9; i++) tone(700, t + i * 0.27, 0.26, { type: 'square', to: 1500, gain: 0.035, lp: 2600, attack: 0.01, release: 0.04, dest }); },
+  paddle: (t) => { noise(t, 0.35, { freq: 900, to: 300, q: 0.7, gain: 0.26 }); noise(t + 0.05, 0.25, { freq: 2600, q: 1.2, gain: 0.08 }); },
+  splash: (t) => { noise(t, 0.6, { freq: 1500, to: 400, q: 0.5, gain: 0.3 }); },
+  rowdrum: (t) => { kick(ctx, sfxBus, t, 0.7); tone(98, t, 0.25, { to: 70, gain: 0.25 }); },
   drum: (t) => { kick(ctx, sfxBus, t, 0.9); noise(t, 0.08, { freq: 1800, q: 0.8, gain: 0.25 }); },
 };
 // ---- 一路鳴笛（11/25）：坐警車、消防車、救護車按下警笛後一直響到目的地；
@@ -425,6 +434,12 @@ const TRACKS = {
     style: 'bg', bpm: 116, inst: 'marimba', gain: 0.24,
     melody: seq('C5 C5 C5 G4 A4 A4 G4 . E5 E5 D5 D5 C5 . . .  G4 C5 C5 C5 G4 A4 A4 G4 E5 E5 D5 D5 C5 . . .'),
     bass: seq('C3 . G2 . F2 . C3 . C3 . G2 . C3 . . .  C3 . G2 . F2 . C3 . G2 . G2 . C3 . . .'),
+  },
+  // 日月潭：慢慢的五聲音階（湖面、山、船），音樂盒
+  lake: {
+    style: 'bg', bpm: 84, inst: 'musicbox', gain: 0.17,
+    melody: seq('E5 . G5 . A5 . . G5 E5 . D5 . . . . .  C5 . D5 . E5 . G5 . A5 . G5 . E5 . . .  D5 . E5 . G5 . . E5 D5 . C5 . . . . .  A4 . C5 . D5 . E5 . D5 . C5 . . . . .'),
+    bass: seq('C3 . . . G2 . . . A2 . . . E3 . . .  F2 . . . C3 . . . G2 . . . . . . .  C3 . . . G2 . . . A2 . . . E3 . . .  F2 . . . G2 . . . C3 . . . . . . .'),
   },
   // 晚晚說：很輕，讓小孩聽得清楚口令
   listen: {

@@ -9,7 +9,7 @@ import { div, wait, burst, stageW, shuffle, pick, stageRect } from '../core/dom.
 import { speak } from '../core/voice.js';
 import { sfx, playMusic } from '../core/audio.js';
 import { isDark, roomTint } from '../core/clock.js';
-import { turnsScene, turnsOn, nextTurn, whoseTurn, levelNow } from '../core/turns.js';
+import { turnsScene, turnsOn, nextTurn, whoseTurn, levelNow, callTurn } from '../core/turns.js';
 import { setHint, setPlaying, mountClock, stillNow } from '../core/session.js';
 import { shanSvg, kidSvg, starIcon } from '../art/stars.js';
 import { personSvg } from '../art/more.js';
@@ -22,6 +22,7 @@ import { backdrop, homeBtn, rotateBtns, jars, roundBtn, zoomBtns } from '../ui/h
 import { ICON2 } from '../art/more.js';
 import { seatbelt, placeBar } from './town.js';
 import { buildCities } from './worldcity.js';
+import { LAKE } from '../art/lake.js';
 
 const S = (inner, vb = '0 0 100 100') => `<svg viewBox="${vb}" width="100%" height="100%">${inner}</svg>`;
 const tree = (c = '#4fbf6e') => S(`<rect x="34" y="70" width="12" height="38" rx="5" fill="#a9744f"/><circle cx="40" cy="48" r="34" fill="${c}"/><circle cx="28" cy="36" r="10" fill="#fff" opacity=".2"/>`, '0 0 80 110');
@@ -42,12 +43,14 @@ export const ZONES = {
   suburb: { icon: itemSvg('cow'), music: 'farm', entry: 'farm' },
   sea: { icon: PLACE_ICON.beach, music: 'sea', entry: 'beach' },
   mountain: { icon: ZOO.panda, music: 'zoo', entry: 'zoo' },
+  lake: { icon: LAKE.rowboat, music: 'lake', entry: 'pier' },   // 日月潭（11/26）
 };
 // 各區域的地點（城市的在 town.js）
 const ZONE_PLACES = {
   suburb: { farm: { x: 420, y: 330, screen: 'farm', icon: itemSvg('feed'), h: 180 } },
   sea: { aquarium: { x: 300, y: 520, screen: 'aquarium', icon: PLACE_ICON.aquarium, h: 150 }, beach: { x: 720, y: 440, screen: 'beach', icon: PLACE_ICON.beach, h: 120 } },
   mountain: { zoo: { x: 450, y: 420, screen: 'zoo', icon: PLACE_ICON.zoo, h: 170 } },
+  lake: { pier: { x: 330, y: 560, screen: 'pier', icon: LAKE.rowboat, h: 110 }, thao: { x: 790, y: 330, screen: 'thao', icon: LAKE.pestle, h: 150 } },
 };
 export const zoneOfScreen = (screen) => {
   for (const [z, ps] of Object.entries(ZONE_PLACES)) for (const [id, p] of Object.entries(ps)) if (p.screen === screen) return [z, id];
@@ -67,9 +70,10 @@ function buildZone(zone) {
     suburb: 'background: radial-gradient(circle at 30% 30%, #c8ec9a, #a6d87a)',
     sea: 'background: linear-gradient(0deg, #f6e3b0 0 52%, #bfe9ff 52% 54%, #5ec3ee 54% 100%)',
     mountain: 'background: radial-gradient(circle at 60% 40%, #9fd87f, #6fb85a)',
+    lake: 'background: radial-gradient(circle at 50% 50%, #a6dd86, #7cc46a)',
   };
-  const skirt = { suburb: '#a6d987', sea: '#5ec3ee', mountain: '#7fc86a' }[zone];
-  const horizon = { suburb: 'nature', sea: 'sea', mountain: 'mountain' }[zone];
+  const skirt = { suburb: '#a6d987', sea: '#5ec3ee', mountain: '#7fc86a', lake: '#7cc46a' }[zone];
+  const horizon = { suburb: 'nature', sea: 'sea', mountain: 'mountain', lake: 'mountain' }[zone];
   const dio = createDiorama({ gl: true, w: W, d: D, walls: false, zoom: 0.8, zmin: 0.45, zmax: 1.6, cy: 0.58, skirt, horizon, floorCss: floors[zone] });
   const markers = {};
   const P = ZONE_PLACES[zone];
@@ -116,6 +120,24 @@ function buildZone(zone) {
     dio.addSprite({ x: 760, y: 420, z: 220, w: 120, h: 100, shadow: 0, html: cablecar() });
     dio.addSprite({ x: 860, y: 300, z: 320, w: 120, h: 100, shadow: 0, html: cablecar() });
     for (const [x, y] of [[100, 600], [180, 420], [900, 640], [520, 160]]) dio.addSprite({ x, y, w: 80, h: 110, shadow: 0.6, html: tree('#3f9f5a') });
+  }
+  if (zone === 'lake') {
+    // 日月潭：東邊圓圓的像太陽、西邊彎彎的像月亮；中間的拉魯島、山上的慈恩塔、碼頭、伊達邵的茅草屋、遊湖的船
+    const lakeSvg = `<svg viewBox="0 0 1000 800" width="100%" height="100%"><path d="M600 130 C800 110 900 260 870 420 C840 580 660 650 520 600 C460 580 420 600 360 640 C250 700 120 640 110 520 C100 400 200 330 300 350 C360 360 380 300 420 240 C470 170 520 140 600 130Z" fill="#bfe9ff"/><path d="M600 150 C780 135 870 270 845 415 C815 560 665 620 530 580 C470 560 420 585 360 615 C260 665 145 615 135 515 C128 410 215 360 305 375 C375 385 400 320 440 255 C485 185 530 160 600 150Z" fill="#3ea8e0"/>${[[300, 470], [620, 300], [700, 470], [480, 420]].map(([x, y]) => `<path d="M${x} ${y} q16 -10 32 0 q16 10 32 0" stroke="#bfe9ff" stroke-width="6" fill="none" opacity=".7" stroke-linecap="round"/>`).join('')}<path d="M330 600 L330 520" stroke="#b8865a" stroke-width="34"/><path d="M790 340 L760 400" stroke="#b8865a" stroke-width="26"/></svg>`;
+    dio.addDecal({ x: 0, y: 0, w: W, h: D, z: 0.7, html: lakeSvg, budget: 1.2e6 });
+    dio.addSprite({ x: 560, y: 400, z: 1, w: 120, h: 110, shadow: 0, html: LAKE.island });
+    for (const [x, y, w, h, c] of [[120, 120, 360, 280, '#5aa84a'], [880, 140, 320, 240, '#4f9a44'], [940, 640, 260, 200, '#6fb85a'], [60, 700, 280, 200, '#6fb85a']]) dio.addSprite({ x, y, w, h, shadow: 0, html: peak(c, false) });
+    dio.addSprite({ x: 180, y: 200, z: 150, w: 90, h: 110, shadow: 0, html: LAKE.pagoda });
+    // 碼頭：木頭棧橋伸進湖裡，旁邊停著小船
+    const p = P.pier, tap = 'go:pier';
+    dio.addBox({ x: p.x - 22, y: p.y - 110, w: 44, d: 130, h: 10, color: '#b8865a', tap });
+    dio.addSprite({ x: p.x + 70, y: p.y - 60, z: 2, w: 90, h: 70, shadow: 0, tap, html: LAKE.rowboat });
+    dio.addSprite({ x: p.x - 80, y: p.y - 80, z: 2, w: 110, h: 80, shadow: 0, tap, html: LAKE.yacht });
+    // 伊達邵：茅草屋和石板上的杵
+    const q = P.thao, tq = 'go:thao';
+    [[q.x - 90, q.y - 30], [q.x + 40, q.y - 60], [q.x + 60, q.y + 50]].forEach(([x, y]) => { dio.addBox({ x: x - 36, y: y - 28, w: 72, d: 56, h: 46, color: '#c99a6a', tap: tq }); dio.addGable({ x: x - 36, y: y - 28, z: 46, w: 72, d: 56, h: 34, over: 8, color: '#8a6a3a', wallColor: '#c99a6a', ridge: 'x', tap: tq }); });
+    dio.addSprite({ x: q.x - 20, y: q.y + 40, w: 80, h: 80, shadow: 0.3, tap: tq, html: LAKE.pestle });
+    for (const [x, y] of [[60, 420], [470, 700], [930, 420], [250, 720], [640, 60]]) dio.addSprite({ x, y, w: 80, h: 110, shadow: 0.6, html: tree(x % 3 ? '#3f9f5a' : '#4fbf6e') });
   }
   for (const [id, p] of Object.entries(P)) {
     markers[id] = dio.addSprite({ x: p.x, y: p.y, z: p.h + 60, w: 120, h: 120, html: `<div class="inner">${p.icon}</div>`, cls: 'marker place-mark', shadow: 0, tap: `go:${id}` });
@@ -219,10 +241,10 @@ function polyAt(P, t) {
   return { x: P[0][0], y: P[0][1], dx: 1, dy: 0 };
 }
 // 四個可以去的地方（真實的相對位置）
-const TW_ZONES = { city: [620, 1000], suburb: [520, 1450], sea: [720, 2310], mountain: [1065, 455] };   // 動物園在木柵（台北盆地東南邊的山上），101 在盆地裡
+const TW_ZONES = { city: [620, 1000], suburb: [520, 1450], sea: [720, 2310], mountain: [1065, 455], lake: [820, 1210] };   // 動物園在木柵（台北盆地東南邊的山上），101 在盆地裡
 // 以後會開放的地方
 const SOON = [
-  { id: 'sunmoon', x: 820, y: 1210, icon: '🚣' }, { id: 'hehuan', x: 930, y: 960, icon: '🏔️' },
+  { id: 'hehuan', x: 930, y: 960, icon: '🏔️' },
   { id: 'huadong', x: 1040, y: 1650, icon: '🌊' }, { id: 'penghu', x: 230, y: 1520, icon: '⛴️' }, { id: 'airport', x: 800, y: 400, icon: '✈️' },
 ];
 const cloudSvg = () => S(`<ellipse cx="60" cy="44" rx="42" ry="22" fill="#fff"/><ellipse cx="38" cy="38" rx="24" ry="20" fill="#fff"/><ellipse cx="80" cy="34" rx="22" ry="18" fill="#fff"/>`, '0 0 120 70');
@@ -255,7 +277,7 @@ export async function mountWorld(root, app) {
     <path d="M${RIDGE.map(([x, y]) => `${x} ${y}`).join(' L')}" stroke="url(#mt)" stroke-width="300" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".55"/>
     ${[...Array(9)].map((_, i) => `<path d="M${450 + (i % 3) * 40} ${1380 + Math.floor(i / 3) * 50} l60 20" stroke="#e3d36a" stroke-width="20" opacity=".7" stroke-linecap="round"/>`).join('')}
     ${cityGround(610, 985, 175, 140, 1)}${cityGround(955, 275, 130, 95, 2)}<ellipse cx="560" cy="2070" rx="80" ry="60" fill="#d3d9e2" opacity=".7"/><ellipse cx="490" cy="1740" rx="60" ry="45" fill="#d3d9e2" opacity=".6"/>
-    <ellipse cx="820" cy="1210" rx="34" ry="24" fill="#7fd3ff"/>
+    <circle cx="836" cy="1206" r="26" fill="#7fd3ff"/><path d="M812 1186 Q786 1206 810 1232 Q796 1208 812 1186Z" fill="#7fd3ff" stroke="#7fd3ff" stroke-width="8" stroke-linejoin="round"/>
     <path d="${linePath(HIGHWAY)}" stroke="#8a8fa0" stroke-width="22" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="${linePath(HIGHWAY)}" stroke="#fff" stroke-width="2.5" stroke-dasharray="14 14" fill="none"/>
     <path d="${linePath(RAILWAY)}" stroke="#a9744f" stroke-width="10" fill="none" stroke-dasharray="4 8" stroke-linecap="round"/>
     ${[[200, 1500, 50, 34], [260, 1560, 30, 22], [180, 1580, 24, 18], [1290, 1930, 34, 26], [1330, 2260, 46, 32]].map(([x, y, rx, ry]) => `<ellipse cx="${x}" cy="${y}" rx="${rx + 10}" ry="${ry + 10}" fill="#f2dca6"/><ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="#a4d97f"/>`).join('')}
@@ -366,7 +388,7 @@ export async function mountWorld(root, app) {
     await speak('shan', `world_go_${to}`, { node: shan.el });
     if (!app.alive()) return;
     if (to === here) { app.go('town'); return; }
-    const mode = await pickTravel(root);
+    const mode = to === 'lake' || here === 'lake' ? 'car' : await pickTravel(root);   // 日月潭沒有火車，開山路去
     if (!mode) { going = false; setPlaying(true); markers[to].el.classList.remove('hop'); return; }
     if (app.alive()) app.go('trip', { to, mode });
   });
@@ -461,11 +483,53 @@ export async function boardTrain(root, { say, alive, kind = 'train', glow = fals
   }
 }
 
+// ======================= 開山路去日月潭：暈車怎麼辦（11/26） =======================
+// 三個選擇：看遠方的山、開窗吹風（對）；低頭看平板（不對）。兩個對的都點到就好了。一起玩時輪流點。
+async function carSick(root, say, alive) {
+  const P = div('panel sickpanel');
+  const scrim = div('scrim');
+  root.append(scrim, P);
+  try {
+    P.innerHTML = `<div class="sick-face">${LAKE.sick}</div><div class="sick-opts">${shuffle(['far', 'window', 'tablet']).map((k) => `<button class="sick-opt" data-k="${k}">${{ far: LAKE.lookFar, window: LAKE.window, tablet: LAKE.tablet }[k]}<i></i></button>`).join('')}</div>`;
+    await say('sick_intro');
+    if (!alive()) return;
+    if (turnsOn()) await callTurn();
+    const got = new Set();
+    let busy = false;
+    await new Promise((resolve) => {
+      P.querySelectorAll('.sick-opt').forEach((b) => b.addEventListener('pointerdown', async (e) => {
+        e.stopPropagation();
+        const k = b.dataset.k;
+        if (busy || got.has(k) || b.classList.contains('no')) return;
+        busy = true;
+        if (k === 'tablet') { sfx('soft'); b.classList.add('no'); await say('sick_tablet'); }
+        else {
+          got.add(k); sfx('sparkle'); b.classList.add('yes');
+          const r = stageRect(b); burst(r.x, r.y, { n: 12, stars: true });
+          await say(k === 'far' ? 'sick_far' : 'sick_window');
+          if (got.size === 2) { resolve(); return; }
+          if (turnsOn()) nextTurn({ say: false });
+        }
+        busy = false;
+        const left = [...P.querySelectorAll('.sick-opt')].find((x) => x.dataset.k !== 'tablet' && !got.has(x.dataset.k));
+        setHint(() => left);
+      }));
+      setHint(() => [...P.querySelectorAll('.sick-opt')].find((x) => x.dataset.k !== 'tablet'));
+      const t = setInterval(() => { if (!alive()) { clearInterval(t); resolve(); } }, 400);
+    });
+    if (!alive()) return;
+    P.querySelector('.sick-face').classList.add('better');
+    sfx('fanfare');
+    await say('sick_done');
+  } finally { setHint(null); P.remove(); scrim.remove(); }
+}
+
 // ======================= 跨區域的路程：看窗外找東西 =======================
 const SCENERY = {
   suburb: { things: { cow: itemSvg('cow'), windmill: windmill(), tree: tree(), field: field() }, targets: ['cow', 'windmill'], sky: '#bfe6ff', ground: '#9fd87f', far: '#8fcf8a' },
   sea: { things: { boat: sailboat(), lighthouse: lighthouse(), palm: palm(), gull: seagull() }, targets: ['boat', 'lighthouse'], sky: '#bfe6ff', ground: '#f2dca6', far: '#3ec7e0' },
   mountain: { things: { monkey: monkey(), cable: cablecar(), tree: tree('#3f9f5a'), tree2: tree() }, targets: ['monkey', 'cable'], sky: '#cfe8ff', ground: '#7fc86a', far: '#5aa84a' },
+  lake: { things: { tea: LAKE.tea, deer: LAKE.deer, tree: tree('#3f9f5a'), mountain: LAKE.mountain }, targets: ['tea', 'deer'], sky: '#cfe8ff', ground: '#7fc86a', far: '#4f9a44' },
   city: { things: { mrt: PLACE_ICON.mrt, building: building(), building2: building('#ffd6a0'), tree: tree() }, targets: ['mrt', 'building'], sky: '#d6e8ff', ground: '#c9d3de', far: '#a9b8cc' },
 };
 
@@ -495,6 +559,7 @@ export async function mountTrip(root, app) {
     const things = scene.querySelector('.tthings'), look = scene.querySelector('.tlook');
     playMusic(mode === 'car' ? 'drive' : 'trip');
     await say(`trip_go_${to}`);
+    if (to === 'lake' && mode === 'car') { scene.classList.add('curvy'); await carSick(root, say, () => alive); if (!alive) return; }
     const targets = shuffle(sc.targets.slice());
     const easy = levelNow(app.profile) === 'easy';
     for (const t of targets) {

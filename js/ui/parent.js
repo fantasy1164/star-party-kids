@@ -34,6 +34,7 @@ const NAMES = {
   'aquarium.tunnel': '海底隧道', 'aquarium.penguin': '企鵝排隊', 'aquarium.rules': '海生館規則',
   'beach.sun': '防曬', 'beach.shells': '撿貝殼', 'beach.safe': '海邊安全',
   'zoo.find': '找動物', 'zoo.food': '餵動物吃什麼', 'zoo.rules': '動物園規則',
+  'pier.vest': '穿救生衣', 'pier.board': '上船規矩', 'pier.row': '划船跟節拍', 'pier.mirror': '水面倒影', 'thao.pestle': '邵族杵音', 'thao.safe': '湖邊安全',
   // 節慶舞台（11/25）
   'fest.bd_cake': '生日：插蠟燭', 'fest.bd_blow': '生日：許願吹蠟燭', 'fest.bd_gift': '生日：拆禮物', 'fest.bd_card': '偷偷做生日卡', 'fest.bd_song': '練習生日歌',
   'fest.pb_card_dad': '爸爸生日卡', 'fest.pb_card_mom': '媽媽生日卡', 'fest.pb_card_grandma': '阿嬤生日卡', 'fest.pb_song': '練習生日歌',

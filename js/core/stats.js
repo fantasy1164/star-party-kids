@@ -98,6 +98,7 @@ const BY_GAME = {
   'aquarium.tunnel': 'space', 'aquarium.penguin': 'social', 'aquarium.rules': 'safe',
   'beach.sun': 'health', 'beach.shells': 'space', 'beach.safe': 'safe',
   'zoo.find': 'space', 'zoo.food': 'health', 'zoo.rules': 'safe',
+  'pier.vest': 'care', 'pier.board': 'safe', 'pier.row': 'social', 'pier.mirror': 'space', 'thao.pestle': 'learn', 'thao.safe': 'safe',
   'fest.cn_clean': 'care', 'fest.mo_help': 'care', 'fest.fa_help': 'care', 'fest.dr_safe': 'safe', 'fest.md_bbq': 'safe',
   'ride.route': 'space',
   'fest.cn_lantern': 'learn', 'fest.md_story': 'learn', 'fest.md_phase': 'space', 'fest.dr_egg': 'space', 'fest.xm_tree': 'space', 'fest.xm_advent': 'learn',

@@ -40,11 +40,11 @@ export async function mountFame(root, app) {
   }
 
   // ---- 展示台：後排高、前排矮；閃閃在前排正中間 ----
-  // 後排 10 位、前排 9 位（11/24 加入謝醫生）
+  // 後排 10 位、前排 10 位（11/24 加入謝醫生、11/26 加入日月潭的鹿鹿）
   const order = [...CAST.slice(1, 11), ...CAST.slice(11, 15), CAST[0], ...CAST.slice(15)];
   const spots = [
     ...[...Array(10)].map((_, i) => ({ x: 128 + i * 116, y: 250, h: 90 })),
-    ...[...Array(9)].map((_, i) => ({ x: 130 + i * 130, y: 520, h: 40 })),
+    ...[...Array(10)].map((_, i) => ({ x: 120 + i * 118, y: 520, h: 40 })),
   ];
   const met = (id) => !!state.met[id];
   const seats = order.map((c, i) => {

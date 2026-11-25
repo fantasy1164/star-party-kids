@@ -5,6 +5,7 @@ import { guaSvg, dongSvg, bibiSvg } from '../art/more.js';
 import { babaSvg, dadaSvg, duoduoSvg, baobaoSvg, jiujiuSvg } from '../art/town.js';
 import { shaoSvg } from '../art/fun.js';
 import { xieSvg } from '../art/doctor.js';
+import { luoluSvg } from '../art/lake.js';
 import { huahuaSvg, xiuxiuSvg, guguSvg, xinxinSvg, baibaiSvg, jiajiaSvg, zhuzhuSvg } from '../art/world.js';
 
 export const CAST = [
@@ -26,6 +27,7 @@ export const CAST = [
   { id: 'baibai', name: '白白', svg: baibaiSvg, screens: ['aquarium'], color: '#bfe6ff' },
   { id: 'jiajia', name: '夾夾', svg: jiajiaSvg, screens: ['beach'], color: '#ff7a4a' },
   { id: 'zhuzhu', name: '竹竹', svg: zhuzhuSvg, screens: ['zoo'], color: '#4fbf6e' },
+  { id: 'luolu', name: '鹿鹿', svg: luoluSvg, screens: ['pier', 'thao'], color: '#f0c44a' },   // 日月潭的白鹿（11/26）
   { id: 'xie', name: '謝醫生', svg: xieSvg, screens: ['clinic'], color: '#5b8fd8' },   // 唯一的人類角色（小兒科）
 ];
 export const CAST_BY_ID = Object.fromEntries(CAST.map((c) => [c.id, c]));
