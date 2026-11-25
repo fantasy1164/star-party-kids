@@ -277,6 +277,44 @@ body.turn-kk .glowy > svg { filter: drop-shadow(0 0 10px #ff6a2b); }
 .parent input.wide { width: min(620px, 100%); }
 .parent .btnrow { margin: 18px 0 6px; }
 .parent b.ok { color: #1a8a3a; } .parent b.bad { color: #c9462c; }
+
+/* 家長頁「進階」：假裝現在幾點（手機上整個舞台會縮到約 43%，所以按鈕都做大） */
+.parent .tm { background: #fff; border-radius: 28px; padding: 22px 26px 0; box-shadow: 0 4px 14px rgba(0,0,0,.06); margin-bottom: 22px; }
+.parent .tm-top { display: flex; gap: 26px; align-items: center; }
+.parent .tm-win { flex: none; width: 230px; height: 170px; border-radius: 24px; position: relative; overflow: hidden; border: 6px solid #e9dfcc; }
+.parent .tm-win .orb { position: absolute; width: 54px; height: 54px; border-radius: 50%; transform: translate(-50%, -50%); }
+.parent .tm-win .sun { background: radial-gradient(circle, #fff6b0, #ffc83d 60%, #ffb02e); box-shadow: 0 0 30px #ffd24d; }
+.parent .tm-win .moon { background: #fff8dc; box-shadow: 0 0 24px #fff3b0, inset -14px -6px 0 #e9dca8; }
+.parent .tm-win .hill { position: absolute; left: -20px; right: -20px; bottom: -40px; height: 80px; border-radius: 50%; background: #5aa85a; }
+.parent .tm-win.dark .hill { background: #2d4a3a; }
+.parent .tm-win .star { position: absolute; width: 5px; height: 5px; background: #fff; border-radius: 50%; }
+.parent .tm-read { flex: 1; min-width: 0; }
+.parent .tm-badge { display: inline-block; font-size: 20px; font-weight: 700; padding: 6px 16px; border-radius: 999px; background: #ffe2cc; color: #c5561a; }
+.parent .tm-badge.real { background: #dff3e4; color: #1a8a3a; }
+.parent .tm-badge.edit { background: #e2f0ff; color: #2a6fb0; }
+.parent .tm-clock { font-size: 96px; font-weight: 800; line-height: 1; margin: 8px 0 4px; letter-spacing: 2px; font-variant-numeric: tabular-nums; }
+.parent .tm-date { font-size: 28px; color: #6b5636; font-weight: 600; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.parent .tm-date .fe, .parent .tm-dshow .fe { font-size: 20px; background: #ffe9f0; color: #c2185b; border-radius: 999px; padding: 4px 14px; }
+.parent .tm-what { font-size: 24px; margin-top: 8px; color: #444; }
+.parent .tm-steps { display: flex; flex-direction: column; gap: 12px; }
+.parent .pbody .tm-step { width: 110px; height: 110px; border-radius: 26px; font-size: 30px; font-weight: 800; padding: 0; background: #f3ecdf; color: #6b5636; margin: 0; }
+.parent .tm-h { font-size: 22px; font-weight: 700; color: #7a5a2a; margin: 22px 0 10px; }
+.parent .tm-tiles { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; }
+.parent .pbody .tile { margin: 0; height: 150px; border-radius: 24px; padding: 10px 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,.35); border: 5px solid transparent; transition: transform .15s; }
+.parent .pbody .tile.lt { color: #2b3a55; text-shadow: 0 1px 0 rgba(255,255,255,.6); }
+.parent .tile .ti { font-size: 48px; line-height: 1; text-shadow: none; }
+.parent .tile .tn { font-size: 24px; font-weight: 800; }
+.parent .tile .tt { font-size: 19px; }
+.parent .pbody .tile.on { border-color: #ff8a3d; box-shadow: 0 0 0 5px #fff inset, 0 6px 16px rgba(255,138,61,.45); transform: translateY(-4px); }
+.parent .tm-dates { display: flex; align-items: center; gap: 14px; }
+.parent .pbody .dbtn { margin: 0; height: 96px; min-width: 96px; border-radius: 24px; font-size: 26px; background: #f3ecdf; color: #6b5636; font-weight: 700; padding: 0 22px; display: inline-flex; align-items: center; justify-content: center; }
+.parent .pbody .dbtn.today { background: #e2f0ff; color: #2a6fb0; }
+.parent .dbtn.dpick { position: relative; overflow: hidden; }
+.parent .dbtn.dpick input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; font-size: 16px; }
+.parent .tm-dshow { flex: 1; height: 96px; border-radius: 24px; background: #fff8ef; border: 3px dashed #e3cfa8; display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 700; }
+.parent .tm-act { position: sticky; bottom: -80px; /* 抵掉 .pbody 的下方留白，貼齊畫面底 */ display: flex; gap: 16px; margin: 22px -26px 0; padding: 16px 26px 22px; background: #fff; box-shadow: 0 -12px 14px -10px rgba(0,0,0,.15); border-radius: 0 0 28px 28px; z-index: 1; }
+.parent .pbody .tm-act .go { flex: 2; margin: 0; height: 110px; border-radius: 28px; font-size: 32px; font-weight: 800; }
+.parent .pbody .tm-act .back { flex: 1; margin: 0; height: 110px; border-radius: 28px; font-size: 26px; font-weight: 700; background: #9a9389; }
 .parent .pbody button.armed { background: #d9473b; }
 
 /* ---------- 臥室細節 ---------- */

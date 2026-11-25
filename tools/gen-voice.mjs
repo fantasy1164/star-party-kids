@@ -107,6 +107,7 @@ async function synth({ charId, text, pron }) {  // text 可以是很多句用停
     if (res.status === 429 && /per day|daily/i.test(msg)) {
       const e = new Error(`今日額度已用完：${msg}`);
       e.quota = true;
+      e.resetAt = quotaResetAt(msg, res.headers.get('retry-after'));
       throw e;
     }
     // 每分鐘太頻繁或伺服器忙：照伺服器建議的時間等，再試
@@ -120,6 +121,37 @@ async function synth({ charId, text, pron }) {  // text 可以是很多句用停
     }
     throw new Error(`HTTP ${res.status}: ${msg}`);
   }
+}
+
+// 每日額度的重置時間：先看伺服器給的等待時間（訊息裡的 retry in 4h59m18s、retryDelay、Retry-After），
+// 都沒有就用官方規則：美國太平洋時間午夜（台灣冬天 16:00、夏天 15:00，會自己算夏令時間）
+function quotaResetAt(msg, retryAfter) {
+  let sec = 0;
+  const m = /retry in\s*(?:(\d+)h)?\s*(?:(\d+)m)?\s*(?:(\d+(?:\.\d+)?)s)?/i.exec(msg);
+  if (m && (m[1] || m[2] || m[3])) sec = (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0);
+  const d = /"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"/.exec(msg);
+  if (!sec && d) sec = +d[1];
+  if (!sec && retryAfter && /^\d+$/.test(retryAfter)) sec = +retryAfter;
+  return sec > 0 ? new Date(Date.now() + sec * 1000) : nextPacificMidnight();
+}
+function nextPacificMidnight(now = new Date()) {
+  const tz = 'America/Los_Angeles';
+  const parts = (t) => Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' })
+    .formatToParts(t).filter((p) => p.type !== 'literal').map((p) => [p.type, +p.value]));
+  const offsetMs = (t) => { const p = parts(t); return Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second) - Math.floor(t.getTime() / 1000) * 1000; };
+  const p = parts(now);
+  const wall = Date.UTC(p.year, p.month - 1, p.day + 1, 0, 0, 0); // 明天 00:00（太平洋時間的牆上時間）
+  let t = new Date(wall - offsetMs(now));
+  t = new Date(wall - offsetMs(t)); // 跨夏令時間的那天再校正一次
+  return t;
+}
+function resetText(at) {
+  const p2 = (n) => String(n).padStart(2, '0');
+  const r = new Date(Math.round(at.getTime() / 60000) * 60000);
+  const today = new Date();
+  const day = r.toDateString() === today.toDateString() ? '今天' : `${r.getMonth() + 1}/${r.getDate()}`;
+  const mins = Math.max(0, Math.round((r - today) / 60000));
+  return `會在${day} ${p2(r.getHours())}:${p2(r.getMinutes())}（還要 ${Math.floor(mins / 60)} 小時 ${mins % 60} 分）`;
 }
 
 // 回應格式可能調整，所以不寫死路徑：在整個回應裡找最後一段 audio 資料
@@ -486,7 +518,7 @@ if (flag('dry')) {
     } catch (e) {
       failed.push(...batch.map((j) => j.key));
       console.log(`    失敗：${e.message}`);
-      if (e.quota) { console.log('今天的每日額度用完了（台灣時間下午 4 點左右重置）。重置後再執行一次，已完成的會自動跳過。'); break; }
+      if (e.quota) { console.log(`今天的每日額度用完了，${resetText(e.resetAt)}重置。重置後再執行一次，已完成的會自動跳過。`); break; }
       if (e.split) {
         console.log('    這批的停頓不明顯，可以之後用 --batch 5 或 --single 補做。');
         // 連續兩批都切不開：模型可能沒照停頓唸，先停下來，免得浪費額度

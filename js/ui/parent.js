@@ -4,8 +4,9 @@ import { div } from '../core/dom.js';
 import { state, save, clearAll } from '../core/store.js';
 import { setMusicVolume, setQuietMode } from '../core/audio.js';
 import { clearRest, resting, restLeftMs, remainingMs } from '../core/session.js';
-import { TEST_KEY, testSettings, dateKey } from '../core/clock.js';
+import { TEST_KEY, dateKey } from '../core/clock.js';
 import * as fest from '../core/festival.js';
+import { timeMachineHtml, bindTimeMachine } from './timemachine.js';
 import { KIDS } from '../config.js';
 import * as M from '../core/mult.js';
 import { syncConfig, setSyncConfig, syncNow, syncStatus, onSyncStatus, configured, deviceName, pingCloud } from '../core/sync.js';
@@ -73,7 +74,6 @@ function syncText(st = syncStatus()) {
 
 export function openParent(root, onClose) {
   const s = state.settings;
-  const test = testSettings();
   const p = div('parent');
   let tab = sessionStorage.getItem(TAB_KEY) || 'today';
   if (!TABS.some(([id]) => id === tab)) tab = 'today';
@@ -155,10 +155,10 @@ export function openParent(root, onClose) {
       <h3>節慶相簿</h3>
       <div class="chips">${fest.album().map((a) => `<span class="chip">${a.y} ${fest.FESTS[a.id]?.name || a.id}</span>`).join('') || '<span class="none">還沒有，節慶期間在城市的節慶舞台把活動做完就有</span>'}</div>`,
     dev: () => `<h2>進階</h2>
+      ${timeMachineHtml()}
       ${sw('nolimit', '不限制每次遊玩時間')}
-      ${field('假裝現在幾點', `<input id="thour" type="number" step="0.5" min="0" max="23.5" placeholder="例如 20.5" value="${test.hour ?? ''}"><button id="applyTest">套用並重新開啟</button><button id="clearTest" class="gray">回到真實時間</button>`)}
       ${field('測試', '<button id="perf" class="gray">立體引擎效能測試</button><button id="guide" class="gray">看「加到主畫面」引導</button><button id="gestAgain" class="gray">下次打開再練習手勢</button>')}
-      <p class="note">網址參數：?hour=20.5 假裝幾點、?notts=1 不出聲、?debug=1 顯示語音事件、?guide 看安裝引導。</p>
+      <p class="note">網址參數：?hour=20.5 假裝幾點、?date=2026-12-24 假裝哪天、?notts=1 不出聲、?debug=1 顯示語音事件、?guide 看安裝引導。</p>
       <h3 class="danger-h">危險區</h3>
       <button id="wipe" class="danger">清除全部進度</button>`,
   };
@@ -217,13 +217,8 @@ export function openParent(root, onClose) {
     $('recheck') && ($('recheck').onclick = () => { state.mult = { ...(state.mult || {}), checked: false }; save(); $('recheck').textContent = '下次進學堂會重新檢查 ✓'; });
     body.querySelectorAll('.bday').forEach((inp) => { inp.onchange = () => { fest.setBirthday(inp.dataset.id, inp.value); }; });
     body.querySelectorAll('.fprev').forEach((b) => { b.onclick = () => { localStorage.setItem(TEST_KEY, JSON.stringify({ date: b.dataset.date, hour: 10, setAt: Date.now() })); location.reload(); }; });
-    if ($('applyTest')) {
-      $('applyTest').onclick = () => {
-        const h = $('thour').value;
-        localStorage.setItem(TEST_KEY, JSON.stringify({ hour: h === '' ? null : parseFloat(h), setAt: Date.now() }));
-        location.reload();
-      };
-      $('clearTest').onclick = () => { localStorage.removeItem(TEST_KEY); location.reload(); };
+    bindTimeMachine(body, s);
+    if ($('perf')) {
       $('perf').onclick = () => { location.href = 'engine-test.html?spin=1'; };
       $('guide').onclick = () => { location.href = '?guide'; };
       $('gestAgain').onclick = () => { delete state.seen.gestures; s.gestureTip = true; save(); $('gestAgain').textContent = '下次打開會練習 ✓'; };
