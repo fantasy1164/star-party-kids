@@ -1338,3 +1338,26 @@ body.turn-kk .glowy > svg { filter: drop-shadow(0 0 10px #ff6a2b); }
 .dio-sprite.cloud { opacity: .85; pointer-events: none; }
 .dio-sprite.whale .spout { opacity: 0; animation: spout 6s ease-out infinite; transform-origin: 50px 30px; }
 @keyframes spout { 0%, 70% { opacity: 0; transform: scaleY(.3); } 78% { opacity: 1; transform: scaleY(1); } 92% { opacity: 0; transform: scaleY(1.2); } }
+
+/* ---- 生活裡的九九乘法（11/26） ---- */
+.lifepanel { background: linear-gradient(#fff8ea, #ffe9c6); }
+.life-g { position: absolute; border-radius: 20px; padding: 6px; background: rgba(255,255,255,.55); box-shadow: 0 4px 0 rgba(0,0,0,.06); transition: transform .25s, box-shadow .25s, opacity .25s; opacity: .55; }
+.life-g svg { width: 100%; height: 100%; display: block; }
+.life-g.lit { opacity: 1; background: #fff; box-shadow: 0 0 0 5px #fff, 0 0 24px #ffd23f; transform: translateY(-6px); }
+.life-g.peek { opacity: 1; animation: glow2d 1.2s ease-in-out infinite; }
+.life-g .cnt { position: absolute; left: 50%; top: -26px; transform: translateX(-50%); min-width: 52px; text-align: center; padding: 2px 12px; border-radius: 999px; font-size: 28px; font-weight: 800; color: #fff; background: #cfc6b4; }
+.life-g.lit .cnt { background: #3ea8e0; }
+.lifepanel .life-ans { left: 50%; right: auto; transform: translateX(-50%); bottom: 26px; }
+.life-skip { position: absolute; right: 24px; bottom: 24px; width: 90px; height: 90px; border-radius: 50%; border: 0; background: #e9dfcc; font-size: 40px; color: #8a7a5a; box-shadow: 0 5px 0 #d2c3a5; z-index: 30; }
+
+/* 收音機口訣歌（坐車時，左下角） */
+.radio-box { position: absolute; left: 24px; bottom: 150px; z-index: 22; display: flex; align-items: center; gap: 12px; }
+.radio-btn { width: 110px; height: 110px; border-radius: 50%; border: 0; padding: 14px; background: radial-gradient(circle at 35% 30%, #fff, #ffe9c6 60%, #ffc27a); box-shadow: 0 6px 0 #d99a4a; }
+.radio-btn svg { width: 100%; height: 100%; }
+.radio-box.on .radio-btn { animation: radioBop .5s ease-in-out infinite alternate; box-shadow: 0 6px 0 #d99a4a, 0 0 22px #ffd23f; }
+@keyframes radioBop { to { transform: scale(1.07) rotate(-4deg); } }
+.radio-card { min-width: 0; font-size: 40px; font-weight: 800; color: #3a3550; background: #fff; border-radius: 22px; padding: 0; box-shadow: 0 5px 0 #e3cfa8; white-space: nowrap; }
+.radio-box.on .radio-card { padding: 10px 22px; }
+.radio-card:empty { display: none; }
+.radio-card .p { color: #ff6a2b; }
+.radio-card.pop { animation: popin .35s cubic-bezier(.3,1.6,.5,1) both; }

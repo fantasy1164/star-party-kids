@@ -8,8 +8,9 @@
 // 一起玩：愷愷認路、岳岳煞車，兩個人同時有事做。
 import { createDiorama, lit } from '../engine/diorama.js';
 import { div, wait, burst, stageW, shuffle, pick, toStage, stageRect } from '../core/dom.js';
-import { speak } from '../core/voice.js';
-import { sfx, playMusic, startSiren, stopSiren } from '../core/audio.js';
+import { speak, isSpeaking, quietFor } from '../core/voice.js';
+import * as MUL from '../core/mult.js';
+import { sfx, playMusic, startSiren, stopSiren, playNote } from '../core/audio.js';
 import { isDark, roomTint, hour } from '../core/clock.js';
 import { turnsOn, turnsScene, whoseTurn, nextTurn, callTurn, levelNow } from '../core/turns.js';
 import { setHint, setPlaying, mountClock } from '../core/session.js';
@@ -1191,6 +1192,9 @@ export async function mountRide(root, app) {
       sfx('click');
       if (stopPressed) stopPressed();
     });
+    // 收音機口訣歌（11/26）：岳岳在的時候左下角有一台收音機，點了才放「正在練的那一排」的口訣（不強迫），再點一下關掉。
+    // 每一句一個音、一個「6 × 3 = 18」的牌子；叭叭要說話時收音機自己停一下（不會兩個聲音疊在一起）。
+    const radio = app.profile.members.includes('yy') ? radioBox(root, () => alive) : null;
     // 出發前：拉遠、把小鎮轉到「旗子在前面（畫面上方）」，讓小孩真的看到旗子，再回到跟著車子
     dio.lock(false);   // 11/25：開車途中也可以轉小鎮（鏡頭照樣跟著車子）
     following = false;
@@ -1235,6 +1239,7 @@ export async function mountRide(root, app) {
     }
     if (vehicle === 'garbage' && segs === 0) { await garbageStop(); chk(); }
     stopBtn.remove();
+    radio?.remove();
     traffic?.setSiren(false);
     stopSiren();
     car.el.classList.remove('siren-on');
@@ -1538,6 +1543,41 @@ async function helmet(root, app, alive) {
   } finally {
     scrim.remove(); pnl.remove(); node.remove();
   }
+}
+
+// ---- 收音機口訣歌 ----
+const RADIO_SVG = `<svg viewBox="0 0 100 100"><rect x="10" y="32" width="80" height="52" rx="12" fill="#ff8a3d"/><path d="M30 32 L64 12" stroke="#4a3b6b" stroke-width="4" stroke-linecap="round"/><circle cx="36" cy="58" r="15" fill="#4a3b6b"/><circle cx="36" cy="58" r="6" fill="#ffd23f"/><rect x="58" y="44" width="22" height="8" rx="3" fill="#fff"/><rect x="58" y="58" width="22" height="6" rx="3" fill="#ffe0b0"/><rect x="58" y="68" width="22" height="6" rx="3" fill="#ffe0b0"/></svg>`;
+const RADIO_NOTES = ['C5', 'D5', 'E5', 'F5', 'G5', 'A5', 'B5', 'C6', 'D6'];
+function radioBox(root, alive) {
+  const wrap = div('radio-box ui', `<button class="radio-btn">${RADIO_SVG}</button><div class="radio-card"></div>`);
+  root.appendChild(wrap);
+  const btn = wrap.querySelector('.radio-btn'), card = wrap.querySelector('.radio-card');
+  let on = false, run = 0;
+  const stop = () => { on = false; run++; wrap.classList.remove('on'); card.textContent = ''; };
+  const play = async (me) => {
+    const a = MUL.focusRow();
+    for (let b = 1; b <= 9; b++) {
+      while ((isSpeaking() || quietFor() < 700) && on && run === me && alive()) await wait(200);
+      if (!on || run !== me || !alive()) return;
+      card.innerHTML = `<b>${a}</b> × <b>${b}</b> = <b class="p">${a * b}</b>`;
+      card.classList.remove('pop'); void card.offsetWidth; card.classList.add('pop');
+      playNote(RADIO_NOTES[b - 1], 'marimba');
+      await speak('bibi', `c_${a}_${b}`, { node: btn });
+      await wait(450);
+    }
+    if (run === me) stop();
+  };
+  btn.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    sfx('tap');
+    if (on) { stop(); return; }
+    on = true; run++;
+    wrap.classList.add('on');
+    play(run);
+  });
+  // 拍手：點牌子跟著拍（只有星星和聲音，不算分）
+  card.addEventListener('pointerdown', (e) => { e.stopPropagation(); if (!on) return; sfx('pop'); const r = stageRect(card); burst(r.x, r.y - 20, { n: 8, stars: true, colors: ['#ffd23f', '#fff3a0'] }); });
+  return { remove() { stop(); wrap.remove(); } };
 }
 
 // ======================= 專屬車的小任務（11/25） =======================

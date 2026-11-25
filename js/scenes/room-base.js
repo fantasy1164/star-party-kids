@@ -24,6 +24,7 @@ import { phase, isDark, roomTint } from '../core/clock.js';
 import { turnsScene, whoseTurn } from '../core/turns.js';
 import { setHint, setPlaying, mountClock, timeUp } from '../core/session.js';
 import { gameBegin, gameEnd } from '../core/stats.js';
+import { lifeMult, lifeMultReady, resetLifeVisit } from './lifemult.js';
 import { KIDS } from '../config.js';
 import { backdrop, homeBtn, rotateBtns, jars } from '../ui/hud.js';
 
@@ -216,6 +217,8 @@ export async function runRoom(root, app, spec) {
     if (sp) { sfx('boing'); hop(sp.el); }
   });
   spec.setup?.(R);
+  resetLifeVisit(spec.id);   // 每次走進來，可以再出一題
+  window.__room = { R, id: spec.id };   // 測試用
 
   async function startGame(id) {
     if (busy || !alive) return;
@@ -246,6 +249,14 @@ export async function runRoom(root, app, spec) {
       // 愷愷：每做完一關多一張貼紙（可以拿去貼在小鎮上）
       if (alive && members.includes('kk')) await showNewSticker(root);
       refreshPlan();
+      // 生活裡的九九乘法（11/26）：這個地方第一次做完關卡，嗶嗶問一題（岳岳在才出、每次來最多一題、可跳過）
+      if (alive && lifeMultReady(R, spec.id) && !timeUp()) {
+        gameBegin(members, 'life.mult');
+        let ok = false;
+        try { await lifeMult(R, spec.id); ok = true; } catch (e) { if (e !== ABORT) console.error(e); }
+        gameEnd(ok && alive);
+        if (!alive) return;
+      }
     }
     if (!alive) return;
     dio.lock(false);

@@ -101,6 +101,11 @@ export function nextTurn({ say = true } = {}) {
   paint();
   return say ? callTurn() : Promise.resolve();
 }
+// 換到某個人（已經是他就只唱名）
+export function turnTo(id) {
+  if (!turnsOn() || !ids.includes(id)) return Promise.resolve();
+  return cur === id ? callTurn() : nextTurn();
+}
 // 現在用誰的難度：一起玩時看輪到的人，一個人玩看自己
 export function levelNow(profile) {
   if (turnsOn()) return KIDS[cur].level;
