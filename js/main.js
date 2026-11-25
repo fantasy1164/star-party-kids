@@ -24,7 +24,7 @@ import { mountWorld, mountTrip } from './scenes/world.js';
 import { mountFire, mountMrt, mountLibrary, mountPost, mountGarbage } from './scenes/city.js';
 import { mountAquarium, mountBeach, mountZoo } from './scenes/nature.js';
 import { mountPier, mountThao } from './scenes/lake.js';
-import { mountAirport, mountPenghu, mountHehuan } from './scenes/far.js';
+import { mountAirport, mountPenghu, mountHehuan, mountHuadong } from './scenes/far.js';
 import { mountRest, mountSleep } from './ui/rest.js';
 import { openParent } from './ui/parent.js';
 import { moodCheck } from './ui/mood.js';
@@ -32,7 +32,7 @@ import { pruneLogs, snapMult } from './core/stats.js';
 import { needInstallGuide, showInstallGuide } from './ui/install.js';
 import { syncNow, setupSync } from './core/sync.js';
 
-const SCREENS = { opening, town: mountTown, ride: mountRide, house, bedroom, bath, kitchen, living, school, market: mountMarket, park: mountPark, clinic: mountClinic, farm: mountFarm, police: mountPolice, draw, world: mountWorld, trip: mountTrip, fire: mountFire, mrt: mountMrt, library: mountLibrary, post: mountPost, garbage: mountGarbage, aquarium: mountAquarium, beach: mountBeach, zoo: mountZoo, pier: mountPier, thao: mountThao, airport: mountAirport, penghu: mountPenghu, hehuan: mountHehuan, fame: mountFame, fest: mountFest, rest: mountRest, sleep: mountSleep };
+const SCREENS = { opening, town: mountTown, ride: mountRide, house, bedroom, bath, kitchen, living, school, market: mountMarket, park: mountPark, clinic: mountClinic, farm: mountFarm, police: mountPolice, draw, world: mountWorld, trip: mountTrip, fire: mountFire, mrt: mountMrt, library: mountLibrary, post: mountPost, garbage: mountGarbage, aquarium: mountAquarium, beach: mountBeach, zoo: mountZoo, pier: mountPier, thao: mountThao, airport: mountAirport, penghu: mountPenghu, hehuan: mountHehuan, huadong: mountHuadong, fame: mountFame, fest: mountFest, rest: mountRest, sleep: mountSleep };
 const ROOMS = ['town', 'ride', 'house', 'bedroom', 'bath', 'kitchen', 'living', 'school', 'market', 'park', 'clinic', 'farm'];
 let current = null;
 

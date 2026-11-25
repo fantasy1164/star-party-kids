@@ -115,3 +115,35 @@ export const HH = {
   breath: S('<circle cx="40" cy="50" r="28" fill="#ffd9b8"/><circle cx="32" cy="44" r="3.5" fill="#2a2f3a"/><circle cx="48" cy="44" r="3.5" fill="#2a2f3a"/><ellipse cx="40" cy="62" rx="6" ry="4" fill="#c2344a"/><path d="M70 50 q8 -4 16 0 M72 62 q8 -4 16 0 M70 38 q8 -4 16 0" stroke="#9fc7e6" stroke-width="4" fill="none" stroke-linecap="round"/>'),
   foot: S(`<path d="M36 12 Q58 10 60 34 Q62 54 56 72 Q50 90 36 86 Q24 82 26 60 Q28 40 24 26 Q24 14 36 12Z" fill="#8a5a32"/>${[[32, 6], [42, 4], [52, 6], [60, 12]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="4" fill="#8a5a32"/>`).join("")}`),
 };
+
+// ---- 花東（11/26）----
+// 飄飄：彩色熱氣球（台東鹿野），氣球上是臉，下面吊著小籃子
+export const piaopiaoSvg = () => S(`${shadow}
+  <path d="M80 8 C126 8 146 44 140 72 C134 98 108 112 96 122 H64 C52 112 26 98 20 72 C14 44 34 8 80 8Z" fill="#ff8a3d"/>
+  <path d="M80 8 C100 8 108 44 106 72 C104 98 94 112 90 122 H70 C66 112 56 98 54 72 C52 44 60 8 80 8Z" fill="#ffd23f"/>
+  <path d="M80 8 C86 8 88 44 88 72 C88 98 84 112 82 122 H78 C76 112 72 98 72 72 C72 44 74 8 80 8Z" fill="#46b46a"/>
+  <path d="M30 44 Q80 54 130 44" stroke="#fff" stroke-width="4" fill="none" opacity=".6"/>
+  ${eyes(66, 94, 68, 6)}${smile(80, 82, 9)}${blush(56, 104, 80)}
+  <path d="M64 122 L66 136 M96 122 L94 136" stroke="#8a5a32" stroke-width="3"/>
+  <rect x="60" y="134" width="40" height="22" rx="5" fill="#c98b5e"/><path d="M60 142 H100 M60 150 H100" stroke="#a86b3c" stroke-width="2"/>`, CV);
+FAR_ICON.huadong = S('<path d="M50 6 C76 6 86 28 82 46 C78 60 64 68 58 74 H42 C36 68 22 60 18 46 C14 28 24 6 50 6Z" fill="#ff8a3d"/><path d="M50 6 C60 6 64 28 62 46 C60 60 54 68 52 74 H48 C46 68 40 60 38 46 C36 28 40 6 50 6Z" fill="#ffd23f"/><rect x="40" y="80" width="20" height="12" rx="3" fill="#c98b5e"/><path d="M42 74 L42 80 M58 74 L58 80" stroke="#8a5a32" stroke-width="2"/>');
+export const HD = {
+  helmet: S('<path d="M14 64 Q14 22 50 22 Q86 22 86 64Z" fill="#ffd23f"/><rect x="10" y="60" width="80" height="12" rx="6" fill="#f0b800"/><path d="M34 26 Q50 18 66 26 L62 40 Q50 34 38 40Z" fill="#fff" opacity=".5"/><path d="M30 72 Q30 86 44 86" stroke="#3a3550" stroke-width="4" fill="none"/>'),
+  bird: S('<path d="M10 50 Q30 34 46 46 L50 50 L54 46 Q70 34 90 50 Q70 44 58 54 L64 72 L50 60 L36 72 L42 54 Q30 44 10 50Z" fill="#2f3a6a"/><circle cx="50" cy="50" r="6" fill="#ff8a3d"/>'),
+  bridge: S(`<path d="M4 40 Q50 80 96 40" stroke="#ff4a4a" stroke-width="6" fill="none"/><path d="M4 62 Q50 74 96 62" stroke="#8a5a32" stroke-width="8" fill="none"/>${[16, 30, 44, 58, 72, 86].map((x, i) => `<path d="M${x} ${46 + Math.sin(i / 1.6) * 12} V${66 + Math.sin(i / 1.6) * 3}" stroke="#ff4a4a" stroke-width="2"/>`).join("")}<rect x="0" y="30" width="8" height="40" fill="#7d8494"/><rect x="92" y="30" width="8" height="40" fill="#7d8494"/>`),
+  monkey: S('<circle cx="50" cy="40" r="20" fill="#a9744f"/><ellipse cx="50" cy="45" rx="12" ry="10" fill="#f2c7a0"/><circle cx="44" cy="40" r="3" fill="#2a2f3a"/><circle cx="56" cy="40" r="3" fill="#2a2f3a"/><ellipse cx="50" cy="72" rx="18" ry="16" fill="#a9744f"/><path d="M68 76 Q86 70 84 52" stroke="#a9744f" stroke-width="6" fill="none" stroke-linecap="round"/><circle cx="30" cy="38" r="6" fill="#f2c7a0"/><circle cx="70" cy="38" r="6" fill="#f2c7a0"/>'),
+  waterfall: S('<rect x="10" y="10" width="26" height="80" fill="#7d8494"/><rect x="64" y="10" width="26" height="80" fill="#7d8494"/><rect x="36" y="10" width="28" height="74" fill="#bfe9ff"/><path d="M40 14 V80 M50 14 V82 M60 14 V80" stroke="#fff" stroke-width="3" opacity=".8"/><ellipse cx="50" cy="88" rx="26" ry="8" fill="#7fd3ff"/><path d="M38 4 H62 L58 10 H42Z" fill="#c9553a"/>'),
+  signL: S('<circle cx="50" cy="50" r="42" fill="#3ea8e0"/><path d="M70 50 H32 M46 34 L30 50 L46 66" stroke="#fff" stroke-width="10" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'),
+  signR: S('<circle cx="50" cy="50" r="42" fill="#3ea8e0"/><path d="M30 50 H68 M54 34 L70 50 L54 66" stroke="#fff" stroke-width="10" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'),
+  signDown: S('<path d="M50 8 L94 88 H6Z" fill="#ffd23f" stroke="#ff4a4a" stroke-width="6" stroke-linejoin="round"/><path d="M24 76 L76 46" stroke="#3a3550" stroke-width="8" stroke-linecap="round"/><circle cx="40" cy="58" r="6" fill="#3a3550"/>'),
+  signWalk: S('<path d="M50 8 L94 88 H6Z" fill="#ffd23f" stroke="#ff4a4a" stroke-width="6" stroke-linejoin="round"/><circle cx="50" cy="38" r="7" fill="#3a3550"/><path d="M50 46 V62 M50 62 L42 78 M50 62 L58 78 M50 50 L40 58 M50 50 L60 56" stroke="#3a3550" stroke-width="6" stroke-linecap="round"/>'),
+  handL: S('<circle cx="62" cy="62" r="16" fill="#ffd9b8"/><rect x="56" y="70" width="14" height="24" rx="6" fill="#4a78c2"/><path d="M58 58 L20 58" stroke="#ffd9b8" stroke-width="10" stroke-linecap="round"/><path d="M26 44 L12 58 L26 72" stroke="#3ea8e0" stroke-width="6" fill="none" stroke-linecap="round"/><text x="70" y="30" font-size="24" font-weight="800" fill="#3a3550">L</text>'),
+  handR: S('<circle cx="38" cy="62" r="16" fill="#ffd9b8"/><rect x="30" y="70" width="14" height="24" rx="6" fill="#4a78c2"/><path d="M42 58 L80 58" stroke="#ffd9b8" stroke-width="10" stroke-linecap="round"/><path d="M74 44 L88 58 L74 72" stroke="#3ea8e0" stroke-width="6" fill="none" stroke-linecap="round"/><text x="12" y="30" font-size="24" font-weight="800" fill="#3a3550">R</text>'),
+  brake: S('<path d="M14 40 H70" stroke="#3a3550" stroke-width="10" stroke-linecap="round"/><path d="M60 46 Q84 56 88 76" stroke="#ff4a4a" stroke-width="9" fill="none" stroke-linecap="round"/><rect x="8" y="30" width="20" height="20" rx="6" fill="#555b6a"/><circle cx="50" cy="80" r="12" fill="none" stroke="#ff4a4a" stroke-width="5"/><path d="M50 68 V92" stroke="#ff4a4a" stroke-width="5"/>'),
+  cloud: S('<ellipse cx="50" cy="56" rx="44" ry="24" fill="#fff"/><ellipse cx="34" cy="44" rx="22" ry="20" fill="#fff"/><ellipse cx="64" cy="40" rx="24" ry="22" fill="#fff"/>'),
+  fire: S('<path d="M50 90 C24 80 26 54 40 40 C40 54 48 56 50 46 C50 30 58 18 66 10 C64 30 82 44 78 64 C76 80 66 88 50 90Z" fill="#ff8a3d"/><path d="M50 88 C38 82 40 66 48 58 C50 68 58 66 58 58 C66 68 66 82 50 88Z" fill="#ffd23f"/>'),
+  dolphin: S('<path d="M12 62 Q20 30 56 28 Q80 28 90 40 L96 30 L96 54 L86 50 Q74 66 46 66 Q30 66 22 72 L20 60Z" fill="#6f8fb8"/><path d="M50 28 L58 14 L64 30Z" fill="#6f8fb8"/><path d="M24 60 Q48 64 80 54" stroke="#dbe6f4" stroke-width="6" fill="none"/><circle cx="26" cy="46" r="3" fill="#2a2f3a"/>'),
+  whale: S('<path d="M6 60 Q10 34 46 32 Q78 32 86 50 L98 40 L96 70 L86 62 Q72 78 42 76 Q12 76 6 60Z" fill="#4f6f9a"/><circle cx="20" cy="54" r="3" fill="#2a2f3a"/><path d="M40 26 Q36 10 28 6 M44 26 Q46 8 54 2 M48 28 Q56 14 66 12" stroke="#bfe9ff" stroke-width="5" fill="none" stroke-linecap="round"/>'),
+  rice: S(`<rect x="4" y="50" width="92" height="44" rx="6" fill="#8fd36a"/>${[14, 30, 46, 62, 78].map((x) => `<path d="M${x} 90 V58 M${x} 64 L${x - 6} 54 M${x} 64 L${x + 6} 54" stroke="#4f9a44" stroke-width="3"/>`).join("")}`),
+  bikeKid: null,
+};

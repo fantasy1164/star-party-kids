@@ -101,6 +101,7 @@ const BY_GAME = {
   'pier.vest': 'care', 'pier.board': 'safe', 'pier.row': 'social', 'pier.mirror': 'space', 'thao.pestle': 'learn', 'thao.safe': 'safe',
   'airport.checkin': 'care', 'airport.security': 'safe', 'airport.gate': 'learn', 'airport.carousel': 'space',
   'penghu.weir': 'space', 'penghu.basalt': 'space', 'penghu.tide': 'safe', 'penghu.turtle': 'care',
+  'huadong.gorge': 'safe', 'huadong.bike': 'safe', 'huadong.balloon': 'space', 'huadong.whale': 'learn',
   'hehuan.layers': 'health', 'hehuan.snowman': 'space', 'hehuan.walk': 'health', 'hehuan.stars': 'learn',
   'fest.cn_clean': 'care', 'fest.mo_help': 'care', 'fest.fa_help': 'care', 'fest.dr_safe': 'safe', 'fest.md_bbq': 'safe',
   'ride.route': 'space',

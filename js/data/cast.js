@@ -6,7 +6,7 @@ import { babaSvg, dadaSvg, duoduoSvg, baobaoSvg, jiujiuSvg } from '../art/town.j
 import { shaoSvg } from '../art/fun.js';
 import { xieSvg } from '../art/doctor.js';
 import { luoluSvg } from '../art/lake.js';
-import { xiangxiangSvg, guiguiSvg, xuexueSvg } from '../art/far.js';
+import { xiangxiangSvg, guiguiSvg, xuexueSvg, piaopiaoSvg } from '../art/far.js';
 import { huahuaSvg, xiuxiuSvg, guguSvg, xinxinSvg, baibaiSvg, jiajiaSvg, zhuzhuSvg } from '../art/world.js';
 
 export const CAST = [
@@ -32,6 +32,7 @@ export const CAST = [
   { id: 'xiangxiang', name: '翔翔', svg: xiangxiangSvg, screens: ['airport'], color: '#3ea8e0' },   // 機場的小飛機（11/26）
   { id: 'guigui', name: '龜龜', svg: guiguiSvg, screens: ['penghu'], color: '#3a9a55' },   // 澎湖的綠蠵龜
   { id: 'xuexue', name: '雪雪', svg: xuexueSvg, screens: ['hehuan'], color: '#bfe0ff' },   // 合歡山的小雪人
+  { id: 'piaopiao', name: '飄飄', svg: piaopiaoSvg, screens: ['huadong'], color: '#ff8a3d' },   // 花東的熱氣球（11/26）
   { id: 'xie', name: '謝醫生', svg: xieSvg, screens: ['clinic'], color: '#5b8fd8' },   // 唯一的人類角色（小兒科）
 ];
 export const CAST_BY_ID = Object.fromEntries(CAST.map((c) => [c.id, c]));

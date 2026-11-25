@@ -37,6 +37,7 @@ const NAMES = {
   'pier.vest': '穿救生衣', 'pier.board': '上船規矩', 'pier.row': '划船跟節拍', 'pier.mirror': '水面倒影', 'thao.pestle': '邵族杵音', 'thao.safe': '湖邊安全',
   'airport.checkin': '報到托運', 'airport.security': '安全檢查', 'airport.gate': '聽廣播找登機門', 'airport.carousel': '行李轉盤',
   'penghu.weir': '雙心石滬', 'penghu.basalt': '玄武岩', 'penghu.tide': '潮間帶規矩', 'penghu.turtle': '海龜生蛋的夜晚',
+  'huadong.gorge': '太魯閣峽谷', 'huadong.bike': '縱谷騎腳踏車', 'huadong.balloon': '熱氣球', 'huadong.whale': '花蓮賞鯨',
   'hehuan.layers': '洋蔥式穿衣', 'hehuan.snowman': '堆雪人', 'hehuan.walk': '高山慢慢走', 'hehuan.stars': '觀星',
   // 節慶舞台（11/25）
   'fest.bd_cake': '生日：插蠟燭', 'fest.bd_blow': '生日：許願吹蠟燭', 'fest.bd_gift': '生日：拆禮物', 'fest.bd_card': '偷偷做生日卡', 'fest.bd_song': '練習生日歌',

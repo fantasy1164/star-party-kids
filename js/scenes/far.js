@@ -4,7 +4,7 @@
 //   合歡山（雪雪）：洋蔥式穿衣、堆雪人（大小）、高山慢慢走（岳岳練「慢下來」）、晚上觀星（連北斗七星；岳岳照口訣連）
 // 原則跟其他地方一樣：一關 1～2 分鐘、每次碰都有回饋、錯兩次亮答案、做錯不扣分、一起玩輪流。
 import { runRoom } from './room-base.js';
-import { sortGame, stepsGame, roundDots } from './kit.js';
+import { sortGame, stepsGame, roundDots, findGame } from './kit.js';
 import { createDiorama } from '../engine/diorama.js';
 import { div, wait, shuffle, pick, stageRect, burst } from '../core/dom.js';
 import { sfx, playNote, think } from '../core/audio.js';
@@ -14,8 +14,9 @@ import { shanSvg, kidSvg } from '../art/stars.js';
 import { personSvg } from '../art/more.js';
 import { itemSvg } from '../art/town.js';
 import { numSvg } from '../art/more.js';
+import { VEHICLES } from '../art/fun.js';
 import * as M from '../core/mult.js';
-import { xiangxiangSvg, guiguiSvg, xuexueSvg, AIR, PH, HH, bagSvg, STICKER, GATE_COLORS, basalt } from '../art/far.js';
+import { xiangxiangSvg, guiguiSvg, xuexueSvg, piaopiaoSvg, AIR, PH, HH, HD, FAR_ICON, bagSvg, STICKER, GATE_COLORS, basalt } from '../art/far.js';
 
 const hello = (p) => (ph) => `${p}_hello_${ph === 'night' ? 'evening' : ph === 'morning' ? 'morning' : 'day'}`;
 const hardSolo = (R) => R.members.length === 1 && R.members[0] === 'yy';
@@ -615,4 +616,238 @@ async function starsGame(R) {
     await say('xuexue', 'hh_st_done');
     await wait(400);
   } finally { setHint(null); P.close(); }
+}
+
+// ============================== 花東（飄飄） ==============================
+//   太魯閣峽谷：轉一轉找燕子、吊橋、獼猴、長春祠的瀑布（有的躲在大理石峭壁後面）；說明安全帽、步道內側、不撿石頭、不餵猴子
+//   縱谷騎腳踏車：戴好安全帽，看路牌做對的動作（左轉手勢、右轉手勢、按煞車）
+//   熱氣球：按住加火升高、放開慢慢降，穿過雲的空隙，最後降落在草地上
+//   花蓮賞鯨：海豚跳出水面的時候點一下、數一數，最後大鯨魚噴水
+const PP = () => piaopiaoSvg();
+const marble = (w, h) => `<svg viewBox="0 0 ${w} ${h}" width="100%" height="100%" preserveAspectRatio="none"><rect width="${w}" height="${h}" fill="#c9ced8"/>${[...Array(8)].map((_, i) => `<path d="M0 ${20 + i * h / 8} Q${w / 2} ${i * h / 8} ${w} ${30 + i * h / 8}" stroke="#eef1f6" stroke-width="5" fill="none"/>`).join('')}</svg>`;
+export function mountHuadong(root, app) {
+  return runRoom(root, app, {
+    id: 'huadong', host: 'piaopiao', back: 'town',
+    build() {
+      const dio = createDiorama({ w: 760, d: 620, walls: false, zoom: 0.9, cy: 0.6, base: '#7d8494', rim: 24, skirt: '#8fd36a', horizon: 'mountain',
+        floorCss: 'background: linear-gradient(90deg, #a6dd86 0 30%, #7fd3ff 30% 40%, #a6dd86 40% 100%)' });
+      // 太魯閣：兩排大理石峭壁（上面長著樹）夾著立霧溪，峭壁之間一座紅色吊橋；右邊是縱谷的稻田
+      dio.addDecal({ x: 215, y: 0, w: 80, h: 620, z: 0.8, css: 'background: linear-gradient(90deg, #5ec3ee, #8fdcff 50%, #5ec3ee); border-radius: 20px' });
+      [[30, 20, 180, 130, 170], [50, 160, 160, 120, 140], [30, 290, 180, 140, 165], [300, 20, 150, 130, 185], [310, 160, 140, 120, 150], [300, 290, 150, 140, 175]].forEach(([x, y, w, d, h]) => dio.addBox({ x, y, w, d, h, color: '#c9ced8', top: '#7cb86a', faces: { s: marble(w, h), n: marble(w, h), e: marble(d, h), w: marble(d, h) } }));
+      dio.addBox({ x: 205, y: 168, z: 118, w: 100, d: 14, h: 6, color: '#ff4a4a' });
+      for (let i = 0; i < 6; i++) dio.addDecal({ x: 470 + (i % 3) * 95, y: 60 + Math.floor(i / 3) * 150, w: 85, h: 130, z: 0.8, css: `background:repeating-linear-gradient(0deg,${i % 2 ? '#9fe07a' : '#d9e36a'} 0 10px,#7cc35a 10px 13px);border-radius:8px` });
+      dio.addSprite({ x: 640, y: 380, z: 220, w: 110, h: 120, shadow: 0.15, html: FAR_ICON.huadong });
+      const piao = dio.addSprite({ x: 560, y: 470, z: 20, w: 140, h: 150, html: piaopiaoSvg(), shadow: 0.4, tap: 'piaopiao' });
+      const shan = dio.addSprite({ x: 450, y: 560, w: 100, h: 114, html: shanSvg(), shadow: 0.7, tap: 'shan' });
+      return { dio, chars: { piaopiao: piao, shan } };
+    },
+    music: () => 'lake',
+    lines: { hello: hello('hd'), pick: 'hd_pick', next: 'hd_next', allDone: [['piaopiao', 'hd_all_done'], ['shan', 'hd_all_done']] },
+    games: [
+      { id: 'gorge', icon: HD.helmet, marker: { x: 250, y: 230, z: 220 }, run: (R) => findGame(R, {
+        host: 'piaopiao', intro: 'hd_gg_go', found: (id) => `hd_gg_${id}`, hiddenLine: 'hd_gg_hidden', done: 'hd_gg_done',
+        items: [
+          { id: 'bird', x: 255, y: 90, z: 120, w: 80, h: 70, html: HD.bird },
+          { id: 'bridge', x: 255, y: 182, z: 110, w: 130, h: 80, html: HD.bridge },
+          { id: 'monkey', x: 480, y: 90, z: 0, w: 80, h: 90, html: HD.monkey, hidden: true, seenFrom: [1, 2] },
+          { id: 'waterfall', x: 120, y: 10, z: 0, w: 90, h: 120, html: HD.waterfall, hidden: true, seenFrom: [2, 3] },
+        ],
+      }) },
+      { id: 'bike', icon: HD.handR, marker: { x: 560, y: 140, z: 160 }, run: bikeGame },
+      { id: 'balloon', icon: FAR_ICON.huadong, marker: { x: 640, y: 380, z: 380 }, run: balloonGame },
+      { id: 'whale', icon: HD.dolphin, marker: { x: 260, y: 520, z: 160 }, run: whaleGame },
+    ],
+    playful(name, R) { if (name === 'piaopiao') { sfx('whoosh'); R.hop(R.set.chars.piaopiao.el); R.say('piaopiao', 'piaopiao_hi'); return true; } return false; },
+  });
+}
+
+// ---- 縱谷騎腳踏車：先戴安全帽；路牌出來就做對的動作 ----
+// 愷愷（easy）：飄飄直接說要做什麼、對的按鈕發亮；岳岳：只看路牌，做錯才說明
+const BIKE_EV = { left: { sign: HD.signL, act: 'L', line: 'hd_bk_left' }, right: { sign: HD.signR, act: 'R', line: 'hd_bk_right' }, down: { sign: HD.signDown, act: 'B', line: 'hd_bk_down' }, walk: { sign: HD.signWalk, act: 'B', line: 'hd_bk_walk' } };
+async function bikeGame(R) {
+  const { say, chk } = R;
+  const P = R.panel('bikepanel', { host: 'piaopiao', hostSvg: PP() });
+  const el = P.el;
+  const who = () => (turnsOn() ? whoseTurn() : R.members[0]) || 'yy';
+  const evs = hardSolo(R) ? shuffle(['left', 'right', 'down', 'walk', 'left', 'right']) : shuffle(['left', 'right', 'down', 'walk']);
+  try {
+    el.innerHTML = `<div class="bk-road"></div><div class="bk-field l"></div><div class="bk-field r"></div><div class="bk-rider"><div class="bk-kid">${kidSvg(who(), ['shirt', 'pants'])}</div></div>
+      <div class="bk-sign"></div><button class="bk-helm">${HD.helmet}</button><div class="bk-acts"><button class="bk-act" data-a="L">${HD.handL}</button><button class="bk-act" data-a="B">${HD.brake}</button><button class="bk-act" data-a="R">${HD.handR}</button></div>`;
+    const dots = roundDots(el, evs.length);
+    const rider = el.querySelector('.bk-rider'), sign = el.querySelector('.bk-sign'), helm = el.querySelector('.bk-helm'), acts = el.querySelector('.bk-acts');
+    await say('piaopiao', 'hd_bk_go');
+    chk();
+    await callTurn();
+    chk();
+    // 戴安全帽
+    helm.classList.add('glowy-2d');
+    setHint(() => helm);
+    await tapRound(R, el, { right: (b) => b === helm, onWrong: () => say('piaopiao', 'hd_bk_helmet') });
+    helm.remove();
+    const bikeOf = () => `<div class="bk-bike">${VEHICLES.bike(who() === 'kk' ? '#ff8a3d' : '#2f7fe0')}</div>`;
+    rider.innerHTML = bikeOf();   // 戴好安全帽，騎上腳踏車
+    sfx('click'); sfx('sparkle');
+    await say('piaopiao', 'hd_bk_helmet_ok');
+    chk();
+    el.classList.add('riding');
+    for (let i = 0; i < evs.length; i++) {
+      dots.set(i);
+      await wait(1400);
+      chk();
+      const ev = BIKE_EV[evs[i]];
+      sign.innerHTML = ev.sign;
+      sign.classList.remove('come'); void sign.offsetWidth; sign.classList.add('come');
+      sfx('ding');
+      const easy = easyNow(R);
+      const right = acts.querySelector(`[data-a="${ev.act}"]`);
+      if (easy) { right.classList.add('glowy-2d'); say('piaopiao', ev.line); }
+      setHint(() => right);
+      think(true);
+      await tapRound(R, acts, {
+        right: (b) => b === right,
+        onWrong: (b, w) => { R.hop(b); say('piaopiao', ev.line); if (w >= 2 || easy) right.classList.add('glowy-2d'); },
+        onRight: async (b) => {
+          think(false); right.classList.remove('glowy-2d');
+          rider.classList.remove('turn-l', 'turn-r', 'brake'); void rider.offsetWidth;
+          rider.classList.add(ev.act === 'L' ? 'turn-l' : ev.act === 'R' ? 'turn-r' : 'brake');
+          sfx(ev.act === 'B' ? 'slide' : 'sparkle');
+          R.burstAt(b, { n: 10, stars: true });
+        },
+      });
+      think(false);
+      sign.classList.remove('come');
+      chk();
+      if (turnsOn() && i < evs.length - 1) { await nextTurn({ say: false }); rider.innerHTML = bikeOf(); }
+    }
+    dots.done();
+    el.classList.remove('riding');
+    sfx('fanfare');
+    await say('piaopiao', 'hd_bk_done');
+    await wait(300);
+  } finally { think(false); setHint(null); P.close(); }
+}
+
+// ---- 熱氣球：按住「火」升高，放開慢慢降；穿過雲的空隙，最後降在草地上 ----
+// 不會失敗：碰到雲只會停住，調好高度就能繼續往前飄
+async function balloonGame(R) {
+  const { say, chk } = R;
+  const P = R.panel('balloonpanel', { host: 'piaopiao', hostSvg: PP() });
+  const el = P.el;
+  const easy = easyNow(R);
+  const gapH = easy ? 220 : 160;
+  const gates = (hardSolo(R) ? [[300, 150], [520, 330], [720, 200]] : [[340, 170], [600, 300]]).map(([x, y]) => ({ x, y }));   // y：空隙的中心
+  let raf = 0;
+  try {
+    el.innerHTML = `<div class="bl-sky"></div><div class="bl-grass"></div><div class="bl-field"></div>${gates.map((g) => `<i class="bl-cloud" style="left:${g.x - 60}px;top:-20px;height:${g.y - gapH / 2 + 20}px"></i><i class="bl-cloud" style="left:${g.x - 60}px;top:${g.y + gapH / 2}px;height:${600 - g.y - gapH / 2}px"></i>`).join('')}
+      <div class="bl-ball">${FAR_ICON.huadong}<i class="bl-fire">${HD.fire}</i></div><button class="bl-btn">${HD.fire}</button>`;
+    const ball = el.querySelector('.bl-ball'), btn = el.querySelector('.bl-btn');
+    await say('piaopiao', 'hd_bl_go');
+    chk();
+    await callTurn();
+    chk();
+    let x = 60, y = 440, vy = 0, burn = false, last = performance.now(), bumpAt = 0, landSaid = false, done = false;
+    const FIELD = 800, GROUND = 500;
+    btn.addEventListener('pointerdown', (e) => { e.stopPropagation(); burn = true; ball.classList.add('burn'); sfx('whoosh'); });
+    const off = () => { burn = false; ball.classList.remove('burn'); };
+    window.addEventListener('pointerup', off);
+    window.addEventListener('pointercancel', off);
+    setHint(() => btn);
+    btn.classList.add('glowy-2d');
+    await R.race(new Promise((resolve) => {
+      const step = (now) => {
+        const dt = Math.min(0.05, (now - last) / 1000); last = now;
+        vy += (burn ? -260 : 130) * dt;
+        vy = Math.max(-150, Math.min(110, vy));
+        y = Math.max(40, Math.min(GROUND, y + vy * dt));
+        if (y >= GROUND) vy = 0;
+        // 往前飄：前面的雲擋住就停
+        const nx = x + (y >= GROUND && x < 120 ? 0 : 70) * dt;
+        const g = gates.find((q) => nx + 50 > q.x - 60 && x + 50 <= q.x + 60 && (y - 50 < q.y - gapH / 2 || y + 50 > q.y + gapH / 2));
+        if (g && x + 50 <= g.x - 60 + 4) { if (now - bumpAt > 5000) { bumpAt = now; sfx('boing'); say('piaopiao', 'hd_bl_bump'); } ball.classList.add('stuck'); }
+        else { ball.classList.remove('stuck'); if (y < GROUND || x < 120) x = Math.min(FIELD, nx); }
+        if (y < GROUND - 20 && x < 120) btn.classList.remove('glowy-2d');
+        if (x >= FIELD - 80 && !landSaid) { landSaid = true; say('piaopiao', 'hd_bl_land'); }
+        if (x >= FIELD - 80 && y >= GROUND && !done) { done = true; resolve(); return; }
+        ball.style.transform = `translate(${x}px, ${y - 120}px)`;
+        raf = requestAnimationFrame(step);
+      };
+      raf = requestAnimationFrame(step);
+    }));
+    cancelAnimationFrame(raf); raf = 0;
+    window.removeEventListener('pointerup', off);
+    window.removeEventListener('pointercancel', off);
+    chk();
+    sfx('fanfare');
+    R.burstAt(ball, { n: 24, stars: true });
+    await say('piaopiao', 'hd_bl_done');
+    await wait(300);
+  } finally { if (raf) cancelAnimationFrame(raf); setHint(null); P.close(); }
+}
+
+// ---- 賞鯨：海豚跳出來的時候點一下（數一數）；最後大鯨魚噴水 ----
+async function whaleGame(R) {
+  const { say, chk } = R;
+  const P = R.panel('whalepanel', { host: 'piaopiao', hostSvg: PP() });
+  const el = P.el;
+  const goal = hardSolo(R) ? 8 : 5;
+  const stay = easyNow(R) ? 1700 : 1200;
+  let alive = true;
+  try {
+    el.innerHTML = `<div class="wh-sky"></div><div class="wh-sea"></div><div class="wh-boat"></div><div class="wh-count"></div><div class="wh-pod"></div>`;
+    el.querySelector('.wh-boat').innerHTML = `<svg viewBox="0 0 200 80"><path d="M10 30 H190 L170 70 H30Z" fill="#fff"/><path d="M10 30 H190" stroke="#3ea8e0" stroke-width="6"/><rect x="60" y="6" width="80" height="24" rx="6" fill="#e9f3ff"/><rect x="68" y="12" width="64" height="10" fill="#3ea8e0"/></svg>`;
+    const pod = el.querySelector('.wh-pod'), count = el.querySelector('.wh-count');
+    await say('piaopiao', 'hd_wh_go');
+    chk();
+    await callTurn();
+    chk();
+    let n = 0;
+    const spots = [[120, 250], [300, 200], [480, 260], [660, 210], [800, 270], [220, 330], [600, 340]];
+    await R.race(new Promise((resolve) => {
+      const jump = async () => {
+        if (!alive || n >= goal) return;
+        const [x, y] = pick(spots);
+        const d = document.createElement('button');
+        d.className = 'wh-dol';
+        d.style.left = `${x - 60}px`; d.style.top = `${y - 40}px`;
+        d.innerHTML = HD.dolphin;
+        pod.appendChild(d);
+        sfx('splash');
+        setHint(() => d);
+        d.addEventListener('pointerdown', (e) => {
+          e.stopPropagation();
+          if (d.classList.contains('got')) return;
+          d.classList.add('got');
+          n++;
+          count.innerHTML = numSvg(n, { color: '#3a3550' });
+          count.classList.remove('pop'); void count.offsetWidth; count.classList.add('pop');
+          playNote(['C5', 'D5', 'E5', 'G5', 'A5', 'C6', 'D6', 'E6'][n - 1], 'musicbox', 0.28);
+          R.burstAt(d, { n: 10, stars: true, colors: ['#bfe9ff', '#fff', '#ffd23f'] });
+          if (n >= goal) resolve();
+        });
+        setTimeout(() => d.remove(), stay + 300);
+        setTimeout(jump, stay + 500 + Math.random() * 600);
+      };
+      jump();
+    }));
+    chk();
+    await wait(600);
+    // 大鯨魚噴水
+    const whale = document.createElement('button');
+    whale.className = 'wh-big';
+    whale.innerHTML = HD.whale;
+    pod.appendChild(whale);
+    sfx('water');
+    setHint(() => whale);
+    await say('piaopiao', 'hd_wh_look');
+    chk();
+    await tapRound(R, pod, { right: (b) => b === whale });
+    whale.classList.add('spout');
+    sfx('splash');
+    R.burstAt(whale, { n: 24, colors: ['#bfe9ff', '#fff'] });
+    await say('piaopiao', 'hd_wh_whale');
+    chk();
+    sfx('fanfare');
+    await say('piaopiao', 'hd_wh_done');
+    await wait(300);
+  } finally { alive = false; setHint(null); P.close(); }
 }

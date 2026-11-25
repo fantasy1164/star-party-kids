@@ -1615,3 +1615,59 @@ body.turn-kk .glowy > svg { filter: drop-shadow(0 0 10px #ff6a2b); }
 @keyframes snowfall { from { translate: 0 -30px; } to { translate: 0 30px; } }
 .gt b svg { transform: scale(1.8); }
 .snowpanel .sn-ground { left: 290px; bottom: 26px; width: 360px; height: 60px; border-radius: 50%; background: #d6e4f2; }
+
+/* ---------- 花東（11/26） ---------- */
+/* 騎腳踏車 */
+.bikepanel { background: linear-gradient(#cfe8ff 0 30%, #8fd36a 30%); overflow: hidden; }
+.bikepanel .bk-road { left: 300px; width: 340px; top: 30%; bottom: 0; background: #8a8fa0; }
+.bikepanel .bk-road::after { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 8px; margin-left: -4px; background: repeating-linear-gradient(180deg, #fff 0 40px, transparent 40px 80px); }
+.bikepanel.riding .bk-road::after { animation: bkRoad .6s linear infinite; }
+@keyframes bkRoad { to { background-position: 0 80px; } }
+.bikepanel .bk-field { top: 30%; bottom: 0; width: 300px; background: repeating-linear-gradient(180deg, #9fe07a 0 22px, #7cc35a 22px 28px); }
+.bikepanel .bk-field.l { left: 0; } .bikepanel .bk-field.r { right: 0; }
+.bikepanel.riding .bk-field { animation: bkRoad .6s linear infinite; background-size: 100% 28px; }
+.bikepanel .bk-rider { left: 480px; top: 300px; width: 160px; height: 200px; transition: transform .4s; }
+.bikepanel .bk-kid svg, .bikepanel .bk-bike svg { width: 100%; height: 100%; }
+.bikepanel .bk-kid { width: 110px; height: 200px; }
+.bikepanel .bk-bike { width: 170px; height: 170px; }
+.bikepanel.riding .bk-bike { animation: bump .35s ease-in-out infinite; }
+.bikepanel .bk-rider.turn-l { animation: bkTurnL .8s; } .bikepanel .bk-rider.turn-r { animation: bkTurnR .8s; } .bikepanel .bk-rider.brake { animation: bkBrake .8s; }
+@keyframes bkTurnL { 50% { transform: translateX(-40px) rotate(-10deg); } }
+@keyframes bkTurnR { 50% { transform: translateX(40px) rotate(10deg); } }
+@keyframes bkBrake { 30% { transform: translateY(14px); } }
+.bikepanel .bk-sign { left: 380px; top: 40px; width: 170px; height: 170px; opacity: 0; transform: scale(.3); }
+.bikepanel .bk-sign svg { width: 100%; height: 100%; }
+.bikepanel .bk-sign.come { opacity: 1; transform: none; transition: transform .5s cubic-bezier(.3,1.5,.5,1), opacity .2s; }
+.bikepanel .bk-helm { left: 680px; top: 300px; width: 170px; height: 150px; border: 0; border-radius: 30px; background: #fff; box-shadow: 0 6px 0 #c9d9ec; padding: 14px; }
+.bikepanel .bk-helm svg { width: 100%; height: 100%; }
+.bikepanel .bk-acts { left: 40px; right: 40px; bottom: 26px; display: flex; justify-content: space-between; }
+.bk-act { width: 170px; height: 150px; border: 0; border-radius: 30px; background: #fff; box-shadow: 0 8px 0 #c9d9ec; padding: 14px; }
+.bk-act svg { width: 100%; height: 100%; }
+/* 熱氣球 */
+.balloonpanel .bl-sky { inset: 0; background: linear-gradient(#9fd2f5, #e6f4ff); }
+.balloonpanel .bl-grass { left: 0; right: 0; bottom: 0; height: 90px; background: #8fd36a; }
+.balloonpanel .bl-field { right: 40px; bottom: 60px; width: 170px; height: 40px; border-radius: 50%; background: #ffd23f; box-shadow: 0 0 0 8px rgba(255,210,63,.35); animation: bkPulse 1s ease-in-out infinite alternate; }
+.balloonpanel .bl-cloud { position: absolute; display: block; width: 120px; border-radius: 60px; background: #fff; box-shadow: 0 0 0 10px rgba(255,255,255,.6), inset 0 -10px 0 #e6eef8; }
+.balloonpanel .bl-ball { left: 0; top: 0; width: 100px; height: 130px; }
+.balloonpanel .bl-ball svg { width: 100%; height: 100%; }
+.balloonpanel .bl-ball .bl-fire { position: absolute; left: 36px; top: 70px; width: 28px; height: 28px; opacity: 0; transition: opacity .15s; }
+.balloonpanel .bl-ball.burn .bl-fire { opacity: 1; }
+.balloonpanel .bl-ball.stuck svg { animation: shake .4s; }
+.balloonpanel .bl-btn { left: 40px; bottom: 110px; width: 150px; height: 150px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 8px 0 #c9d9ec; padding: 26px; }
+.balloonpanel .bl-btn:active { transform: scale(.94); background: #fff3d6; }
+.balloonpanel .bl-btn svg { width: 100%; height: 100%; }
+/* 賞鯨 */
+.whalepanel .wh-sky { left: 0; right: 0; top: 0; height: 180px; background: linear-gradient(#bfe6ff, #e6f4ff); }
+.whalepanel .wh-sea { left: 0; right: 0; top: 180px; bottom: 0; background: linear-gradient(#3ea8e0, #2f7fc0); }
+.whalepanel .wh-boat { left: 340px; bottom: 10px; width: 260px; height: 110px; animation: boatRock 2.4s ease-in-out infinite; }
+.whalepanel .wh-boat svg { width: 100%; height: 100%; }
+.whalepanel .wh-count { right: 40px; top: 30px; width: 90px; height: 110px; }
+.whalepanel .wh-count svg { width: 100%; height: 100%; }
+.whalepanel .wh-count.pop { animation: popin .35s; }
+.wh-dol { position: absolute; width: 180px; height: 124px; border: 0; background: none; padding: 0; animation: dolJump 1.3s ease-out both; }
+.wh-dol svg { width: 100%; height: 100%; }
+.wh-dol.got { filter: drop-shadow(0 0 12px #ffd23f); }
+@keyframes dolJump { 0% { transform: translateY(80px) rotate(30deg); opacity: 0; } 30% { opacity: 1; } 55% { transform: translateY(-40px) rotate(-10deg); } 100% { transform: translateY(20px) rotate(-30deg); } }
+.wh-big { position: absolute; left: 520px; top: 260px; width: 260px; height: 180px; border: 0; background: none; padding: 0; animation: popin .6s; }
+.wh-big svg { width: 100%; height: 100%; }
+.wh-big.spout { animation: hop .6s; }

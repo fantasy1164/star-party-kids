@@ -23,7 +23,7 @@ import { ICON2 } from '../art/more.js';
 import { seatbelt, placeBar } from './town.js';
 import { buildCities } from './worldcity.js';
 import { LAKE, BOARD } from '../art/lake.js';
-import { FAR_ICON, xiangxiangSvg, guiguiSvg, AIR, PH, HH } from '../art/far.js';
+import { FAR_ICON, xiangxiangSvg, guiguiSvg, AIR, PH, HH, HD } from '../art/far.js';
 
 const S = (inner, vb = '0 0 100 100') => `<svg viewBox="${vb}" width="100%" height="100%">${inner}</svg>`;
 const tree = (c = '#4fbf6e') => S(`<rect x="34" y="70" width="12" height="38" rx="5" fill="#a9744f"/><circle cx="40" cy="48" r="34" fill="${c}"/><circle cx="28" cy="36" r="10" fill="#fff" opacity=".2"/>`, '0 0 80 110');
@@ -48,6 +48,7 @@ export const ZONES = {
   airport: { icon: FAR_ICON.airport, music: 'airport', entry: 'airport' },   // 機場（桃園）
   penghu: { icon: FAR_ICON.penghu, music: 'sea', entry: 'penghu' },   // 澎湖：坐飛機或坐船
   hehuan: { icon: FAR_ICON.hehuan, music: 'snow', entry: 'hehuan' },   // 合歡山：開山路
+  huadong: { icon: FAR_ICON.huadong, music: 'lake', entry: 'huadong' },   // 花東：坐火車或開車
 };
 // 各區域的地點（城市的在 town.js）
 const ZONE_PLACES = {
@@ -58,6 +59,7 @@ const ZONE_PLACES = {
   airport: { airport: { x: 500, y: 330, screen: 'airport', icon: FAR_ICON.airport, h: 190 } },
   penghu: { penghu: { x: 470, y: 420, screen: 'penghu', icon: FAR_ICON.penghu, h: 120 } },
   hehuan: { hehuan: { x: 520, y: 380, screen: 'hehuan', icon: FAR_ICON.hehuan, h: 170 } },
+  huadong: { huadong: { x: 430, y: 400, screen: 'huadong', icon: FAR_ICON.huadong, h: 200 } },
 };
 export const zoneOfScreen = (screen) => {
   for (const [z, ps] of Object.entries(ZONE_PLACES)) for (const [id, p] of Object.entries(ps)) if (p.screen === screen) return [z, id];
@@ -81,9 +83,10 @@ function buildZone(zone) {
     airport: 'background: radial-gradient(circle at 50% 50%, #c8e6a8, #9fd27f)',
     penghu: 'background: radial-gradient(ellipse at 45% 50%, #e9d9a6 0 40%, #bfe9ff 40% 44%, #5ec3ee 44% 100%)',
     hehuan: 'background: radial-gradient(circle at 50% 45%, #ffffff, #dfeaf6 60%, #c9d9ec)',
+    huadong: 'background: linear-gradient(90deg, #8fd36a 0 70%, #f2dca6 70% 74%, #3ea8e0 74% 100%)',
   };
-  const skirt = { suburb: '#a6d987', sea: '#5ec3ee', mountain: '#7fc86a', lake: '#7cc46a', airport: '#9fd27f', penghu: '#5ec3ee', hehuan: '#c9d9ec' }[zone];
-  const horizon = { suburb: 'nature', sea: 'sea', mountain: 'mountain', lake: 'mountain', airport: 'nature', penghu: 'sea', hehuan: 'mountain' }[zone];
+  const skirt = { suburb: '#a6d987', sea: '#5ec3ee', mountain: '#7fc86a', lake: '#7cc46a', airport: '#9fd27f', penghu: '#5ec3ee', hehuan: '#c9d9ec', huadong: '#8fd36a' }[zone];
+  const horizon = { suburb: 'nature', sea: 'sea', mountain: 'mountain', lake: 'mountain', airport: 'nature', penghu: 'sea', hehuan: 'mountain', huadong: 'mountain' }[zone];
   const dio = createDiorama({ gl: true, w: W, d: D, walls: false, zoom: 0.8, zmin: 0.45, zmax: 1.6, cy: 0.58, skirt, horizon, floorCss: floors[zone] });
   const markers = {};
   const P = ZONE_PLACES[zone];
@@ -184,6 +187,18 @@ function buildZone(zone) {
     const p = P.hehuan, tap = 'go:hehuan';
     dio.addBox({ x: p.x - 70, y: p.y - 10, w: 140, d: 20, h: 60, color: '#8a5a32', tap, faces: { s: `<svg viewBox="0 0 140 60" width="100%" height="100%" preserveAspectRatio="none"><rect width="140" height="60" fill="#8a5a32"/><rect x="10" y="10" width="120" height="40" rx="6" fill="#f3e6c8"/><path d="M24 40 L48 18 L60 30 L78 14 L116 40Z" fill="#7aa0c8"/></svg>` } });
     dio.addSprite({ x: p.x + 160, y: p.y + 120, w: 100, h: 110, shadow: 0.4, tap, html: HH.ball });
+  }
+  if (zone === 'huadong') {
+    // 花東：西邊的山、縱谷的稻田、東邊的海和清水斷崖、熱氣球、沿著海邊的鐵路
+    for (let i = 0; i < 8; i++) dio.addDecal({ x: 120 + (i % 4) * 130, y: 120 + Math.floor(i / 4) * 360 + (i % 2) * 20, w: 110, h: 150, z: 0.7, css: `background:repeating-linear-gradient(0deg,${i % 3 ? '#9fe07a' : '#d9e36a'} 0 12px,#7cc35a 12px 15px);border-radius:10px` });
+    dio.addDecal({ x: 655, y: 0, w: 14, h: D, z: 0.9, css: 'background:repeating-linear-gradient(0deg,#8a6a4a 0 6px,#b9a98a 6px 22px)' });
+    for (const [x, y, w, h] of [[60, 100, 300, 300], [80, 440, 280, 260], [-20, 280, 260, 240]]) dio.addSprite({ x, y, w, h, shadow: 0, html: peak('#4f9a44', false) });
+    [[720, 200], [720, 330], [720, 460]].forEach(([x, y]) => dio.addBox({ x, y, w: 40, d: 120, h: 110 + (y % 3) * 10, color: '#a9b2bf' }));
+    const p = P.huadong, tap = 'go:huadong';
+    dio.addSprite({ x: p.x, y: p.y + 30, z: 140, w: 150, h: 160, shadow: 0.2, tap, html: FAR_ICON.huadong });
+    dio.addSprite({ x: p.x - 200, y: p.y - 150, z: 240, w: 90, h: 100, shadow: 0.15, html: FAR_ICON.huadong });
+    dio.addSprite({ x: 880, y: 300, z: 1, w: 120, h: 70, shadow: 0, html: HD.dolphin });
+    dio.addSprite({ x: 900, y: 560, z: 1, w: 140, h: 90, shadow: 0, html: HD.whale });
   }
   for (const [id, p] of Object.entries(P)) {
     markers[id] = dio.addSprite({ x: p.x, y: p.y, z: p.h + 60, w: 120, h: 120, html: `<div class="inner">${p.icon}</div>`, cls: 'marker place-mark', shadow: 0, tap: `go:${id}` });
@@ -287,11 +302,9 @@ function polyAt(P, t) {
   return { x: P[0][0], y: P[0][1], dx: 1, dy: 0 };
 }
 // 四個可以去的地方（真實的相對位置）
-const TW_ZONES = { city: [620, 1000], suburb: [520, 1450], sea: [720, 2310], mountain: [1065, 455], lake: [820, 1210], airport: [800, 400], penghu: [230, 1520], hehuan: [930, 960] };   // 動物園在木柵（台北盆地東南邊的山上），101 在盆地裡
+const TW_ZONES = { city: [620, 1000], suburb: [520, 1450], sea: [720, 2310], mountain: [1065, 455], lake: [820, 1210], airport: [800, 400], penghu: [230, 1520], hehuan: [930, 960], huadong: [1040, 1650] };   // 動物園在木柵（台北盆地東南邊的山上），101 在盆地裡
 // 以後會開放的地方
-const SOON = [
-  { id: 'huadong', x: 1040, y: 1650, icon: '🌊' },
-];
+const SOON = [];   // 11/26：全部開放了
 const cloudSvg = () => S(`<ellipse cx="60" cy="44" rx="42" ry="22" fill="#fff"/><ellipse cx="38" cy="38" rx="24" ry="20" fill="#fff"/><ellipse cx="80" cy="34" rx="22" ry="18" fill="#fff"/>`, '0 0 120 70');
 const whaleSvg = () => S(`<path d="M10 58 Q20 34 56 34 Q86 36 94 52 L108 40 L106 70 L94 62 Q80 76 50 74 Q20 74 10 58Z" fill="#4f6f9a"/><path d="M18 62 Q50 72 84 64" stroke="#c9d8ef" stroke-width="6" fill="none"/><circle cx="24" cy="52" r="3" fill="#1d2433"/><g class="spout"><path d="M44 30 Q40 12 30 8 M46 30 Q48 10 56 4 M48 30 Q56 16 66 14" stroke="#bfe9ff" stroke-width="5" fill="none" stroke-linecap="round"/></g>`, '0 0 120 80');
 const ferrySvg = () => S(`<path d="M8 50 H112 L100 72 H20Z" fill="#fff"/><rect x="28" y="30" width="62" height="20" rx="4" fill="#e9f3ff"/><rect x="34" y="34" width="50" height="8" fill="#3ea8e0"/><rect x="66" y="16" width="10" height="16" fill="#ff5d5d"/><path d="M8 50 H112" stroke="#3ea8e0" stroke-width="4"/>`, '0 0 120 80');
@@ -591,6 +604,7 @@ const SCENERY = {
   mountain: { things: { monkey: monkey(), cable: cablecar(), tree: tree('#3f9f5a'), tree2: tree() }, targets: ['monkey', 'cable'], sky: '#cfe8ff', ground: '#7fc86a', far: '#5aa84a' },
   lake: { things: { tea: LAKE.tea, deer: LAKE.deer, tree: tree('#3f9f5a'), mountain: LAKE.mountain }, targets: ['tea', 'deer'], sky: '#cfe8ff', ground: '#7fc86a', far: '#4f9a44' },
   airport: { things: { plane: AIR.plane, tower: TOWER, tree: tree(), building: building() }, targets: ['plane', 'tower'], sky: '#d6e8ff', ground: '#9fd27f', far: '#a9b8cc' },
+  huadong: { things: { balloon: FAR_ICON.huadong, dolphin: HD.dolphin, rice: HD.rice, tree: tree('#3f9f5a') }, targets: ['balloon', 'dolphin'], sky: '#cfe8ff', ground: '#8fd36a', far: '#3ea8e0' },
   penghu: { things: { lighthouse: lighthouse(), gull: seagull(), boat: sailboat(), turtle: PH.turtle }, targets: ['lighthouse', 'turtle'], sky: '#bfe6ff', ground: '#5ec3ee', far: '#3ea8e0' },
   hehuan: { things: { pine: PINE, snowpeak: peak('#7aa0c8', true), tree: tree('#3f9f5a'), mountain: LAKE.mountain }, targets: ['pine', 'snowpeak'], sky: '#e6f0fa', ground: '#dfeaf6', far: '#7aa0c8' },
   city: { things: { mrt: PLACE_ICON.mrt, building: building(), building2: building('#ffd6a0'), tree: tree() }, targets: ['mrt', 'building'], sky: '#d6e8ff', ground: '#c9d3de', far: '#a9b8cc' },
