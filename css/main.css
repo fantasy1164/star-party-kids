@@ -1245,3 +1245,28 @@ body.turn-kk .glowy > svg { filter: drop-shadow(0 0 10px #ff6a2b); }
 .storypanel .sp .fx-sp svg { width: 100%; height: 100%; }
 .fx-pick { background: #fff3e0; }
 .squiz .fx-pick { width: 150px; height: 150px; }
+
+/* ---- 專屬車（11/25）：選車時發亮、裝貨面板、警笛 ---- */
+.vopt.sp { background: radial-gradient(circle at 35% 30%, #fff, #fff1c2); box-shadow: 0 6px 0 #e8c35a, 0 0 0 5px #ffd23f; animation: popin .4s cubic-bezier(.3,1.6,.5,1) both, spGlow 1.4s ease-in-out .4s infinite; }
+@keyframes spGlow { 50% { box-shadow: 0 6px 0 #e8c35a, 0 0 0 9px #ffe27a, 0 0 26px #ffd23f; } }
+.loadpanel { background: linear-gradient(#fff6e6, #ffe6c4); }
+.loadpanel.ld-amb { background: linear-gradient(#f2f8ff, #dceeff); }
+.loadpanel.ld-fresh { background: linear-gradient(#eaf8ff, #d6f0e0); }
+.loadpanel.ld-post { background: linear-gradient(#f2fff4, #d8f2df); }
+.loadpanel.ld-book { background: linear-gradient(#fff8ea, #f3e2c2); }
+.loadpanel.ld-book::after { content: ''; position: absolute; left: 60px; right: 60px; top: 598px; height: 18px; border-radius: 6px; background: #c98b5e; }
+.loadpanel.ld-garbage { background: linear-gradient(#fff4dc, #ffe1a8); }
+.ld-bin { z-index: 1; transition: transform .2s; }
+.ld-bin svg, .ld-item svg { width: 100%; height: 100%; display: block; }
+.ld-bin.help { filter: drop-shadow(0 0 14px #ffd23f) drop-shadow(0 0 6px #fff); animation: glow2d 1.2s ease-in-out infinite; }
+.ld-item { z-index: 3; touch-action: none; cursor: grab; filter: drop-shadow(0 6px 6px rgba(0,0,0,.18)); transition: left .25s, top .25s, transform .25s; }
+.ld-item.dragging { transition: none; transform: scale(1.12); z-index: 5; }
+.ld-item.in { transform: scale(.6); pointer-events: none; z-index: 2; }
+.ld-book .ld-item.in { transform: none; }
+.sirenbtn { left: calc(50% - 75px); bottom: 24px; background: radial-gradient(circle at 35% 30%, #fff, #ffd6d6 60%, #ff7b7b); box-shadow: 0 8px 0 #c93c3c; animation: glow2d 1.2s ease-in-out infinite; }
+.sirenbtn.on { animation: none; }
+/* 坐的車開了警笛：車頂一紅一藍兩顆燈輪流閃（--sy：車頂在圖的哪個高度） */
+.ride-car.siren-on::before, .ride-car.siren-on::after { content: ''; position: absolute; top: calc(var(--sy, 16%) - 16px); width: 26px; height: 26px; border-radius: 50%; pointer-events: none; animation: sirenA .6s steps(1) infinite; }
+.ride-car.siren-on::before { left: calc(50% - 30px); background: #ff3030; box-shadow: 0 0 18px 8px rgba(255,48,48,.75); }
+.ride-car.siren-on::after { left: calc(50% + 4px); background: #2f6bff; box-shadow: 0 0 18px 8px rgba(47,107,255,.75); animation-delay: .3s; }
+@keyframes sirenA { 50% { opacity: .15; } }

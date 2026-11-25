@@ -22,6 +22,8 @@ import { VEHICLES, helmetSvg, shaoSvg } from '../art/fun.js';
 import { PLACE_ICON, MISC, garbageTruckSvg, recycleTruckSvg } from '../art/world.js';
 import { mountZone, worldBtn } from './world.js';
 import { startTraffic } from './traffic.js';
+import { ambulanceSvg, freshTruckSvg, postVanSvg, bookmobileSvg, LOAD_ART } from '../art/traffic.js';
+import { FOODS } from '../art/more.js';
 import { mainFest } from '../core/festival.js';
 import { FEST_SIGN, FEST_COLOR, FICON } from '../art/festival.js';
 import { stepsGame } from './kit.js';
@@ -667,7 +669,7 @@ export async function mountTown(root, app) {
       } else {
         await speak('shan', `town_go_${to}`, { node: shan.el });
         if (!app.alive()) return;
-        const vehicle = await pickVehicle(root, app);
+        const vehicle = await pickVehicle(root, app, app.trip.location, to);
         if (!vehicle) { going = false; setPlaying(true); T.markers[to].el.classList.remove('hop'); return; }
         if (app.alive()) app.go('ride', { to, vehicle });
       }
@@ -725,16 +727,25 @@ export function placeBar(root, dio, places, markers, here, go, node = null) {
 
 const DRAW_ICON = `<svg viewBox="0 0 100 100"><rect x="14" y="18" width="72" height="60" rx="10" fill="#fff"/><path d="M24 64 Q40 30 56 52 T80 40" stroke="#3ea8e0" stroke-width="7" fill="none" stroke-linecap="round"/><circle cx="66" cy="34" r="8" fill="#ffd23f"/><rect x="44" y="78" width="12" height="14" fill="#c98b5e"/></svg>`;
 
-// ---- 要坐什麼去？叭叭、公車、警車、消防車、腳踏車（一個人玩才能騎腳踏車）----
-function pickVehicle(root, app) {
+// ---- 要坐什麼去？（11/25）固定有叭叭、公車（一個人玩多一台腳踏車），
+// 再加上「出發地、目的地」的專屬車：警察局 → 警車、消防局 → 消防車、醫院 → 救護車、超市 → 生鮮貨車、
+// 郵局 → 郵務車、垃圾車站 → 垃圾車、圖書館 → 行動圖書車。最多五台，岳岳不會被太多選擇卡住；也學到哪台車屬於哪裡。
+export const PLACE_VEHICLE = { police: 'police', fire: 'fire', clinic: 'ambulance', market: 'fresh', post: 'postvan', garbage: 'garbage', library: 'book' };
+const RIDE_ART = {
+  police: () => VEHICLES.police, fire: () => VEHICLES.fire, ambulance: () => ambulanceSvg(), fresh: () => freshTruckSvg(),
+  postvan: () => postVanSvg(), garbage: () => garbageTruckSvg(), book: () => bookmobileSvg(),
+};
+function pickVehicle(root, app, from, to) {
   const solo = app.profile.members.length === 1;
   const color = KIDS[app.profile.members[0]].color;
-  const opts = [['baba', babaSvg()], ['bus', VEHICLES.bus], ['police', VEHICLES.police], ['fire', VEHICLES.fire], ...(solo ? [['bike', VEHICLES.bike(color)]] : [])];
+  const special = [...new Set([PLACE_VEHICLE[to], PLACE_VEHICLE[from]].filter(Boolean))];
+  const opts = [['baba', babaSvg()], ['bus', VEHICLES.bus], ...(solo ? [['bike', VEHICLES.bike(color)]] : []), ...special.map((k) => [k, RIDE_ART[k](), 'sp'])];
   return new Promise((resolve) => {
     const scrim = div('scrim');
-    const box = div('vpick ui', opts.map(([k, html]) => `<button class="vopt" data-v="${k}">${html}</button>`).join('') + `<button class="vback">${ICON2.skip}</button>`);
+    const box = div('vpick ui', opts.map(([k, html, sp]) => `<button class="vopt${sp ? ' sp' : ''}" data-v="${k}">${html}</button>`).join('') + `<button class="vback">${ICON2.skip}</button>`);
     root.append(scrim, box);
-    speak('baba', 'pick_vehicle');
+    // 有專屬車：說「今天可以坐救護車喔！」（目的地的優先）；沒有就問要坐什麼
+    speak('baba', special.length ? `pick_sp_${special[0]}` : 'pick_vehicle');
     const done = (v) => { scrim.remove(); box.remove(); resolve(v); };
     box.addEventListener('pointerdown', (e) => {
       e.stopPropagation();
@@ -770,8 +781,14 @@ export async function mountRide(root, app) {
 
   const path = route(PLACES[from].node, PLACES[to].node);
   const vehicle = app.params?.vehicle || 'baba';
-  const vhtml = vehicle === 'baba' ? babaSvg() : vehicle === 'bike' ? VEHICLES.bike(KIDS[app.profile.members[0]].color) : VEHICLES[vehicle];
-  const car = dio.addSprite({ x: path[0].x, y: path[0].y, z: 1, w: vehicle === 'bus' || vehicle === 'fire' ? 130 : 110, h: vehicle === 'bus' || vehicle === 'fire' ? 110 : 90, html: vhtml, shadow: 0.6 });
+  const vhtml = vehicle === 'baba' ? babaSvg() : vehicle === 'bike' ? VEHICLES.bike(KIDS[app.profile.members[0]].color) : RIDE_ART[vehicle] ? RIDE_ART[vehicle]() : VEHICLES[vehicle];
+  const big = ['bus', 'fire', 'garbage'].includes(vehicle), long = ['ambulance', 'fresh', 'postvan', 'book'].includes(vehicle);
+  const car = dio.addSprite({ x: path[0].x, y: path[0].y, z: 1, w: big || long ? 132 : 110, h: big ? 110 : long ? 90 : 90, html: vhtml, shadow: 0.6, live: true });
+  car.el.classList.add('ride-car');
+  // 路上的車流（11/25 坐車時也有）：靠近小孩的車會停下來等；開警笛時靠邊讓路
+  const traffic = state.settings.traffic !== false
+    ? startTraffic(dio, { NODES, neighbors, edgePts, along, MRT_LINE, TRAIN_LINE, PLACES }, { alive: () => alive, player: () => ({ x: car.x, y: car.y }) })
+    : null;
   drawPlacedStickers(dio);
   const flag = dio.addSprite({ x: path[path.length - 1].x + 30, y: path[path.length - 1].y - 30, z: 1, w: 90, h: 240, shadow: 0.4,
     html: `<svg viewBox="0 0 90 240"><rect x="10" y="10" width="7" height="228" rx="3" fill="#8a8fa0"/><path d="M17 14 H84 L70 40 L84 66 H17Z" fill="#ff5d73"/><circle cx="13" cy="10" r="8" fill="#ffd23f"/></svg>` });
@@ -799,10 +816,15 @@ export async function mountRide(root, app) {
 
   try {
     // 1. 繫安全帶
+    // 專屬車：上車前先裝貨（救護車、生鮮貨車、郵務車、行動圖書車）；垃圾車在路上停一站收垃圾
+    const job = vehicle === 'garbage' ? null : loadJob(vehicle, from, to);
+    if (job) { await loadTask(root, app, job, () => alive); chk(); }
     if (vehicle === 'bike') await helmet(root, app, () => alive);
     else if (vehicle === 'bus') await busBoard(root, app, full, () => alive);   // 公車沒有安全帶：排隊、招手、刷卡、坐好
     else await seatbelt(root, app, full, () => alive);
     chk();
+    // 警車、消防車、救護車：按警笛，路上的車靠邊讓路
+    if (SIREN[vehicle]) { await sirenTask(root, app, vehicle, car, traffic, () => alive); chk(); }
     // 2. 開車
     const stopBtn = document.createElement('button');
     stopBtn.className = 'bigbtn stopbtn ui';
@@ -852,20 +874,37 @@ export async function mountRide(root, app) {
         chk();
         stopBtn.style.visibility = '';
       }
+      // 垃圾車：路程中間停一站，把垃圾丟上車（分一般垃圾、資源回收）
+      if (vehicle === 'garbage' && i === Math.floor(segs / 2)) { await garbageStop(); chk(); }
       const ev = events[i];
       await drive(a, b, ev);
       chk();
     }
+    if (vehicle === 'garbage' && segs === 0) { await garbageStop(); chk(); }
     stopBtn.remove();
+    traffic?.setSiren(false);
+    car.el.classList.remove('siren-on');
     if (vehicle === 'bus') { await say('baba', 'bus_off', car.el); chk(); }
     // 3. 到了
     sfx('fanfare');
     burst(stageW() / 2, 400, { n: 24, spread: 220 });
-    await say('baba', full ? `ride_arrive_${to}` : 'ride_arrive_short', car.el);
+    // 專屬車到了：先說這台車做了什麼（救護車到醫院：謝醫生出來接小熊）
+    const arr = arriveLine(vehicle, to);
+    if (arr) { await say(arr[0], arr[1], car.el); chk(); }
+    if (full || !arr) await say('baba', full ? `ride_arrive_${to}` : 'ride_arrive_short', car.el);
     chk();
     if (full) { await say('baba', 'ride_lookback', car.el); chk(); }
     app.trip.location = to;
     app.go(PLACES[to].screen);
+
+    async function garbageStop() {
+      stopBtn.style.visibility = 'hidden';
+      playMusic('garbage');
+      sfx('ding');
+      await loadTask(root, app, garbageJob(), () => alive);
+      playMusic('drive');
+      stopBtn.style.visibility = '';
+    }
 
     // ---- 開一段路；ev：'light' 紅燈、'walker' 行人 ----
     async function drive(a, b, ev) {
@@ -1132,6 +1171,170 @@ async function helmet(root, app, alive) {
     if (alive()) await speak('baba', 'helmet_done', { node });
   } finally {
     scrim.remove(); pnl.remove(); node.remove();
+  }
+}
+
+// ======================= 專屬車的小任務（11/25） =======================
+const SIREN = { police: 'sirenPolice', fire: 'sirenFire', ambulance: 'sirenAmb' };
+const L = LOAD_ART;
+// 裝貨：把東西拖到對的地方。items：[{ art, to }]、bins：[{ id, art }]
+function loadJob(vehicle, from, to) {
+  if (vehicle === 'ambulance') {
+    const teddy = to === 'clinic';   // 往醫院：載受傷的小熊；從醫院出發：帶急救箱和毯子去幫人
+    return {
+      cls: 'ld-amb', intro: teddy ? 'ld_amb_teddy' : 'ld_amb_kit', done: 'ld_amb_done',
+      bins: [{ id: 'amb', art: ambulanceSvg(), w: 330, h: 222 }],
+      items: teddy ? [{ art: L.teddyStretcher, to: 'amb', w: 240, h: 200 }, { art: L.medkit, to: 'amb' }] : [{ art: L.medkit, to: 'amb' }, { art: L.blanket, to: 'amb' }],
+    };
+  }
+  if (vehicle === 'fresh') return {
+    cls: 'ld-fresh', intro: 'ld_fresh_go', done: 'ld_fresh_done',
+    bins: [{ id: 'cold', art: L.fridge, wrong: 'ld_fresh_cold' }, { id: 'dry', art: L.shelf, wrong: 'ld_fresh_dry' }],
+    items: shuffle([{ art: `<svg viewBox="0 0 100 100" width="100%" height="100%">${FOODS.fish.svg}</svg>`, to: 'cold' }, { art: itemSvg('milk'), to: 'cold' }, { art: MISC.meat, to: 'cold' }, { art: itemSvg('bread'), to: 'dry' }, { art: itemSvg('can'), to: 'dry' }]),
+  };
+  if (vehicle === 'postvan') return {
+    cls: 'ld-post', intro: 'ld_post_go', done: 'ld_post_done',
+    bins: [{ id: 'red', art: L.bagRed }, { id: 'green', art: L.bagGreen }],
+    items: shuffle([{ art: L.letterRed, to: 'red' }, { art: L.letterGreen, to: 'green' }, { art: L.letterRed, to: 'red' }, { art: L.letterGreen, to: 'green' }]),
+  };
+  if (vehicle === 'book') {
+    // 書架上的空格：顏色和高度都要一樣（愷愷的觀察力）
+    const B = shuffle([['#ff5d73', 86], ['#3ea8e0', 62], ['#4cd07d', 74], ['#ffb627', 52]]);
+    return {
+      cls: 'ld-book', intro: 'ld_book_go', done: 'ld_book_done',
+      bins: B.map(([c, h], i) => ({ id: `b${i}`, art: L.slot(c, h), w: 130, h: 170 })),
+      items: shuffle(B.map(([c, h], i) => ({ art: L.book(c, h), to: `b${i}`, w: 120, h: 160 }))),
+    };
+  }
+  return null;
+}
+const garbageJob = () => ({
+  cls: 'ld-garbage', intro: 'ld_garbage_go', done: 'ld_garbage_done',
+  bins: [{ id: 'trash', art: L.truckTrash, wrong: 'ld_garbage_trash' }, { id: 'rec', art: L.truckRecycle, wrong: 'ld_garbage_rec' }],
+  items: shuffle([{ art: L.trashBag, to: 'trash' }, { art: itemSvg('tissue'), to: 'trash' }, { art: itemSvg('bottle'), to: 'rec' }, { art: itemSvg('can'), to: 'rec' }]),
+});
+function arriveLine(vehicle, to) {
+  if (vehicle === 'ambulance') return to === 'clinic' ? ['xie', 'arr_amb_clinic'] : ['baba', 'arr_amb'];
+  if (vehicle === 'fresh') return ['baba', 'arr_fresh'];
+  if (vehicle === 'postvan') return ['baba', 'arr_post'];
+  if (vehicle === 'garbage') return ['baba', 'arr_garbage'];
+  if (vehicle === 'book') return ['baba', to === 'library' ? 'arr_book_back' : 'arr_book'];
+  if (vehicle === 'police' || vehicle === 'fire') return ['baba', 'arr_siren'];
+  return null;
+}
+
+// 拖東西的小面板：東西在上面一排，目的地在下面；放錯彈回去，同一個放錯兩次，對的地方會發亮
+export async function loadTask(root, app, job, alive) {
+  const scrim = div('scrim');
+  const pnl = div(`panel loadpanel ${job.cls || ''}`);
+  root.append(scrim, pnl);
+  const node = div('panel-host', babaSvg());
+  root.appendChild(node);
+  const PW = 940;
+  try {
+    const bins = job.bins.map((b, i) => {
+      const w = b.w || 230, h = b.h || 230;
+      const gap = (PW - job.bins.reduce((t, x) => t + (x.w || 230), 0)) / (job.bins.length + 1);
+      const x = gap * (i + 1) + job.bins.slice(0, i).reduce((t, x2) => t + (x2.w || 230) + 0, 0);
+      const el = div('ld-bin', b.art);
+      el.style.cssText = `left:${x}px;top:${600 - h}px;width:${w}px;height:${h}px`;
+      el.dataset.bin = b.id;
+      pnl.appendChild(el);
+      return { ...b, el, n: 0 };
+    });
+    const IW = 160;
+    const items = job.items.map((it, i) => {
+      const w = it.w || IW, h = it.h || IW;
+      const gap = (PW - job.items.reduce((t, x) => t + (x.w || IW), 0)) / (job.items.length + 1);
+      const x = gap * (i + 1) + job.items.slice(0, i).reduce((t, x2) => t + (x2.w || IW), 0);
+      const el = div('ld-item', it.art);
+      el.style.cssText = `left:${x}px;top:${40 + (i % 2) * 24}px;width:${w}px;height:${h}px`;
+      pnl.appendChild(el);
+      return { ...it, el, home: { x, y: 40 + (i % 2) * 24 }, w, h, done: false, wrongs: 0 };
+    });
+    await speak('baba', job.intro, { node });
+    if (!alive()) return;
+    setHint(() => items.find((x) => !x.done)?.el);
+    let lastWrongSay = 0;
+    await new Promise((resolve) => {
+      for (const it of items) {
+        it.el.addEventListener('pointerdown', (e) => {
+          if (it.done) return;
+          e.preventDefault(); e.stopPropagation();
+          sfx('tap');
+          it.el.classList.add('dragging');
+          const P = stageRect(pnl);
+          const mv = (ev) => { const p = toStage(ev.clientX, ev.clientY); it.el.style.left = `${p.x - P.left - it.w / 2}px`; it.el.style.top = `${p.y - P.top - it.h / 2}px`; };
+          const up = (ev) => {
+            window.removeEventListener('pointermove', mv);
+            window.removeEventListener('pointerup', up);
+            it.el.classList.remove('dragging');
+            const p = toStage(ev.clientX, ev.clientY);
+            const hit = bins.find((b) => { const r = stageRect(b.el); return Math.abs(p.x - r.x) < r.w / 2 + 20 && Math.abs(p.y - r.y) < r.h / 2 + 20; });
+            const home = () => { it.el.style.left = `${it.home.x}px`; it.el.style.top = `${it.home.y}px`; };
+            if (!hit) { home(); return; }
+            if (hit.id === it.to) {
+              it.done = true;
+              it.el.classList.add('in');
+              bins.forEach((b) => b.el.classList.remove('help'));
+              // 放進去：縮小疊在目的地上
+              const r = stageRect(hit.el);
+              const k = hit.n++;
+              it.el.style.left = `${r.left - P.left + r.w / 2 - it.w * 0.3 + (k % 3 - 1) * 26}px`;
+              it.el.style.top = `${r.top - P.top + r.h * 0.42 - it.h * 0.3 - Math.floor(k / 3) * 20}px`;
+              sfx('pop');
+              burst(r.x, r.y - 30, { n: 10, stars: true, colors: ['#ffd23f', '#fff3a0'] });
+              if (turnsOn()) nextTurn({ say: false });
+              if (items.every((x) => x.done)) setTimeout(resolve, 500);
+            } else {
+              home();
+              sfx('soft');
+              it.wrongs++;
+              const right = bins.find((b) => b.id === it.to);
+              if (it.wrongs >= 2) right.el.classList.add('help');
+              if (Date.now() - lastWrongSay > 2500) { lastWrongSay = Date.now(); speak('baba', right.wrong || 'ld_wrong', { node }); }
+            }
+          };
+          window.addEventListener('pointermove', mv);
+          window.addEventListener('pointerup', up);
+        });
+      }
+      const watch = setInterval(() => { if (!alive()) { clearInterval(watch); resolve(); } }, 400);
+    });
+    setHint(null);
+    if (!alive()) return;
+    sfx('sparkle');
+    await speak('baba', job.done, { node });
+  } finally {
+    scrim.remove(); pnl.remove(); node.remove(); setHint(null);
+  }
+}
+
+// 警笛：一個大大的警笛按鈕，按一下響一次（不會一直響，岳岳怕吵）、車頂的燈開始閃，路上的車靠邊讓路
+async function sirenTask(root, app, vehicle, car, traffic, alive) {
+  const btn = document.createElement('button');
+  btn.className = 'bigbtn sirenbtn ui';
+  btn.innerHTML = LOAD_ART.sirenBtn;
+  root.appendChild(btn);
+  let said = false;
+  try {
+    setHint(() => btn);
+    speak('baba', 'siren_go', { node: car.el });
+    await new Promise((resolve) => {
+      btn.addEventListener('pointerdown', (e) => { e.stopPropagation(); resolve(); }, { once: true });
+      const watch = setInterval(() => { if (!alive()) { clearInterval(watch); resolve(); } }, 400);
+    });
+    setHint(null);
+    if (!alive()) return;
+    sfx(SIREN[vehicle]);
+    btn.classList.add('on');
+    car.el.style.setProperty('--sy', { police: '16%', fire: '20%', ambulance: '12%' }[vehicle]);
+    car.el.classList.add('siren-on');
+    traffic?.setSiren(true, () => { if (said || !alive()) return; said = true; speak('baba', 'siren_yield', { node: car.el }); });
+    await speak('baba', 'siren_on', { node: car.el });
+  } finally {
+    setHint(null);
+    btn.remove();
   }
 }
 

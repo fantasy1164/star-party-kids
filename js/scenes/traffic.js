@@ -5,7 +5,7 @@
 import { pick, wait } from '../core/dom.js';
 import { stillNow } from '../core/session.js';
 import { VEHICLES } from '../art/fun.js';
-import { carSvg, riderSvg, postScooterSvg, vanSvg, mrtTrainSvg, trainSvg } from '../art/traffic.js';
+import { carSvg, riderSvg, postScooterSvg, vanSvg, mrtTrainSvg, trainSvg, freshTruckSvg, postVanSvg, bookmobileSvg } from '../art/traffic.js';
 
 const FLEET = [
   // [種類, 圖, 寬, 高, 速度（每秒幾個單位）]
@@ -19,9 +19,16 @@ const FLEET = [
   ['bus', () => VEHICLES.bus, 112, 88, 70],
   ['post', () => postScooterSvg(), 54, 52, 100],
   ['van', () => vanSvg(), 92, 58, 85],
+  ['fresh', () => freshTruckSvg(), 104, 70, 75],
+  ['postvan', () => postVanSvg(), 92, 62, 85],
+  ['book', () => bookmobileSvg(), 104, 70, 70],
 ];
 
-export function startTraffic(dio, roads, { alive }) {
+// 坐車時（11/25）：player() 回傳小孩坐的車在哪裡。路上的車靠近它就停下來等（不會穿過去）；
+// 開了警笛（siren）的時候，更遠就停、而且往路邊靠，讓救護車、消防車、警車先過。
+export function startTraffic(dio, roads, { alive, player = null }) {
+  let siren = false;
+  let onYield = null;
   const { NODES, neighbors, edgePts, along, MRT_LINE, TRAIN_LINE, PLACES } = roads;
   const ids = Object.keys(NODES);
   const cars = FLEET.map(([kind, art, w, h, speed], i) => {
@@ -40,8 +47,20 @@ export function startTraffic(dio, roads, { alive }) {
     if (f !== v.flip) { v.flip = f; v.inner.style.transform = f ? 'scaleX(-1)' : ''; }
   };
   function stepCars(s) {
+    const me = player?.();
     for (const v of cars) {
-      if (v.wait > 0) { v.wait -= s; continue; }
+      // 讓路：離小孩的車太近就停；開警笛時停得更遠、慢慢往路邊靠
+      let hold = false;
+      if (me) {
+        const d = Math.hypot(v.sp.x - me.x, v.sp.y - me.y);
+        hold = d < (siren ? 520 : 200);
+        const want = hold ? (siren ? 1 : 0.7) : 0;   // 沒開警笛也稍微靠邊，小孩的車才不會穿過去
+        v.pull = (v.pull || 0) + Math.max(-s * 1.5, Math.min(s * 1.5, want - (v.pull || 0)));
+        if (siren && hold && !v.yielded) { v.yielded = true; onYield?.(); }
+        if (!siren) v.yielded = false;
+      }
+      if (hold) { place(v); continue; }
+      if (v.wait > 0) { v.wait -= s; place(v); continue; }
       v.t += (v.speed * s) / v.E.len;
       if (v.t >= 1) {
         // 到路口：停一下（像在等紅燈、看左右），再換一條路（不回頭，除非是死路）
@@ -50,12 +69,15 @@ export function startTraffic(dio, roads, { alive }) {
         v.a = v.b; v.b = next; v.E = edgePts(v.a.id, v.b.id); v.t = 0;
         v.wait = 0.5 + Math.random() * 1.5;
       }
-      const p = along(v.E, Math.min(1, v.t));
-      const l = Math.hypot(p.dx, p.dy) || 1;
-      const off = lane(v.kind);
-      v.sp.move(p.x - (p.dy / l) * off, p.y + (p.dx / l) * off, 1);
-      facing(v, p.dx, p.dy);
+      place(v);
     }
+  }
+  function place(v) {
+    const p = along(v.E, Math.min(1, v.t));
+    const l = Math.hypot(p.dx, p.dy) || 1;
+    const off = lane(v.kind) + (v.pull || 0) * 46;   // 讓路時往右邊的路邊靠
+    v.sp.move(p.x - (p.dy / l) * off, p.y + (p.dx / l) * off, 1);
+    facing(v, p.dx, p.dy);
   }
 
   // ---- 捷運、火車：沿著一直線來回 ----
@@ -123,4 +145,7 @@ export function startTraffic(dio, roads, { alive }) {
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
+  return {
+    setSiren(on, cb = null) { siren = !!on; onYield = cb; },
+  };
 }
