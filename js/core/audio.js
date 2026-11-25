@@ -224,7 +224,11 @@ export function stopSiren() {
   setTimeout(() => { try { g.disconnect(); } catch { /* 忽略 */ } }, 1500);
 }
 
+// 音效的旁聽者（11/25）：學習紀錄用 'soft'（答錯的聲音）來算錯幾次
+const sfxHooks = [];
+export function onSfx(fn) { sfxHooks.push(fn); }
 export function sfx(name) {
+  for (const f of sfxHooks) { try { f(name); } catch { /* 忽略 */ } }
   if (!ctx || ctx.state !== 'running') return;
   if ((thinking || quietMode) && DECOR.has(name)) return;
   SFX[name]?.(ctx.currentTime + 0.005);

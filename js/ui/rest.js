@@ -8,6 +8,7 @@ import { restLeftMs, resting, clearRest, startRest } from '../core/session.js';
 import { phase, isDark } from '../core/clock.js';
 import { shanSvg, wanSvg } from '../art/stars.js';
 import { ICON } from '../art/props.js';
+import { moodCheck } from './mood.js';
 import { backdrop } from './hud.js';
 
 function lockBtn(root, app) {
@@ -19,7 +20,8 @@ function lockBtn(root, app) {
 export async function mountRest(root, app) {
   // 11/25 修正：從關卡時間到跳過來時，休息還沒開始計時（restUntil 是 0），一秒後就「休息好了」；
   // 進休息畫面時如果還沒在休息，從現在開始算休息時間
-  if (!resting()) startRest();
+  const fresh = !resting();   // 剛玩完（不是休息中重新打開 app）
+  if (fresh) startRest();
   backdrop(root);
   const card = div('rest-card');
   const ch = div('', shanSvg());
@@ -42,6 +44,8 @@ export async function mountRest(root, app) {
   draw();
   ch.addEventListener('click', () => { sfx('windup'); speak('shan', resting() ? 'rest_wait' : 'rest_ready', { node: ch }); });
   app.onLeave(() => clearInterval(timer));
+  // 心情打卡（玩之後）
+  if (fresh && app.profile) { await moodCheck(root, app.profile.members, 'e', app.alive); if (!app.alive()) return; }
   await speak('shan', 'rest', { node: ch });
   timer = setInterval(async () => {
     draw();

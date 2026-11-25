@@ -1270,3 +1270,54 @@ body.turn-kk .glowy > svg { filter: drop-shadow(0 0 10px #ff6a2b); }
 .ride-car.siren-on::before { left: calc(50% - 30px); background: #ff3030; box-shadow: 0 0 18px 8px rgba(255,48,48,.75); }
 .ride-car.siren-on::after { left: calc(50% + 4px); background: #2f6bff; box-shadow: 0 0 18px 8px rgba(47,107,255,.75); animation-delay: .3s; }
 @keyframes sirenA { 50% { opacity: .15; } }
+
+/* ---- 心情打卡（11/25）：仿捷運廁所的滿意度按鈕 ---- */
+.moodpanel { background: linear-gradient(#fdf7ff, #efe6ff); }
+.moodpanel .mood-kid { left: 50%; top: 40px; margin-left: -80px; width: 160px; height: 160px; animation: popin .4s cubic-bezier(.3,1.6,.5,1) both; }
+.moodpanel .mood-kid svg { width: 100%; height: 100%; }
+.mood-kiosk { left: 50%; top: 250px; transform: translateX(-50%); display: flex; gap: 26px; padding: 34px 40px; background: #3a3f4a; border-radius: 40px; box-shadow: inset 0 -10px 0 rgba(0,0,0,.25), 0 14px 30px rgba(0,0,0,.2); }
+.mood-btn { position: relative; width: 132px; height: 132px; border-radius: 50%; background: #2a2e36; padding: 8px; border: 0; box-shadow: 0 8px 0 #1c1f25; transition: transform .15s, opacity .3s; }
+.mood-btn svg { width: 100%; height: 100%; display: block; }
+.mood-btn:active { transform: translateY(6px); box-shadow: 0 2px 0 #1c1f25; }
+.mood-btn.picked { transform: translateY(-12px) scale(1.12); box-shadow: 0 0 0 6px #fff, 0 0 28px #fff6a0; }
+.mood-kiosk.chosen .mood-btn:not(.picked) { opacity: .3; }
+.mood-skip { left: auto !important; right: 36px; bottom: 32px; width: 104px; height: 104px; border-radius: 50%; background: #c9bde0; border: 0; padding: 24px; box-shadow: 0 6px 0 #a898c4; }
+.mood-skip svg { width: 100%; height: 100%; }
+.mood-balloon { left: 50%; top: 120px; margin-left: -150px; width: 300px; height: 360px; border: 0; background: none; padding: 0; filter: drop-shadow(0 0 16px #ffd23f); animation: balloonBob 2.4s ease-in-out infinite; }
+@keyframes balloonBob { 50% { transform: translateY(-14px) rotate(4deg); } }
+.mood-balloon svg { width: 100%; height: 100%; }
+.moodpanel .breath-balloon { left: 340px; }
+.moodpanel .breath-dots { left: 390px; }
+.moodpanel .breath-btn { left: 385px; }
+
+/* ---- 家長頁：總覽與一週紀錄（11/25，圖表） ---- */
+.parent .rp-hero { background: #fff; border-radius: 28px; padding: 22px 26px; box-shadow: 0 4px 14px rgba(0,0,0,.06); border-top: 10px solid #3ea8e0; margin-bottom: 18px; }
+.parent .rp-hero h3 { margin: 0 0 14px; font-size: 30px; color: #333; display: flex; align-items: center; gap: 12px; }
+.parent .rp-row { display: flex; gap: 16px; flex-wrap: wrap; }
+.parent .rp-mood { flex: none; display: flex; align-items: center; gap: 10px; background: #faf6ef; border-radius: 22px; padding: 14px 20px; }
+.parent .rp-mood .lab { font-size: 17px; color: #8a7a5a; text-align: center; margin-top: 4px; }
+.parent .rp-mood .arrow { font-size: 34px; color: #c9b88e; }
+.parent .mood-face { display: block; }
+.parent .mood-none { display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #ece4d4; color: #b3a684; font-size: 30px; font-weight: 800; }
+.parent .rp-tile { flex: 1 1 150px; background: #faf6ef; border-radius: 22px; padding: 14px 18px; }
+.parent .rp-tile .v { font-size: 46px; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.parent .rp-tile .v small { display: inline; font-size: 20px; font-weight: 600; color: #8a7a5a; margin-left: 4px; }
+.parent .rp-tile .k { font-size: 18px; color: #8a7a5a; }
+.parent .rp-tile .d { font-size: 16px; margin-top: 4px; color: #6b5636; }
+.parent .rp-tile .d.good { color: #1a8a3a; } .parent .rp-tile .d.bad { color: #c9462c; }
+.parent .rp-hl { margin-top: 14px; background: #fff8e6; border-radius: 18px; padding: 12px 18px; font-size: 20px; line-height: 1.6; }
+.parent .rp-mini { background: #fff; border-radius: 22px; padding: 16px 22px; box-shadow: 0 3px 10px rgba(0,0,0,.05); border-top: 8px solid #ff6a2b; display: flex; align-items: center; gap: 22px; flex-wrap: wrap; font-size: 20px; margin-bottom: 8px; }
+.parent .rp-mini b { font-size: 28px; }
+.parent .rp-mini .hl1 { color: #8a7a5a; }
+.parent .rp-card { background: #fff; border-radius: 24px; padding: 18px 22px 10px; box-shadow: 0 3px 10px rgba(0,0,0,.05); margin-bottom: 18px; }
+.parent .rp-card h4 { margin: 0 0 4px; font-size: 24px; }
+.parent .rp-card .q { font-size: 17px; color: #8a7a5a; margin-bottom: 6px; }
+.parent .rp-card svg.chart { display: block; }
+.parent .chart-legend { display: flex; gap: 20px; font-size: 17px; color: #555; margin: 4px 0 2px; }
+.parent .chart-legend i { display: inline-block; width: 22px; height: 10px; border-radius: 5px; margin-right: 6px; vertical-align: middle; }
+.parent .rp-three { background: #fff; border-radius: 24px; padding: 16px 22px; margin-bottom: 18px; box-shadow: 0 3px 10px rgba(0,0,0,.05); font-size: 21px; line-height: 1.7; }
+.parent .rp-three ul { margin: 6px 0 0; padding-left: 8px; list-style: none; }
+.parent .rp-empty { background: #fff; border-radius: 24px; padding: 26px; font-size: 21px; line-height: 1.7; color: #6b5636; margin-bottom: 18px; }
+.parent .kidsw { display: inline-flex; background: #e9dfcc; border-radius: 14px; padding: 4px; gap: 4px; margin-left: 12px; vertical-align: middle; }
+.parent .pbody .kidsw button { margin: 0; padding: 8px 20px; border-radius: 10px; font-size: 19px; background: transparent; color: #6b5636; }
+.parent .pbody .kidsw button.on { background: #fff; font-weight: 700; color: #222; box-shadow: 0 2px 6px rgba(0,0,0,.1); }

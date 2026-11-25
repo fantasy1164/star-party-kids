@@ -5,6 +5,7 @@ import { quietFor } from './voice.js';
 import { div, stageRect, toStage } from './dom.js';
 import { ICON } from '../art/props.js';
 import { speak } from './voice.js';
+import { noteHand } from './stats.js';
 
 let playing = false;
 let lastTick = Date.now();
@@ -90,6 +91,7 @@ export function setupHints(stageEl) {
     hand.style.left = `${r.x - 20}px`;
     hand.style.top = `${r.y - 10}px`;
     stageRoot.appendChild(hand);
+    noteHand();   // 學習紀錄：這一關有用到手指提示
     setTimeout(hideHand, 4000);
     lastTouch = Date.now();
   }, 1000);

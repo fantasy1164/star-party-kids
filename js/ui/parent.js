@@ -7,6 +7,8 @@ import { clearRest, resting, restLeftMs, remainingMs } from '../core/session.js'
 import { TEST_KEY, dateKey } from '../core/clock.js';
 import * as fest from '../core/festival.js';
 import { timeMachineHtml, bindTimeMachine } from './timemachine.js';
+import { todayHtml, weekHtml } from './report.js';
+import { snapMult } from '../core/stats.js';
 import { KIDS } from '../config.js';
 import * as M from '../core/mult.js';
 import { syncConfig, setSyncConfig, syncNow, syncStatus, onSyncStatus, syncLight, configured, deviceName, pingCloud } from '../core/sync.js';
@@ -55,7 +57,6 @@ const TAB_KEY = 'spk-parent-tab';
 const BOXC = ['#ffd0d0', '#ffe3c4', '#fff2b8', '#c8f5d6', '#9fe6b8', '#6fd99a'];
 const hm = (v) => `${Math.floor(v)}:${v % 1 ? '30' : '00'}`;
 const mins = (ms) => Math.ceil(ms / 60000);
-const chips = (done) => Object.entries(done || {}).map(([g, n]) => `<span class="chip">${NAMES[g] || g}${n > 1 ? ` ×${n}` : ''}</span>`).join('') || '<span class="none">還沒玩</span>';
 
 const attr = (v) => String(v || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 function syncText(st = syncStatus()) {
@@ -88,35 +89,24 @@ export function openParent(root, onClose) {
 
   // ---- 各分頁 ----
   const today = dateKey();
-  const kidCard = (id) => {
-    const k = state.kids[id];
-    const n = Object.values(k.done[today] || {}).reduce((a, b) => a + b, 0);
-    const extra = id === 'yy' ? `<div class="kstat"><b>${M.masteredCount()}</b>／81 題乘法學會了　正在練 ${M.focusRow()} 的乘法</div>` : '';
-    return `<div class="kid-card k-${id}"><div class="kname">${KIDS[id].name}</div>
-      <div class="kstat"><b>${k.stars[today] || 0}</b> 顆星星　玩了 <b>${n}</b> 關</div>${extra}
-      <div class="chips">${chips(k.done[today])}</div></div>`;
-  };
+  let weekKid = 'yy';   // 一週紀錄看誰（預設岳岳）
+  snapMult();
   const playState = () => {
     if (resting()) return `<div class="status rest">😴 休息中，還有 <b>${mins(restLeftMs())}</b> 分鐘　<button id="endRest">現在結束休息</button></div>`;
     if (s.nolimit) return '<div class="status">⏱️ 目前不限制遊玩時間（在「進階」可以改）</div>';
     return `<div class="status">⏱️ 這一輪還可以玩 <b>${mins(remainingMs())}</b> 分鐘（每次 ${s.sessionMin} 分鐘，玩完休息 ${s.restMin} 分鐘）</div>`;
   };
-  const days = [];
-  const d = new Date();
-  for (let i = 0; i < 7; i++) { days.push(dateKey(d)); d.setDate(d.getDate() - 1); }
   const multTable = () => `<table class="mult"><tr><th></th>${[2, 3, 4, 5, 6, 7, 8, 9].map((b) => `<th>×${b}</th>`).join('')}</tr>
     ${M.table().map((row, i) => `<tr><th>${i + 2}</th>${row.map((f) => `<td style="background:${BOXC[f.box]}">${f.bad ? `✕${f.bad}` : ''}</td>`).join('')}</tr>`).join('')}</table>`;
 
   const PAGES = {
-    today: () => `<h2>今天</h2>${playState()}<div class="status sync-st">${syncText()}</div><div class="kids">${kidCard('yy')}${kidCard('kk')}</div>
+    today: () => `<h2>今天</h2>${playState()}<div class="status sync-st">${syncText()}</div>${todayHtml(NAMES)}
       <h3>常用</h3>
       ${field('音樂大小', seg('musicVol', [['low', '小'], ['mid', '中'], ['high', '大']]))}
       ${sw('quiet', '安靜模式', '關掉背景音樂和裝飾音效，只留角色說話和對錯的聲音')}
       ${sw('traffic', '城市裡有車在跑', '汽車、機車、公車、捷運、火車在城市裡慢慢開；覺得會讓孩子分心可以關掉')}
       ${sw('gestureTip', '每天第一次打開時練習手勢', '大家歡迎完以後，跟閃閃練習：一指左右滑轉、上下滑抬頭低頭、兩指張開捏起拉近拉遠、兩指一起滑移動')}`,
-    week: () => `<h2>這一週</h2>
-      <table class="week"><tr><th>日期</th><th>${KIDS.yy.name}</th><th>${KIDS.kk.name}</th></tr>
-      ${days.map((day) => `<tr><td class="day">${day.slice(5)}${day === today ? '<small>今天</small>' : ''}</td>${['yy', 'kk'].map((id) => `<td><div class="wstar">⭐ ${state.kids[id].stars[day] || 0}</div><div class="chips">${chips(state.kids[id].done[day])}</div></td>`).join('')}</tr>`).join('')}</table>`,
+    week: () => weekHtml(weekKid, NAMES),
     mult: () => `<h2>九九乘法（${KIDS.yy.name}）</h2>
       <div class="status">正在練 <b>${M.focusRow()}</b> 的乘法　已學會 <b>${M.masteredCount()}</b>／81 題${M.checked() ? '' : '<br><small>還沒做程度檢查：在學堂玩「修理機器人」會先做</small>'}</div>
       ${multTable()}
@@ -218,6 +208,7 @@ export function openParent(root, onClose) {
     $('recheck') && ($('recheck').onclick = () => { state.mult = { ...(state.mult || {}), checked: false }; save(); $('recheck').textContent = '下次進學堂會重新檢查 ✓'; });
     body.querySelectorAll('.bday').forEach((inp) => { inp.onchange = () => { fest.setBirthday(inp.dataset.id, inp.value); }; });
     body.querySelectorAll('.fprev').forEach((b) => { b.onclick = () => { localStorage.setItem(TEST_KEY, JSON.stringify({ date: b.dataset.date, hour: 10, setAt: Date.now() })); location.reload(); }; });
+    body.querySelectorAll('.kidsw button').forEach((b) => { b.onclick = () => { weekKid = b.dataset.kid; show('week'); }; });
     bindTimeMachine(body, s);
     if ($('perf')) {
       $('perf').onclick = () => { location.href = 'engine-test.html?spin=1'; };

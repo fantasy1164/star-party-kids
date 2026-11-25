@@ -681,6 +681,19 @@ export const LINES = {
   draw_back: { shan: '上次的畫還在這裡，接著畫吧！' },
   // 小鎮：交通工具、腳踏車、警察局
   pick_vehicle: { baba: '要坐什麼去呢？點一台車！' },
+  // 心情打卡（11/25）：玩之前、玩之後
+  mood_s_yy: { shan: '岳岳，今天心情怎麼樣？按一個臉！' },
+  mood_s_kk: { shan: '愷愷，今天心情怎麼樣？按一個臉！' },
+  mood_e_yy: { shan: '岳岳，玩完了，現在心情怎麼樣？' },
+  mood_e_kk: { shan: '愷愷，玩完了，現在心情怎麼樣？' },
+  mood_r5: { shan: '哇，好開心！閃閃也好開心！' },
+  mood_r4: { shan: '開心就好！' },
+  mood_r3: { shan: '知道了，謝謝你告訴我。' },
+  mood_r_low: { shan: '不開心也沒關係，謝謝你告訴閃閃。要不要一起吹氣球，深呼吸三次？' },
+  mood_breath_in: { shan: '按住氣球，慢慢吸氣——' },
+  mood_breath_slow: { shan: '再慢一點，按久一點喔。' },
+  mood_breath_out: { shan: '放開，呼——慢慢吐氣。' },
+  mood_breath_done: { shan: '好多了嗎？閃閃陪著你。' },
   // 專屬車（11/25）：出發地或目的地有自己的車，選車時多一台、會發亮
   pick_sp_police: { baba: '今天可以坐警車喔！' },
   pick_sp_fire: { baba: '今天可以坐消防車喔！' },

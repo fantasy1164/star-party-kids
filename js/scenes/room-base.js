@@ -23,6 +23,7 @@ import { showNewSticker } from './fun.js';
 import { phase, isDark, roomTint } from '../core/clock.js';
 import { turnsScene, whoseTurn } from '../core/turns.js';
 import { setHint, setPlaying, mountClock, timeUp } from '../core/session.js';
+import { gameBegin, gameEnd } from '../core/stats.js';
 import { KIDS } from '../config.js';
 import { backdrop, homeBtn, rotateBtns, jars } from '../ui/hud.js';
 
@@ -36,7 +37,7 @@ export async function runRoom(root, app, spec) {
   const set = spec.build();
   const { dio } = set;
   root.appendChild(dio.el);
-  app.onLeave(() => { alive = false; setHint(null); setPlaying(false); dio.destroy(); });
+  app.onLeave(() => { alive = false; gameEnd(false); setHint(null); setPlaying(false); dio.destroy(); });   // 玩到一半離開：記成中途離開
 
   const ph = phase(state.settings);
   const night = ph === 'evening' || ph === 'night';
@@ -227,12 +228,14 @@ export async function runRoom(root, app, spec) {
     const dimmed = Object.entries(set.chars).filter(([k]) => k !== spec.host).map(([, sp]) => sp.el);
     dimmed.forEach((el) => el.classList.add('dim'));
     let finished = false;
+    gameBegin(members, `${spec.id}.${id}`);   // 學習紀錄：專注多久、有沒有靠提示、有沒有中途離開
     try {
       await g.run(R);
       finished = true;
     } catch (e) {
       if (e !== ABORT) console.error(e);
     }
+    gameEnd(finished && alive);
     if (!alive) return;
     dimmed.forEach((el) => el.classList.remove('dim'));
     setHint(null);

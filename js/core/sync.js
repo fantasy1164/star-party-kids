@@ -97,7 +97,17 @@ function mergeKid(L = {}, C = {}) {
   const done = {};
   for (const day of new Set([...Object.keys(L.done || {}), ...Object.keys(C.done || {})])) done[day] = maxMap(L.done?.[day], C.done?.[day]);
   const stars = maxMap(L.stars, C.stars);
-  return { ...L, ...C, stars, done, total: Math.max(L.total || 0, C.total || 0) };
+  // 學習紀錄（11/25）：每天每關取比較大的數字（兩台都合併過一次後不會重複加）；心情打卡兩邊合起來（同一分鐘同一個只留一個）
+  const log = {};
+  for (const day of new Set([...Object.keys(L.log || {}), ...Object.keys(C.log || {})])) {
+    const a = L.log?.[day] || {}, b = C.log?.[day] || {};
+    const g = { ...(a.g || {}) };
+    for (const [k, r] of Object.entries(b.g || {})) g[k] = g[k] ? g[k].map((v, i) => Math.max(v, r[i] || 0)) : r;
+    const seenM = new Set();
+    const m = [...(a.m || []), ...(b.m || [])].filter((x) => { const key = x.join(','); if (seenM.has(key)) return false; seenM.add(key); return true; }).sort((x, y) => x[0] - y[0]);
+    log[day] = { m, g };
+  }
+  return { ...L, ...C, stars, done, log, total: Math.max(L.total || 0, C.total || 0) };
 }
 function mergeMult(L, C) {
   if (!L) return C; if (!C) return L;
@@ -125,7 +135,8 @@ export function mergeStates(L, C, cloudNewer) {
   o.stickers = cs > ls || (cs === ls && cloudNewer) ? C.stickers : L.stickers;
   o.seen = maxMap(L.seen, C.seen);
   o.met = maxMap(L.met, C.met);   // 認識的明星：兩邊加起來
-  o.fest = maxMap(L.fest, C.fest);   // 節慶：開過的降臨月曆、相簿、生日卡，兩邊加起來
+  o.fest = maxMap(L.fest, C.fest);
+  o.multHist = maxMap(L.multHist, C.multHist);   // 節慶：開過的降臨月曆、相簿、生日卡，兩邊加起來
   const ns = (cloudNewer ? C.session : L.session) || {};
   o.session = { ...ns, restUntil: Math.max(L.session?.restUntil || 0, C.session?.restUntil || 0) };
   o.settings = { ...(cloudNewer ? L.settings : C.settings), ...(cloudNewer ? C.settings : L.settings) };

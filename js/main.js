@@ -25,6 +25,8 @@ import { mountFire, mountMrt, mountLibrary, mountPost, mountGarbage } from './sc
 import { mountAquarium, mountBeach, mountZoo } from './scenes/nature.js';
 import { mountRest, mountSleep } from './ui/rest.js';
 import { openParent } from './ui/parent.js';
+import { moodCheck } from './ui/mood.js';
+import { pruneLogs, snapMult } from './core/stats.js';
 import { needInstallGuide, showInstallGuide } from './ui/install.js';
 import { syncNow, setupSync } from './core/sync.js';
 
@@ -53,6 +55,8 @@ const app = {
     app.trip.rides = 0;           // 這次遊玩的第一趟車走完整版
     setupTurns(app.profile, first);
     await speak('shan', 'welcome', { name: NAMES[id], who: id, node });
+    // 心情打卡（玩之前）：要去小鎮玩的時候才問（睡覺、休息中不問）
+    if (route() === 'town') { const me = current; await moodCheck(stage(), app.profile.members, 's', () => current === me); if (current !== me) return; }
     app.go(route());
   },
   parent() { openParent(stage()); },
@@ -84,6 +88,8 @@ const app = {
 };
 window.__app = app;   // 測試用
 
+pruneLogs();
+snapMult();
 setupStage(document.getElementById('stage'));
 setupHints(stage());
 setMusicVolume(state.settings.musicVol);
