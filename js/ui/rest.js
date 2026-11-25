@@ -4,7 +4,7 @@ import { div, longPress, wait } from '../core/dom.js';
 import { speak } from '../core/voice.js';
 import { playMusic, sfx } from '../core/audio.js';
 import { state } from '../core/store.js';
-import { restLeftMs, resting, clearRest } from '../core/session.js';
+import { restLeftMs, resting, clearRest, startRest } from '../core/session.js';
 import { phase, isDark } from '../core/clock.js';
 import { shanSvg, wanSvg } from '../art/stars.js';
 import { ICON } from '../art/props.js';
@@ -17,6 +17,9 @@ function lockBtn(root, app) {
 }
 
 export async function mountRest(root, app) {
+  // 11/25 修正：從關卡時間到跳過來時，休息還沒開始計時（restUntil 是 0），一秒後就「休息好了」；
+  // 進休息畫面時如果還沒在休息，從現在開始算休息時間
+  if (!resting()) startRest();
   backdrop(root);
   const card = div('rest-card');
   const ch = div('', shanSvg());

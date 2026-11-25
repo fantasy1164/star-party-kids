@@ -1,6 +1,6 @@
 // 離線快取：有網路時一律抓最新版並更新快取，沒網路時用快取。
 // 快取名稱用 spk-（toon-fun-party 是 tfp-，同一個網域不能撞名）。新增檔案時加進 CORE，並把版本號加一。
-const CACHE = 'spk-v50';
+const CACHE = 'spk-v51';
 const CORE = [
   './', 'index.html', 'manifest.webmanifest', 'css/main.css',
   'js/main.js', 'js/config.js',
