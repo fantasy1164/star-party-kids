@@ -32,14 +32,17 @@ export async function mountRest(root, app) {
   playMusic('lullaby');
   const total = state.settings.restMin * 60000;
   let timer = 0;
+  // 11/26 修正：以前每秒整張重畫，鑰匙的旋轉動畫每秒重新開始，轉不到一圈就跳回 12 點。
+  // 現在 SVG 只建一次，每秒只更新金色的扇形。
+  card.innerHTML = `<svg viewBox="0 0 360 360"><circle cx="180" cy="180" r="170" fill="#fff" opacity=".9"/><circle cx="180" cy="180" r="150" fill="#f3e6c8"/><path class="rest-arc" fill="#ffd23f"/>
+      <g class="keep-anim" style="transform-origin:180px 180px;animation:spin 6s linear infinite"><rect x="168" y="120" width="24" height="70" rx="8" fill="#c4902a"/>
+      <circle cx="150" cy="110" r="34" fill="#f6c453" stroke="#c4902a" stroke-width="8"/><circle cx="210" cy="110" r="34" fill="#f6c453" stroke="#c4902a" stroke-width="8"/></g></svg>`;
+  const arcEl = card.querySelector('.rest-arc');
   const draw = () => {
     const k = Math.min(1, 1 - restLeftMs() / total);
     const a = Math.max(0.0001, k) * Math.PI * 2;
     const x = 180 + 150 * Math.sin(a), y = 180 - 150 * Math.cos(a);
-    const arc = k >= 0.999 ? '<circle cx="180" cy="180" r="150" fill="#ffd23f"/>' : `<path d="M180 180 L180 30 A150 150 0 ${a > Math.PI ? 1 : 0} 1 ${x.toFixed(1)} ${y.toFixed(1)} Z" fill="#ffd23f"/>`;
-    card.innerHTML = `<svg viewBox="0 0 360 360"><circle cx="180" cy="180" r="170" fill="#fff" opacity=".9"/><circle cx="180" cy="180" r="150" fill="#f3e6c8"/>${arc}
-      <g style="transform-origin:180px 180px;animation:spin 6s linear infinite"><rect x="168" y="120" width="24" height="70" rx="8" fill="#c4902a"/>
-      <circle cx="150" cy="110" r="34" fill="#f6c453" stroke="#c4902a" stroke-width="8"/><circle cx="210" cy="110" r="34" fill="#f6c453" stroke="#c4902a" stroke-width="8"/></g></svg>`;
+    arcEl.setAttribute('d', k >= 0.999 ? 'M180 30 A150 150 0 1 1 179.99 30 Z' : `M180 180 L180 30 A150 150 0 ${a > Math.PI ? 1 : 0} 1 ${x.toFixed(1)} ${y.toFixed(1)} Z`);
   };
   draw();
   ch.addEventListener('click', () => { sfx('windup'); speak('shan', resting() ? 'rest_wait' : 'rest_ready', { node: ch }); });

@@ -104,7 +104,7 @@ const paused = new Set();
 function rest() {
   for (const a of document.getAnimations()) {
     if (a.playState !== 'running' || a.effect?.getTiming?.().iterations !== Infinity) continue;
-    if (a.effect.target?.closest?.('.hinthand')) continue;   // 手指提示要繼續動
+    if (a.effect.target?.closest?.('.hinthand, .keep-anim')) continue;   // 手指提示、休息時的發條鑰匙要繼續動
     a.pause();
     paused.add(a);
   }
