@@ -29,7 +29,10 @@ const FLEET = [
 export function startTraffic(dio, roads, { alive, player = null }) {
   let siren = false;
   let onYield = null;
-  const { NODES, neighbors, edgePts, along, MRT_LINE, TRAIN_LINE, PLACES, heightAt = () => 0, hwyPt = null, HWY = null } = roads;
+  const { NODES, neighbors, edgePts, along, MRT_LINE, TRAIN_LINE, PLACES, heightAt = () => 0, hwyPt = null, HWY = null, occludedBy = null } = roads;
+  // 被高架橋、山擋住（從鏡頭看過去）：每幾格才算一次，省電
+  let eye = null, occN = 0, trainOcc = false;
+  const hidden = (x, y, z) => (occludedBy && eye ? !!occludedBy(eye, x, y, z) : false);
   // 開進山裡（隧道）就看不見；一半在裡面就半透明
   const inside = (x, y, len = 0, dx = 1, dy = 0) => {
     if (!len) return heightAt(x, y) > 30 ? 1 : 0;
@@ -86,7 +89,9 @@ export function startTraffic(dio, roads, { alive, player = null }) {
     const off = lane(v.kind) + (v.pull || 0) * 46;   // 讓路時往右邊的路邊靠
     const x = p.x - (p.dy / l) * off, y = p.y + (p.dx / l) * off;
     v.sp.move(x, y, 1);
-    veil(v.sp.el, inside(x, y));
+    if (inside(x, y)) veil(v.sp.el, 1);
+    else if (eye) { v.occ = hidden(x, y, 22); veil(v.sp.el, v.occ ? 1 : 0); }
+    else veil(v.sp.el, v.occ ? 1 : 0);
     facing(v, p.dx, p.dy);
   }
 
@@ -112,7 +117,7 @@ export function startTraffic(dio, roads, { alive, player = null }) {
         m.t = Math.min(1, m.t + s / dur);
         const e = m.t < 0.5 ? 2 * m.t * m.t : 1 - (-2 * m.t + 2) ** 2 / 2;
         m.sp.move(x0 + (x1 - x0) * e, m.y, m.z);
-        if (m.sp === train) veil(train.el, inside(m.sp.x, m.y, 210));   // 火車開進東山的隧道
+        if (m.sp === train) { if (eye) trainOcc = hidden(m.sp.x, m.y, 30); veil(train.el, Math.max(inside(m.sp.x, m.y, 210), trainOcc ? 1 : 0)); }   // 火車開進東山的隧道
         if (m.t >= 1) { m.t = 0; if (stop) m.hold = stop; else m.k++; }
       }
       if (m.k >= m.legs.length) { movers.splice(i, 1); m.resolve(); }
@@ -162,7 +167,8 @@ export function startTraffic(dio, roads, { alive, player = null }) {
       const l = Math.hypot(p.dx, p.dy) || 1, off = 22 * v.dir;
       const x = p.x - (p.dy / l) * off, y = p.y + (p.dx / l) * off;
       v.sp.move(x, y, HWY.z);
-      veil(v.sp.el, heightAt(x, y) > HWY.z + 6 || v.t < 0 || v.t > 1 ? 1 : 0);
+      if (eye) v.occ = hidden(x, y, HWY.z + 20);
+      veil(v.sp.el, heightAt(x, y) > HWY.z + 6 || v.t < 0 || v.t > 1 || v.occ ? 1 : 0);
       facing(v, p.dx * v.dir, p.dy * v.dir);
     }
   }
@@ -174,7 +180,7 @@ export function startTraffic(dio, roads, { alive, player = null }) {
     last = now;
     if (!stillNow() && !document.hidden) {
       acc += dt;
-      if (acc >= 33) { const s = acc / 1000; acc = 0; stepCars(s); stepMovers(s); stepHwy(s); }
+      if (acc >= 33) { const s = acc / 1000; acc = 0; eye = (occN = (occN + 1) % 4) === 0 && dio.eyePos ? dio.eyePos() : null; stepCars(s); stepMovers(s); stepHwy(s); }
     }
     requestAnimationFrame(tick);
   };

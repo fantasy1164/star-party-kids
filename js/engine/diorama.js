@@ -167,6 +167,11 @@ export function createDiorama(opt = {}) {
     const ox = W / 2, oy = H * PO_Y;
     return { o: xf(inv, [ox, oy, PERSP]), d: xf(inv, [p.x - ox, p.y - oy, -PERSP], 0) };
   }
+  // 鏡頭（眼睛）在世界裡的位置：用來算「這台車有沒有被橋、山擋住」
+  function eyePos() {
+    const [W, H] = viewSize();
+    return xf(inv4(camMatrix()), [W / 2, H * PO_Y, PERSP]);
+  }
   // 點到地面（z = 0）的哪裡
   function groundAt(clientX, clientY) {
     const { o: ro, d } = rayAt(clientX, clientY);
@@ -620,7 +625,7 @@ export function createDiorama(opt = {}) {
   apply();
   const api = {
     el, cam, world, view, walls, floor, o,
-    addBox, addGable, addPanel, addSprite, addDecal, addPolygon, wallArt, alongWall, seal, groundAt, gl: !!glS,
+    addBox, addGable, addPanel, addSprite, addDecal, addPolygon, wallArt, alongWall, seal, groundAt, eyePos, gl: !!glS,
     animateTo, rotateBy, faceQuadrant, quadrant, snap, apply, setTint, glow, zoomBy, view,
     onRotate(fn) { rotHooks.push(fn); },
     lock(on) { locked = on; },

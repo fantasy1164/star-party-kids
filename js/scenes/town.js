@@ -71,6 +71,27 @@ export function heightAt(x, y) {
 }
 // 高架快速道路：從西山的隧道出來，往東南跨過 B–C、C–J 兩條路，開出小鎮南邊
 const HWY = { p0: [-60, 1440], c: [700, 1700], p1: [1500, 2400], z: 100 };
+// 被擋住了嗎？（11/25）從鏡頭看過去，(x, y, z) 這一點前面有沒有高架橋面或山
+// CSS 畫的車子（會動的）永遠疊在 WebGL 的橋和山上面，所以要自己算：被擋住就藏起來，才不會像是車子開在橋上
+let HWY_PTS = null;
+function nearHwy(x, y) { HWY_PTS ||= [...Array(91)].map((_, i) => hwyPt(i / 90)); let d = 1e9; for (const p of HWY_PTS) d = Math.min(d, Math.hypot(p.x - x, p.y - y)); return d; }
+export function occludedBy(eye, x, y, z) {
+  if (!eye) return null;
+  const [ex, ey, ez] = eye;
+  // 高架橋面：視線穿過橋面那個高度的地方，剛好在橋面上
+  if (ez > HWY.z && z < HWY.z) {
+    const t = (ez - HWY.z) / (ez - z);
+    const qx = ex + (x - ex) * t, qy = ey + (y - ey) * t;
+    if (nearHwy(qx, qy) < 50 && heightAt(qx, qy) < HWY.z) return 'deck';
+  }
+  // 山：沿著視線往車子走，有一點在山的下面就是被擋住
+  const L = Math.hypot(x - ex, y - ey), n = Math.max(8, Math.min(60, Math.round(L / 50)));
+  for (let k = n - 1; k >= 1; k--) {
+    const t = k / n, qx = ex + (x - ex) * t, qy = ey + (y - ey) * t, qz = ez + (z - ez) * t;
+    if (qz < 430 && heightAt(qx, qy) > qz + 2) return 'hill';
+  }
+  return null;
+}
 const tunnelEdge = (a, b) => edgePts(a, b).pts.some((p) => heightAt(p.x, p.y) > 30);
 const hwyPt = (t) => {
   const [a, c, b] = [HWY.p0, HWY.c, HWY.p1];
@@ -744,7 +765,7 @@ export async function mountTown(root, app) {
   placeBar(root, dio, PLACES, T.markers, app.trip.location, (id) => { if (!going) dio.el.dispatchEvent(new CustomEvent('tapname', { detail: `go:${id}` })); }, shan.el);
   setHint(() => document.querySelector('.placebar button'));
   // 路上的車、高架捷運、火車（11/25）：一直有車在跑，點車子閃閃會說是什麼車
-  if (state.settings.traffic !== false) startTraffic(dio, { NODES, neighbors, edgePts, along, MRT_LINE, TRAIN_LINE, PLACES, heightAt, hwyPt, HWY }, { alive: () => app.alive() });
+  if (state.settings.traffic !== false) startTraffic(dio, { NODES, neighbors, edgePts, along, MRT_LINE, TRAIN_LINE, PLACES, heightAt, hwyPt, HWY, occludedBy }, { alive: () => app.alive() });
   let lastVeh = 0;
 
   const onTapTown = async (name) => {
@@ -889,7 +910,7 @@ export async function mountRide(root, app) {
   // 岳岳：快到隧道口先預告，畫面慢慢變暗（不會突然全黑），不加回音之類的聲音
   const tunnelFx = div('tunnel-fx');
   root.appendChild(tunnelFx);
-  let inTunnel = false, tunnelSaid = false;
+  let inTunnel = false, tunnelSaid = false, occTick = 0;
   const setTunnel = (on) => {
     if (on === inTunnel) return;
     inTunnel = on;
@@ -899,7 +920,7 @@ export async function mountRide(root, app) {
   };
   // 路上的車流（11/25 坐車時也有）：靠近小孩的車會停下來等；開警笛時靠邊讓路
   const traffic = state.settings.traffic !== false
-    ? startTraffic(dio, { NODES, neighbors, edgePts, along, MRT_LINE, TRAIN_LINE, PLACES, heightAt, hwyPt, HWY }, { alive: () => alive, player: () => ({ x: car.x, y: car.y }) })
+    ? startTraffic(dio, { NODES, neighbors, edgePts, along, MRT_LINE, TRAIN_LINE, PLACES, heightAt, hwyPt, HWY, occludedBy }, { alive: () => alive, player: () => ({ x: car.x, y: car.y }) })
     : null;
   drawPlacedStickers(dio);
   const flag = dio.addSprite({ x: path[path.length - 1].x + 30, y: path[path.length - 1].y - 30, z: 1, w: 90, h: 240, shadow: 0.4, live: true,   // live：永遠畫在山和房子上面，從哪個角度都看得到
@@ -1047,7 +1068,9 @@ export async function mountRide(root, app) {
           { const cp = along(E, t); car.move(cp.x, cp.y, 1);
             const hz = heightAt(cp.x, cp.y);
             if (!tunnelSaid && hz < 30) { const ah = along(E, Math.min(1, t + 260 / len)); if (heightAt(ah.x, ah.y) > 30) { tunnelSaid = true; say('baba', 'ride_tunnel', car.el); } }
-            setTunnel(hz > 30); }
+            setTunnel(hz > 30);
+            // 開到高架橋下面：被橋面擋住就看不見（跟路上別的車一樣）；被山擋住（不是在隧道裡）留一個淡淡的影子，小孩才找得到自己的車
+            if (!inTunnel && (occTick = (occTick + 1) % 4) === 0) { const oc = occludedBy(dio.eyePos(), cp.x, cp.y, 40); car.el.style.opacity = oc === 'deck' ? '0' : oc === 'hill' ? '.35' : ''; } }
           follow();
           if (evState === 'wait' && t >= trigger) {
             evState = 'active';
