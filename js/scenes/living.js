@@ -364,7 +364,7 @@ async function stageGame(R) {
 }
 
 // 一回合打鼓：先數四拍，再來 8 個音符（岳岳版多一個半拍）
-function drumRound(R, lane, drum, { bpm, win, extra }) {
+export function drumRound(R, lane, drum, { bpm, win, extra, onHit = null }) {
   return R.race(new Promise((resolve) => {
     const beat = 60 / bpm;
     const lead = 1.4;
@@ -405,6 +405,7 @@ function drumRound(R, lane, drum, { bpm, win, extra }) {
         hits++;
         sfx('sparkle');
         R.burstAt(drum, { n: 8, spread: 80, stars: true, colors: ['#ffd23f', '#fff3a0'] });
+        onHit?.(hits);
       }
     };
     drum.addEventListener('pointerdown', onTap);

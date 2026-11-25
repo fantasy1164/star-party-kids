@@ -217,6 +217,42 @@ const seq = (s) => s.trim().split(/\s+/);
 
 // 每格是八分音符，'.' 是休止。style：song 活動歌（鼓明顯）、bg 背景（輕鼓）、quiet 安靜（不打鼓）
 const TRACKS = {
+  // ---- 節慶（11/25）：生日快樂歌、聖誕鈴聲是公版；其他是自己寫的五聲音階 ----
+  fest_birthday: {
+    style: 'bg', bpm: 132, inst: 'musicbox', gain: 0.22,
+    melody: seq('G4 G4 A4 . G4 . C5 . B4 . . .  G4 G4 A4 . G4 . D5 . C5 . . .  G4 G4 G5 . E5 . C5 . B4 . A4 .  F5 F5 E5 . C5 . D5 . C5 . . .'),
+    bass: seq('C3 . . . . . G2 . . . . .  G2 . . . . . C3 . . . . .  C3 . . . . . F2 . . . . .  C3 . G2 . . . C3 . . . . .'),
+  },
+  fest_cny: {
+    style: 'song', bpm: 120, inst: 'toypiano', gain: 0.22,
+    melody: seq('C5 D5 E5 G5 . E5 D5 C5 A4 . C5 D5 E5 . . .  G5 A5 G5 E5 . D5 E5 G5 D5 . C5 A4 C5 . . .'),
+    bass: seq('C3 . G2 . C3 . G2 . A2 . E2 . A2 . E2 .  C3 . G2 . C3 . G2 . G2 . D3 . C3 . . .'),
+  },
+  fest_dragon: {
+    style: 'song', bpm: 112, inst: 'marimba', gain: 0.24,
+    melody: seq('A4 C5 D5 . A4 C5 D5 . E5 D5 C5 A4 D5 . . .  E5 G5 E5 D5 C5 . A4 C5 D5 . C5 A4 A4 . . .'),
+    bass: seq('D3 . A2 . D3 . A2 . C3 . G2 . D3 . A2 .  C3 . G2 . A2 . E2 . D3 . A2 . D3 . . .'),
+  },
+  fest_moon: {
+    style: 'quiet', bpm: 76, inst: 'musicbox', gain: 0.19,
+    melody: seq('E5 . G5 . A5 . G5 E5 D5 . . . C5 . . .  D5 . E5 . G5 . E5 D5 C5 . . . A4 . . .'),
+    bass: seq('C3 . . . . . . . G2 . . . . . . .  F2 . . . . . . . A2 . . . . . . .'),
+  },
+  fest_halloween: {
+    style: 'song', bpm: 104, inst: 'marimba', gain: 0.22,
+    melody: seq('A4 . C5 . E5 . D5 C5 B4 . . . E4 . . .  A4 . C5 . E5 . G5 F5 E5 . D5 . C5 . . .'),
+    bass: seq('A2 . E2 . A2 . E2 . E2 . B2 . E2 . B2 .  A2 . E2 . F2 . C3 . E2 . B2 . A2 . . .'),
+  },
+  fest_xmas: {
+    style: 'song', bpm: 120, inst: 'musicbox', gain: 0.22,
+    melody: seq('E5 E5 E5 . E5 E5 E5 . E5 G5 C5 D5 E5 . . .  F5 F5 F5 F5 F5 E5 E5 E5 E5 D5 D5 E5 D5 . G5 .'),
+    bass: seq('C3 . G2 . C3 . G2 . C3 . G2 . C3 . . .  F2 . C3 . C3 . G2 . G2 . D3 . G2 . . .'),
+  },
+  fest_love: {
+    style: 'bg', bpm: 92, inst: 'musicbox', gain: 0.2,
+    melody: seq('C5 . E5 . G5 . E5 . F5 . A5 . G5 . . .  E5 . D5 . C5 . D5 . E5 . C5 . . . . .'),
+    bass: seq('C3 . . . G2 . . . F2 . . . C3 . . .  A2 . . . G2 . . . C3 . . . . . . .'),
+  },
   // 開場、派對：玩具鋼琴
   party: {
     style: 'song', bpm: 128, inst: 'toypiano', gain: 0.24,

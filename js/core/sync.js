@@ -114,6 +114,7 @@ export function mergeStates(L, C, cloudNewer) {
   o.stickers = cs > ls || (cs === ls && cloudNewer) ? C.stickers : L.stickers;
   o.seen = maxMap(L.seen, C.seen);
   o.met = maxMap(L.met, C.met);   // 認識的明星：兩邊加起來
+  o.fest = maxMap(L.fest, C.fest);   // 節慶：開過的降臨月曆、相簿、生日卡，兩邊加起來
   const ns = (cloudNewer ? C.session : L.session) || {};
   o.session = { ...ns, restUntil: Math.max(L.session?.restUntil || 0, C.session?.restUntil || 0) };
   o.settings = { ...(cloudNewer ? L.settings : C.settings), ...(cloudNewer ? C.settings : L.settings) };

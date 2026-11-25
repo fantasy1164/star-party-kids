@@ -12,6 +12,8 @@ import { CAST } from '../data/cast.js';
 import { gestureTipDue, practice } from './gestures.js';
 import { backdrop } from './hud.js';
 import { roomTint } from '../core/clock.js';
+import { mainFest, daysUntil } from '../core/festival.js';
+import { ACCESSORY, FEST_COLOR } from '../art/festival.js';
 
 const TITLE = [['明', '星', '總', '動', '員'], ['歡', '樂', '派', '對']];
 const COLORS = ['#ff5d8f', '#ffb627', '#3ec7e0', '#7ee06a', '#a98bff', '#ff8a3d', '#1fa7c9', '#ff5d8f', '#ffb627'];
@@ -26,10 +28,13 @@ export async function mount(root, app) {
   app.onLeave(() => dio.destroy());
   dio.setTint(roomTint());
 
+  // 節慶或生日（11/25）：禮物盒換節慶顏色、每位明星頭上戴小配件、換一段節慶的歡迎詞和音樂
+  const fx = mainFest();
+  const [boxC, lidC] = fx ? FEST_COLOR[fx.id] : ['#ff8fb8', '#ffd23f'];
   // 禮物盒：四面牆有厚度、中間是空的（打開蓋子看得到裡面），裡面的底在發光
   const bw = 200, bh = 150, T = 16, bx = C - bw / 2, by = C - bw / 2;
   const star = (w) => `<svg viewBox="0 0 ${w} ${bh}" width="100%" height="100%"><polygon points="${starPolygon(w / 2, 78, 42, 19)}" fill="#fff6b0" stroke="#fff6b0" stroke-width="10" stroke-linejoin="round"/></svg>`;
-  const wall = { color: '#ff8fb8', tap: 'box' };
+  const wall = { color: boxC, tap: 'box' };
   dio.addBox({ ...wall, x: bx, y: by, w: bw, d: T, h: bh, faces: { n: star(bw) } });
   dio.addBox({ ...wall, x: bx, y: by + bw - T, w: bw, d: T, h: bh, faces: { s: star(bw) } });
   dio.addBox({ ...wall, x: bx, y: by + T, w: T, d: bw - T * 2, h: bh, faces: { w: star(bw - T * 2) } });
@@ -41,7 +46,7 @@ export async function mount(root, app) {
   const lidWrap = div('dio-box lid');
   lidWrap.style.cssText = `left:${bx - 8}px;top:${by - 8}px;width:${bw + 16}px;height:${bw + 16}px;transform:translateZ(${bh}px);--bh:${bh}px`;
   dio.world.appendChild(lidWrap);
-  dio.addBox({ x: 0, y: 0, w: bw + 16, d: bw + 16, h: 18, color: '#ffd23f', cls: 'soft', parent: lidWrap, tap: 'box',
+  dio.addBox({ x: 0, y: 0, w: bw + 16, d: bw + 16, h: 18, color: lidC, cls: 'soft', parent: lidWrap, tap: 'box',
     faces: { t: `<svg viewBox="0 0 216 216" width="100%" height="100%"><polygon points="${starPolygon(108, 108, 56, 24)}" fill="#fff" opacity=".8"/></svg>` } });
 
   // 明星們：一開始都躲在盒子裡；閃閃站在正前方，其他人圍成一圈（正前方留給閃閃和選人）
@@ -58,6 +63,7 @@ export async function mount(root, app) {
   const shanAt = { x: C + Math.cos(fr) * 175, y: C + Math.sin(fr) * 175 };
   const sprites = { shan };
   ring.forEach((r) => { sprites[r.c.id] = dio.addSprite({ x: C, y: C, z: 40, w: 104, h: 112, html: r.c.svg(), cls: 'gone', shadow: 0.6, tap: `ch:${r.c.id}` }); });
+  if (fx) Object.values(sprites).forEach((sp) => sp.el.insertAdjacentHTML('beforeend', `<i class="acc">${ACCESSORY[fx.id]}</i>`));
 
   const lock = div('lockbtn ui', ICON.lock);
   root.appendChild(lock);
@@ -78,7 +84,7 @@ export async function mount(root, app) {
     shan.el.classList.remove('gone');
     sfx('boing');
     jump(shan, C, C, 40, shanAt.x, shanAt.y, 0, 700, 260);
-    playMusic('party');
+    playMusic(fx ? { birthday: 'fest_birthday', pbirthday: 'fest_birthday', mother: 'fest_love', father: 'fest_love', kids: 'party', cny: 'fest_cny', dragon: 'fest_dragon', moon: 'fest_moon', halloween: 'fest_halloween', xmas: 'fest_xmas' }[fx.id] : 'party');
     burst(app.stageCenter().x, 380, { n: 26, spread: 260 });
     // 其他明星一個接一個跳出來，圍成一圈（「啵」不要每個都響，人多會太吵）
     ring.forEach((r, i) => setTimeout(() => {
@@ -92,7 +98,19 @@ export async function mount(root, app) {
     // 每次都完整喊出「明星總動員！歡樂派對！」
     await speak('shan', 'title', { node: shan.el });
     // 隨機 3 位明星用自己的聲音歡迎，再大家一起喊「歡迎岳岳、愷愷！」
-    for (const c of shuffle(others).slice(0, 3)) {
+    // 節慶或生日：改成閃閃說節慶的歡迎詞（還有幾天、今天就是），生日是大家一起喊生日快樂
+    if (fx) {
+      if (fx.id === 'birthday') {
+        const crowd0 = [CAST[0], ...shuffle(others).slice(0, 5)];
+        crowd0.forEach((c) => hop(sprites[c.id]));
+        await chorus(crowd0.map((c) => c.id), 'bd_all', crowd0.map((c) => sprites[c.id].el));
+        for (const k of fx.who) await speak('shan', `bd_hi_${k}`, { node: shan.el });
+      } else {
+        const d = daysUntil(fx);
+        await speak('shan', fx.phase === 'pre' ? `fx_pre_${fx.id}` : `fx_day_${fx.id}`, { node: shan.el });
+        if (fx.phase === 'pre' && d >= 1 && d <= 7) await speak('shan', `fx_days_${d}`, { node: shan.el });
+      }
+    } else for (const c of shuffle(others).slice(0, 3)) {
       const sp = sprites[c.id];
       hop(sp);
       await speak(c.id, 'hi_open', { node: sp.el });

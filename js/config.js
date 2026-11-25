@@ -10,7 +10,9 @@ export const DEFAULT_SETTINGS = {
   musicVol: 'mid',  // 音樂大小：low、mid、high
   quiet: false,     // 安靜模式：關掉背景音樂和裝飾音效，只留角色說話和對錯的聲音
   nolimit: false,   // 測試用：不限制遊玩時間
-  traffic: true,    // 城市路上有車在跑（11/25）；覺得會分心可以在家長頁關掉
+  traffic: true,
+  birthdays: {},    // 生日（11/25）：{ yy, kk, dad, mom, grandma: 'YYYY-MM-DD' }，只在家長頁輸入，不寫進程式
+  realGift: true,   // 生日、聖誕節拆完遊戲裡的禮物，提醒「去找爸爸媽媽，還有一個真的禮物」    // 城市路上有車在跑（11/25）；覺得會分心可以在家長頁關掉
   gestureTip: true, // 每天第一次打開時，跟閃閃練習手勢（轉、拉近拉遠、移動）
 };
 

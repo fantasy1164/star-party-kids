@@ -18,6 +18,7 @@ function blank() {
     seen: {},   // 看過的東西（開場長版、規則說明）
     stickers: { owned: {}, placed: [] },   // 愷愷的貼紙：手上有幾張、貼在小鎮哪裡
     met: { shan: 1 },   // 認識了哪些明星（第一次見到的時間）：名人堂的台座會亮
+    fest: {},   // 節慶與生日（11/25）：降臨月曆開了哪格、相簿、生日卡…（代號 → 時間）
   };
 }
 function normalize(s) {
@@ -30,6 +31,7 @@ function normalize(s) {
     seen: { ...(s.seen || {}) },
     stickers: { owned: { ...(s.stickers?.owned || {}) }, placed: [...(s.stickers?.placed || [])] },
     met: { ...b.met, ...(s.met || {}) },
+    fest: { ...(s.fest || {}) },
   };
 }
 function load() {

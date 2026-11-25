@@ -257,6 +257,7 @@ export async function runRoom(root, app, spec) {
       for (const [ch, line] of spec.lines.allDone) await say(ch, line);
       const after = spec.lines.after?.(ph);
       if (after) await say(spec.host, after);
+      if (spec.onAllDone) await spec.onAllDone(R);   // 例：節慶舞台全部做完 → 相簿多一張
     } else if (alive) {
       say(spec.host, spec.lines.next);
     }

@@ -5,6 +5,7 @@ import { state, save, clearAll } from '../core/store.js';
 import { setMusicVolume, setQuietMode } from '../core/audio.js';
 import { clearRest, resting, restLeftMs, remainingMs } from '../core/session.js';
 import { TEST_KEY, testSettings, dateKey } from '../core/clock.js';
+import * as fest from '../core/festival.js';
 import { KIDS } from '../config.js';
 import * as M from '../core/mult.js';
 import { syncConfig, setSyncConfig, syncNow, syncStatus, onSyncStatus, configured, deviceName, pingCloud } from '../core/sync.js';
@@ -28,6 +29,16 @@ const NAMES = {
   'aquarium.tunnel': '海底隧道', 'aquarium.penguin': '企鵝排隊', 'aquarium.rules': '海生館規則',
   'beach.sun': '防曬', 'beach.shells': '撿貝殼', 'beach.safe': '海邊安全',
   'zoo.find': '找動物', 'zoo.food': '餵動物吃什麼', 'zoo.rules': '動物園規則',
+  // 節慶舞台（11/25）
+  'fest.bd_cake': '生日：插蠟燭', 'fest.bd_blow': '生日：許願吹蠟燭', 'fest.bd_gift': '生日：拆禮物', 'fest.bd_card': '偷偷做生日卡', 'fest.bd_song': '練習生日歌',
+  'fest.pb_card_dad': '爸爸生日卡', 'fest.pb_card_mom': '媽媽生日卡', 'fest.pb_card_grandma': '阿嬤生日卡', 'fest.pb_song': '練習生日歌',
+  'fest.mo_card': '母親節卡片', 'fest.mo_help': '幫媽媽做家事', 'fest.fa_card': '父親節卡片', 'fest.fa_help': '幫爸爸的忙',
+  'fest.kd_balloon': '兒童節氣球', 'fest.kd_gifts': '找禮物', 'fest.kd_dance': '兒童節跳舞',
+  'fest.cn_clean': '過年大掃除', 'fest.cn_couplet': '貼春聯', 'fest.cn_red': '拿紅包說吉祥話', 'fest.cn_lantern': '元宵猜燈謎',
+  'fest.dr_zongzi': '包粽子', 'fest.dr_safe': '端午安全', 'fest.dr_boat': '划龍舟', 'fest.dr_egg': '立蛋',
+  'fest.md_story': '中秋故事', 'fest.md_bbq': '烤肉安全', 'fest.md_share': '分月餅柚子', 'fest.md_phase': '月亮變圓',
+  'fest.hw_pumpkin': '南瓜燈', 'fest.hw_trick': '不給糖就搗蛋', 'fest.hw_parade': '變裝走秀',
+  'fest.xm_advent': '降臨月曆', 'fest.xm_tree': '裝飾聖誕樹', 'fest.xm_card': '感謝卡', 'fest.xm_eve': '平安夜準備', 'fest.xm_gift': '聖誕禮物',
 };
 const TABS = [
   ['today', '📊', '總覽'],
@@ -35,6 +46,7 @@ const TABS = [
   ['mult', '✖️', '九九乘法'],
   ['time', '⏰', '時間與作息'],
   ['sound', '🔊', '聲音'],
+  ['fest', '🎉', '節慶與生日'],
   ['sync', '☁️', '雲端同步'],
   ['dev', '🛠️', '進階'],
 ];
@@ -134,6 +146,14 @@ export function openParent(root, onClose) {
       <p class="note">兩台在沒網路時各自玩過，連上後會合併：每天的星星、玩過的關卡取多的；乘法每一題取最近一次作答的熟練度；貼紙取比較多的那一邊。
         「用雲端進度覆蓋這台」：這台的進度不要了、直接換成雲端的（例如這台之前拿來測試）。雲端硬碟的「舊版本」資料夾每天留一份，可以找回以前的進度。畫畫板的圖不同步。</p>`;
     },
+    fest: () => `<h2>節慶與生日</h2>
+      <p class="note">生日只存在這台裝置和你的雲端同步檔，不會放到網路上。生日當天打開會有生日派對；爸爸、媽媽、阿嬤生日前三天，兩兄弟會在城市的節慶舞台做卡片。</p>
+      ${Object.entries(fest.PEOPLE).map(([id, n]) => field(`${n}的生日`, `<input type="date" class="bday" data-id="${id}" value="${fest.birthday(id)}">`)).join('')}
+      ${sw('realGift', '拆完遊戲裡的禮物，提醒「去找爸爸媽媽，還有一個真的禮物」', '生日、聖誕節早上用；沒準備真的禮物時關掉')}
+      <h3>今年的節慶（點「預覽」會把遊戲時間換到那天，看完到「進階」按「回到真實時間」）</h3>
+      <div class="fest-list">${fest.yearList().map((f) => `<div class="fest-row"><span class="fdate">${f.date.slice(5).replace('-', '/')}</span><span class="fname">${f.name}</span><button class="gray fprev" data-date="${f.date}">預覽</button></div>`).join('')}</div>
+      <h3>節慶相簿</h3>
+      <div class="chips">${fest.album().map((a) => `<span class="chip">${a.y} ${fest.FESTS[a.id]?.name || a.id}</span>`).join('') || '<span class="none">還沒有，節慶期間在城市的節慶舞台把活動做完就有</span>'}</div>`,
     dev: () => `<h2>進階</h2>
       ${sw('nolimit', '不限制每次遊玩時間')}
       ${field('假裝現在幾點', `<input id="thour" type="number" step="0.5" min="0" max="23.5" placeholder="例如 20.5" value="${test.hour ?? ''}"><button id="applyTest">套用並重新開啟</button><button id="clearTest" class="gray">回到真實時間</button>`)}
@@ -195,6 +215,8 @@ export function openParent(root, onClose) {
       };
     }
     $('recheck') && ($('recheck').onclick = () => { state.mult = { ...(state.mult || {}), checked: false }; save(); $('recheck').textContent = '下次進學堂會重新檢查 ✓'; });
+    body.querySelectorAll('.bday').forEach((inp) => { inp.onchange = () => { fest.setBirthday(inp.dataset.id, inp.value); }; });
+    body.querySelectorAll('.fprev').forEach((b) => { b.onclick = () => { localStorage.setItem(TEST_KEY, JSON.stringify({ date: b.dataset.date, hour: 10, setAt: Date.now() })); location.reload(); }; });
     if ($('applyTest')) {
       $('applyTest').onclick = () => {
         const h = $('thour').value;

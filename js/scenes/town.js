@@ -22,6 +22,8 @@ import { VEHICLES, helmetSvg, shaoSvg } from '../art/fun.js';
 import { PLACE_ICON, MISC, garbageTruckSvg, recycleTruckSvg } from '../art/world.js';
 import { mountZone, worldBtn } from './world.js';
 import { startTraffic } from './traffic.js';
+import { mainFest } from '../core/festival.js';
+import { FEST_SIGN, FEST_COLOR, FICON } from '../art/festival.js';
 import { stepsGame } from './kit.js';
 
 // 垃圾車來的時間（台灣通常傍晚到晚上）：16:00～21:00 在小區路口
@@ -113,6 +115,16 @@ export const PLACES = {
   fame: { node: 'E', x: 1350, y: 770, screen: 'fame', icon: PLACE_ICON.fame, h: 170 },
 };
 export const PLACE_OF_SCREEN = Object.fromEntries(Object.entries(PLACES).map(([k, p]) => [p.screen, k]));
+PLACE_OF_SCREEN.fest = 'fest';
+// 節慶舞台（11/25）：節慶或生日期間，名人堂前面的廣場搭起舞台；地點列排第一個
+export function syncFestPlace() {
+  const f = mainFest();
+  const rest = Object.fromEntries(Object.entries(PLACES).filter(([k]) => k !== 'fest'));
+  Object.keys(PLACES).forEach((k) => delete PLACES[k]);
+  if (f) PLACES.fest = { node: 'E', x: 1290, y: 965, screen: 'fest', icon: FEST_SIGN[f.id], h: 150, fest: f.id };
+  Object.assign(PLACES, rest);
+  return f;
+}
 
 
 // ---- 每個地點的建築：形狀都不一樣，看輪廓就認得出來 ----
@@ -317,6 +329,16 @@ const BUILD = {
     dio.addGable({ x, y, w, d, z: h, h: 40, over: 8, color: '#c9a87a', wallColor: '#f1e2c4', ridge: 'x', tap, faces: { s: face(w, 40, `<rect x="${w / 2 - 22}" y="16" width="44" height="18" rx="3" fill="#ff5d73"/>`) } });
   },
   // 名人堂：白色大理石、金色屋頂、門口紅地毯、屋頂一顆大星星
+  // 節慶舞台：彩色舞台＋背板上大大的節慶圖案＋兩根柱子和彩旗
+  fest(dio, p, tap) {
+    const [c1, c2] = FEST_COLOR[p.fest];
+    const w = 130, d = 70, x = p.x - w / 2, y = p.y - d / 2;
+    dio.addBox({ x, y, w, d, h: 18, color: c1, top: '#fffaf0', tap });
+    dio.addPanel({ x1: x, y1: y, x2: x + w, y2: y, z: 18, h: 110, css: `background:${c1};border-radius:14px 14px 0 0`, html: `<div style="position:absolute;left:50%;top:8px;width:84px;height:84px;margin-left:-42px">${FEST_SIGN[p.fest]}</div>`, tap });
+    [x, x + w].forEach((px) => dio.addBox({ x: px - 5, y: y - 5, w: 10, d: 10, h: 140, color: c2 }));
+    const flags = [...Array(7)].map((_, i) => `<path d="M${i * 20} 0 L${i * 20 + 10} 18 L${i * 20 + 20} 0Z" fill="${i % 2 ? c1 : c2}"/>`).join('');
+    dio.addPanel({ x1: x, y1: y, x2: x + w, y2: y, z: 128, h: 18, html: `<svg viewBox="0 0 140 18" width="100%" height="100%" preserveAspectRatio="none">${flags}</svg>` });
+  },
   fame(dio, p, tap) {
     const w = 170, d = 110, h = 96;
     const x = p.x - w / 2, y = p.y - d / 2;
@@ -474,6 +496,7 @@ const BUILD = {
 
 // ---- 小鎮模型（小鎮地圖和坐車都用） ----
 export function buildTown() {
+  const festNow = syncFestPlace();
   const dio = createDiorama({ gl: true, w: W, d: D, walls: false, zoom: 0.8, zmin: 0.34, zmax: 1.5, cy: 0.58, skirt: '#a6d987', horizon: 'town',
     floorCss: 'background: radial-gradient(ellipse at 25% 30%, #b8e89a 0, transparent 40%), radial-gradient(ellipse at 75% 70%, #b0e392 0, transparent 45%), #a6d987' });
   // 地面一張大圖：河、馬路、中線、斑馬線（都是彎的）
@@ -511,6 +534,12 @@ export function buildTown() {
       BUILD[id](dio, p, `go:${id}`);
     }
     markers[id] = dio.addSprite({ x: p.x, y: p.y, z: (p.h || 40) + 70, w: 130, h: 130, html: `<div class="inner">${p.icon}</div>`, cls: 'marker place-mark', shadow: 0, tap: `go:${id}` });
+  }
+  // 節慶期間：家門口也擺上應景的裝飾（燈籠、南瓜、聖誕樹…）
+  if (festNow) {
+    const deco = { cny: FICON.lantern, dragon: FICON.sachet, moon: FICON.mooncake, halloween: FICON.jack, xmas: FICON.tree, kids: FICON.balloon, birthday: FICON.balloon, pbirthday: FICON.balloon, mother: FICON.carnation, father: FICON.tie }[festNow.id];
+    const h = PLACES.home;
+    [[-150, 120], [150, 120]].forEach(([dx, dy]) => dio.addSprite({ x: h.x + dx, y: h.y + dy, w: 70, h: 70, shadow: 0.4, html: deco }));
   }
   // 火車站後面的鐵軌，往東邊一直延伸出去（去郊區、海邊、山上）
   dio.addDecal({ x: 2560, y: 480, w: 1400, h: 40, z: 0.9, css: 'background:repeating-linear-gradient(90deg,#8a6a4a 0 8px,transparent 8px 26px),linear-gradient(#bfc4cf 0 18%,transparent 18% 82%,#bfc4cf 82%)' });
