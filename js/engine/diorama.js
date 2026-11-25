@@ -194,7 +194,7 @@ export function createDiorama(opt = {}) {
   }
   // 有高低的地面（11/25）：一格一格的網格，每個點的高度由 ground(x, y) 給；地圖範圍內貼上地面大圖（馬路、河），
   // 範圍外是草地；每格依朝向打光。只在 WebGL 場景用（封存前呼叫）。
-  function addTerrain({ html, ground, cell = 60, margin = 1400, grass = '#a6d987' }) {
+  function addTerrain({ html, ground, cell = 60, margin = 1400, grass = '#a6d987', colorAt = null }) {
     if (!useGL()) return;
     const big = Math.max(o.w, o.d);
     const k = Math.min(big > 1500 && stageScale() < 0.6 ? 0.9 : 1.3, 4096 / big);
@@ -216,7 +216,7 @@ export function createDiorama(opt = {}) {
         const uv = pts.map(([x, y]) => [Math.max(0, Math.min(1, x / o.w)), Math.max(0, Math.min(1, y / o.d))]);
         const flat = Math.abs(Z[j][i] - Z[j + 1][i + 1]) < 0.5 && Math.abs(Z[j][i + 1] - Z[j + 1][i]) < 0.5;
         glS.addPoly({ pts, uv, tex, shade: flat ? '#ffffff' : shadeOf('#ffffff', Z[j][i], Z[j][i + 1], Z[j + 1][i]), pass: 'solid', oneSided: false });
-      } else glS.addPoly({ pts, color: shadeOf(grass, Z[j][i], Z[j][i + 1], Z[j + 1][i]), pass: 'solid', oneSided: false });
+      } else glS.addPoly({ pts, color: shadeOf(colorAt ? colorAt(xa + cell / 2, ya + cell / 2) : grass, Z[j][i], Z[j][i + 1], Z[j + 1][i]), pass: 'solid', oneSided: false });
     }
   }
   // 鏡頭（眼睛）在世界裡的位置：用來算「這台車有沒有被橋、山擋住」
