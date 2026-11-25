@@ -55,7 +55,7 @@ const TRAIN_LINE = { y: 500, stop: 2975, far: 3260 };   // 停在車站東邊的
 Object.entries(NODES).forEach(([id, n]) => { n.id = id; });
 // ---- 山谷地形（11/25 E 版）：小鎮夾在西邊的大山和東北、東邊的山之間；北邊一座小山丘，A–D 的路從山丘下的隧道穿過；
 // 東邊的山有火車隧道；一條高架快速道路從西山的隧道出來，跨過兩條馬路往南開（同一個地方有好幾層）。
-// 地面還是平的（路、房子都在 z=0），山是一圈一圈的多邊形疊起來的軟膠山。heightAt() 給「這裡山有多高」：
+// 地面有高低（groundZ），山是一圈一圈的多邊形疊在地面上的軟膠山。hillAt() 給「這裡山有多高」：
 // 坐車、路上的車到了山裡面（隧道）就看不見。
 const HILLS = [
   { id: 'west', cx: -260, cy: 1100, rx: 440, ry: 1350, h: 420, c: '#86c46e' },
@@ -64,35 +64,115 @@ const HILLS = [
   { id: 'east', cx: 3480, cy: 520, rx: 340, ry: 460, h: 380, c: '#80bf68' },
 ];
 const hillProfile = (r) => (r >= 1 ? 0 : Math.pow(1 - r ** 4, 0.6));   // 山腳很陡、山頂圓圓的（隧道口才有地方放）
-export function heightAt(x, y) {
+// 山（疊在地形上面多高）
+export function hillAt(x, y) {
   let z = 0;
   for (const H of HILLS) { const r = Math.hypot((x - H.cx) / H.rx, (y - H.cy) / H.ry); if (r < 1) z = Math.max(z, H.h * hillProfile(r)); }
   return z;
 }
-// 高架快速道路：從西山的隧道出來，往東南跨過 B–C、C–J 兩條路，開出小鎮南邊
+// ---- 地形高低（11/25 城市高程）：河谷最低（0），西邊是住宅台地（170），東邊往山上越來越高（最高 240）。
+// 每個地點、路口、房子底下整平成一塊平台（房子不會一半懸空）；路貼在地面上，會上坡、下坡。
+const RIV_PTS = (() => {
+  const qd = (a, c, b, t) => [(1 - t) ** 2 * a[0] + 2 * (1 - t) * t * c[0] + t * t * b[0], (1 - t) ** 2 * a[1] + 2 * (1 - t) * t * c[1] + t * t * b[1]];
+  return [...Array(41)].map((_, i) => qd([1480, -60], [1620, 500], [1520, 1000], i / 40)).concat([...Array(40)].map((_, i) => qd([1520, 1000], [1420, 1500], [1640, 2260], (i + 1) / 40)));
+})();
+function riverX(y) {
+  if (y <= RIV_PTS[0][1]) return RIV_PTS[0][0];
+  for (let i = 1; i < RIV_PTS.length; i++) { const a = RIV_PTS[i - 1], b = RIV_PTS[i]; if (y <= b[1]) return a[0] + (b[0] - a[0]) * ((y - a[1]) / ((b[1] - a[1]) || 1)); }
+  return RIV_PTS[RIV_PTS.length - 1][0];
+}
+const sstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+function terrainBase(x, y) {
+  const d = x - riverX(y);
+  let z = d < 0 ? 170 * sstep(200, 700, -d) : 240 * sstep(220, 900, d);
+  // 地圖外面慢慢降回平地（遠方），不會在邊緣出現一道懸崖
+  const out = Math.max(0, -x, x - W, -y, y - D);
+  return z * (1 - sstep(300, 1500, out));
+}
+// 整平的平台：[x, y, 半徑]
+const PAD_SPOTS = [
+  [300, 1020, 170], [640, 1290, 80], [860, 600, 150], [300, 560, 190], [1800, 760, 150], [2330, 300, 130], [1800, 1300, 140], [2340, 1290, 120],
+  [2780, 600, 170], [2975, 520, 140], [880, 1640, 130], [1330, 1640, 130], [2420, 1800, 330], [1350, 770, 170], [1290, 965, 110],
+  [180, 1360, 70], [300, 1360, 70], [420, 1360, 70], [180, 760, 70], [300, 820, 70], [820, 900, 70], [940, 900, 70], [180, 1960, 70], [300, 1980, 70],
+  [2200, 760, 80], [2400, 780, 80], [2560, 1180, 80], [1820, 1520, 80], [2080, 250, 80], [1780, 300, 80], [1820, 960, 70], [2240, 1000, 70], [2545, 1330, 110],
+];
+let PADS = null;
+export function groundZ(x, y) {
+  PADS ||= [...PAD_SPOTS, ...Object.values(NODES).map((n) => [n.x, n.y, 90])].map(([px, py, r]) => ({ x: px, y: py, r, z: terrainBase(px, py) }));
+  let z = terrainBase(x, y), w = 0, acc = 0;
+  for (const p of PADS) {
+    const d = Math.hypot(x - p.x, y - p.y);
+    if (d < p.r + 160) { const k = 1 - sstep(p.r * 0.85, p.r + 160, d); acc += k * p.z; w += k; }
+  }
+  if (w > 0) { const k = Math.min(1, w); z = z * (1 - k) + (acc / w) * k; }
+  return z;
+}
+// 地面＋山：這一點最上面有多高（算視線有沒有被擋住）
+export const heightAt = (x, y) => groundZ(x, y) + hillAt(x, y);
+// 把 dio 包一層：加進來的東西（房子、樹、車子、標記…）的 z 都是「離地面多高」，自動踩在地形上。
+// abs: true 的照原本的高度（山、高架橋、捷運這些自己算好的）
+export function onTerrain(dio) {
+  const g = groundZ;
+  const t = Object.create(dio);
+  t.raw = dio;
+  t.addBox = (o) => dio.addBox(o.abs ? o : { ...o, z: (o.z || 0) + g(o.x + o.w / 2, o.y + o.d / 2) });
+  t.addGable = (o) => dio.addGable(o.abs ? o : { ...o, z: (o.z || 0) + g(o.x + o.w / 2, o.y + o.d / 2) });
+  t.addPanel = (o) => dio.addPanel(o.abs ? o : { ...o, z: (o.z || 0) + g((o.x1 + o.x2) / 2, (o.y1 + o.y2) / 2) });
+  t.addPolygon = (o) => dio.addPolygon(o.abs ? o : { ...o, pts: o.pts.map(([x, y, z]) => [x, y, (z || 0) + g(x, y)]) });
+  // 平面（草地、月台）：放在地面上方一點點，畫的時候才不會被地形蓋住
+  t.addDecal = (o) => dio.addDecal(o.abs ? o : { ...o, z: Math.max(3.2, (o.z || 0) + g(o.x + o.w / 2, o.y + o.h / 2) + 2.4) });
+  t.addSprite = (o) => {
+    if (o.abs) return dio.addSprite(o);
+    let rel = o.z || 0;
+    const sp = dio.addSprite({ ...o, z: rel + g(o.x, o.y) });
+    const move = sp.move.bind(sp);
+    sp.move = (nx, ny, nz = rel) => { rel = nz; move(nx, ny, nz + g(nx, ny)); };
+    return sp;
+  };
+  return t;
+}
+// 高架快速道路：從西山的隧道出來，往東南跨過 B–C、C–J 兩條路，開出小鎮南邊。
+// 橋面高度跟著地形走（地面平滑後再高 100），所以從台地下到河谷是一段長長的下坡
 const HWY = { p0: [-60, 1440], c: [700, 1700], p1: [1500, 2400], z: 100 };
-// 被擋住了嗎？（11/25）從鏡頭看過去，(x, y, z) 這一點前面有沒有高架橋面或山
-// CSS 畫的車子（會動的）永遠疊在 WebGL 的橋和山上面，所以要自己算：被擋住就藏起來，才不會像是車子開在橋上
+const HWY_N = 90;
 let HWY_PTS = null;
-function nearHwy(x, y) { HWY_PTS ||= [...Array(91)].map((_, i) => hwyPt(i / 90)); let d = 1e9; for (const p of HWY_PTS) d = Math.min(d, Math.hypot(p.x - x, p.y - y)); return d; }
+function hwyTable() {
+  if (HWY_PTS) return HWY_PTS;
+  const P = [...Array(HWY_N + 1)].map((_, i) => hwyPt(i / HWY_N));
+  const g = P.map((p) => groundZ(p.x, p.y));
+  const mx = g.map((_, i) => Math.max(...g.slice(Math.max(0, i - 5), i + 6)));
+  const sm = mx.map((_, i) => { const w = mx.slice(Math.max(0, i - 6), i + 7); return w.reduce((t, v) => t + v, 0) / w.length; });
+  HWY_PTS = P.map((p, i) => ({ ...p, z: sm[i] + HWY.z }));
+  return HWY_PTS;
+}
+// 高架捷運軌道的高度（絕對）：沿線最高的地面再往上 MRT_LINE.z
+let MRT_Z = null;
+export const mrtZ = () => (MRT_Z ??= MRT_LINE.z + Math.max(...[...Array(21)].map((_, i) => groundZ(MRT_LINE.x0 + ((MRT_LINE.x1 - MRT_LINE.x0) * i) / 20, MRT_LINE.y))));
+// 橋面在 t 的高度（絕對高度）
+export const hwyZ = (t) => { const T = hwyTable(), f = Math.max(0, Math.min(1, t)) * HWY_N, i = Math.min(HWY_N - 1, Math.floor(f)); return T[i].z + (T[i + 1].z - T[i].z) * (f - i); };
+function nearHwy(x, y) { let d = 1e9, z = 0; for (const p of hwyTable()) { const e = Math.hypot(p.x - x, p.y - y); if (e < d) { d = e; z = p.z; } } return { d, z }; }
+// 被擋住了嗎？（11/25）從鏡頭看過去，離地 z 高的 (x, y) 這一點前面有沒有高架橋面、山或比較高的地形
+// CSS 畫的車子（會動的）永遠疊在 WebGL 的橋和山上面，所以要自己算：被擋住就藏起來，才不會像是車子開在橋上
 export function occludedBy(eye, x, y, z, { deck = true } = {}) {
   if (!eye) return null;
   const [ex, ey, ez] = eye;
-  // 高架橋面：視線穿過橋面那個高度的地方，剛好在橋面上
-  if (deck && ez > HWY.z && z < HWY.z) {
-    const t = (ez - HWY.z) / (ez - z);
-    const qx = ex + (x - ex) * t, qy = ey + (y - ey) * t;
-    if (nearHwy(qx, qy) < 50 && heightAt(qx, qy) < HWY.z) return 'deck';
-  }
-  // 山：沿著視線往車子走，有一點在山的下面就是被擋住
-  const L = Math.hypot(x - ex, y - ey), n = Math.max(8, Math.min(60, Math.round(L / 50)));
-  for (let k = n - 1; k >= 1; k--) {
-    const t = k / n, qx = ex + (x - ex) * t, qy = ey + (y - ey) * t, qz = ez + (z - ez) * t;
-    if (qz < 430 && heightAt(qx, qy) > qz + 2) return 'hill';
+  const za = groundZ(x, y) + z;
+  const L = Math.hypot(x - ex, y - ey), n = Math.max(10, Math.min(80, Math.round(L / 40)));
+  let prevDeck = null;
+  for (let k = 1; k < n; k++) {   // 從眼睛往目標走
+    const t = k / n, qx = ex + (x - ex) * t, qy = ey + (y - ey) * t, qz = ez + (za - ez) * t;
+    if (qz < 600 && heightAt(qx, qy) > qz + 2) return 'hill';
+    // 高架橋面：視線從橋面上方穿到下方，而且那裡就在橋面上
+    if (deck) {
+      const h = nearHwy(qx, qy);
+      const above = qz > h.z;
+      if (h.d < 50 && prevDeck === true && !above && heightAt(qx, qy) < h.z) return 'deck';
+      prevDeck = h.d < 60 ? above : null;
+    }
   }
   return null;
 }
-const tunnelEdge = (a, b) => edgePts(a, b).pts.some((p) => heightAt(p.x, p.y) > 30);
+const tunnelEdge = (a, b) => edgePts(a, b).pts.some((p) => hillAt(p.x, p.y) > 30);
 const hwyPt = (t) => {
   const [a, c, b] = [HWY.p0, HWY.c, HWY.p1];
   const x = (1 - t) ** 2 * a[0] + 2 * (1 - t) * t * c[0] + t * t * b[0], y = (1 - t) ** 2 * a[1] + 2 * (1 - t) * t * c[1] + t * t * b[1];
@@ -554,12 +634,13 @@ function tunnelPortal(dio, x, y, dx, dy, { z0 = 0, h = 120, w = 160 } = {}) {
     <circle cx="56" cy="58" r="4" fill="#ffd23f"/><circle cx="104" cy="58" r="4" fill="#ffd23f"/></svg>`;
   dio.addPanel({ x1: x + px * w / 2, y1: y + py * w / 2, x2: x - px * w / 2, y2: y - py * w / 2, z: z0, h, html: svg, both: true });
 }
+// dio 是原本的（不是 onTerrain 包過的）：這裡的高度都自己算好（絕對高度）
 function buildTerrain(dio) {
-  // 山：一圈一圈往內縮、往上疊，每一片依朝向打光（軟膠玩具的亮暗）
+  // 山：一圈一圈往內縮、往上疊，疊在地形上面；每一片依朝向打光（軟膠玩具的亮暗）
   const RINGS = [1, 0.97, 0.93, 0.87, 0.79, 0.69, 0.57, 0.43, 0.27, 0];
   for (const H of HILLS) {
     const seg = H.rx > 400 ? 56 : 40;
-    const ring = (r, i) => { const a = (i / seg) * Math.PI * 2; return [H.cx + Math.cos(a) * H.rx * r, H.cy + Math.sin(a) * H.ry * r, H.h * hillProfile(r) + 0.5]; };
+    const ring = (r, i) => { const a = (i / seg) * Math.PI * 2; const x = H.cx + Math.cos(a) * H.rx * r, y = H.cy + Math.sin(a) * H.ry * r; return [x, y, groundZ(x, y) + H.h * hillProfile(r) + 0.5]; };
     for (let k = 0; k < RINGS.length - 1; k++) {
       for (let i = 0; i < seg; i++) {
         const a = ring(RINGS[k], i), b = ring(RINGS[k], i + 1), c = ring(RINGS[k + 1], i + 1), d = ring(RINGS[k + 1], i);
@@ -584,34 +665,35 @@ function buildTerrain(dio) {
   // 隧道口：路穿過山的地方（找山腳的高度剛好變高的那一點）
   for (const [a, b] of EDGES) {
     const E = edgePts(a, b);
-    let prev = heightAt(E.pts[0].x, E.pts[0].y);
+    let prev = hillAt(E.pts[0].x, E.pts[0].y);
     for (let t = 0.01; t <= 1; t += 0.01) {
-      const p = along(E, t), h = heightAt(p.x, p.y);
-      if ((prev < 30) !== (h < 30)) tunnelPortal(dio, p.x, p.y, p.dx, p.dy);
+      const p = along(E, t), h = hillAt(p.x, p.y);
+      if ((prev < 30) !== (h < 30)) tunnelPortal(dio, p.x, p.y, p.dx, p.dy, { z0: groundZ(p.x, p.y) });
       prev = h;
     }
   }
   // 火車隧道（東山）
-  { const x = HILLS[3].cx - HILLS[3].rx * Math.sqrt(1 - ((TRAIN_LINE.y - HILLS[3].cy) / HILLS[3].ry) ** 2) - 4; tunnelPortal(dio, x, TRAIN_LINE.y + 6, 1, 0, { w: 150, h: 130 }); }
-  // 高架快速道路：橋面（上面、兩側、欄杆）、中線、橋墩；從西山的隧道出來
-  const N = 90, z = HWY.z, half = 46;
-  const P = [...Array(N + 1)].map((_, i) => { const q = hwyPt(i / N); const l = Math.hypot(q.dx, q.dy) || 1; return { ...q, nx: -q.dy / l, ny: q.dx / l }; });
+  { const x = HILLS[3].cx - HILLS[3].rx * Math.sqrt(1 - ((TRAIN_LINE.y - HILLS[3].cy) / HILLS[3].ry) ** 2) - 4; tunnelPortal(dio, x, TRAIN_LINE.y + 6, 1, 0, { w: 150, h: 130, z0: groundZ(x, TRAIN_LINE.y) }); }
+  // 高架快速道路：橋面（上面、兩側、欄杆）、中線、橋墩；從西山的隧道出來，跟著地形慢慢下坡
+  const half = 46;
+  const P = hwyTable().map((q) => { const l = Math.hypot(q.dx, q.dy) || 1; return { ...q, nx: -q.dy / l, ny: q.dx / l }; });
   let portal = false;
-  for (let i = 0; i < N; i++) {
+  for (let i = 0; i < HWY_N; i++) {
     const a = P[i], b = P[i + 1];
-    if (heightAt(b.x, b.y) > z + 6) continue;   // 還在山裡
-    if (!portal) { portal = true; tunnelPortal(dio, a.x, a.y, a.dx, a.dy, { z0: z - 30, h: 150, w: 140 }); }
-    const L = (p, s, zz) => [p.x + p.nx * s, p.y + p.ny * s, zz];
-    dio.addPolygon({ pts: [L(a, half, z), L(b, half, z), L(b, -half, z), L(a, -half, z)], color: '#b8bdc8' });
+    if (heightAt(b.x, b.y) > b.z + 6) continue;   // 還在山裡
+    if (!portal) { portal = true; tunnelPortal(dio, a.x, a.y, a.dx, a.dy, { z0: a.z - 30, h: 150, w: 140 }); }
+    const L = (p, s, dz) => [p.x + p.nx * s, p.y + p.ny * s, p.z + dz];
+    dio.addPolygon({ pts: [L(a, half, 0), L(b, half, 0), L(b, -half, 0), L(a, -half, 0)], color: '#b8bdc8' });
     for (const s of [half, -half]) {
-      dio.addPolygon({ pts: [L(a, s, z - 14), L(b, s, z - 14), L(b, s, z), L(a, s, z)], color: lit('#d8dde6', a.nx * Math.sign(s), a.ny * Math.sign(s), 0) });
-      dio.addPolygon({ pts: [L(a, s, z), L(b, s, z), L(b, s, z + 12), L(a, s, z + 12)], color: '#eef1f6' });
+      dio.addPolygon({ pts: [L(a, s, -14), L(b, s, -14), L(b, s, 0), L(a, s, 0)], color: lit('#d8dde6', a.nx * Math.sign(s), a.ny * Math.sign(s), 0) });
+      dio.addPolygon({ pts: [L(a, s, 0), L(b, s, 0), L(b, s, 12), L(a, s, 12)], color: '#eef1f6' });
     }
-    if (i % 2 === 0) dio.addPolygon({ pts: [L(a, 2.5, z + 0.6), L(b, 2.5, z + 0.6), L(b, -2.5, z + 0.6), L(a, -2.5, z + 0.6)], color: '#ffffff' });
-    // 橋墩：每隔一段一根，不要立在馬路上
-    if (i % 6 === 3 && heightAt(a.x, a.y) < 10) {
+    if (i % 2 === 0) dio.addPolygon({ pts: [L(a, 2.5, 0.6), L(b, 2.5, 0.6), L(b, -2.5, 0.6), L(a, -2.5, 0.6)], color: '#ffffff' });
+    // 橋墩：從地面撐到橋面；每隔一段一根，不要立在馬路上
+    const gz = groundZ(a.x, a.y);
+    if (i % 6 === 3 && hillAt(a.x, a.y) < 10 && a.z - 14 - gz > 20) {
       const onRoad = EDGES.some(([u, v]) => edgePts(u, v).pts.some((q) => Math.hypot(q.x - a.x, q.y - a.y) < 80));
-      if (!onRoad) dio.addBox({ x: a.x - 11, y: a.y - 11, w: 22, d: 22, h: z - 14, color: '#d8dde6' });
+      if (!onRoad) dio.addBox({ x: a.x - 11, y: a.y - 11, w: 22, d: 22, z: gz, h: a.z - 14 - gz, color: '#d8dde6' });
     }
   }
 }
@@ -619,11 +701,13 @@ function buildTerrain(dio) {
 // ---- 小鎮模型（小鎮地圖和坐車都用） ----
 export function buildTown() {
   const festNow = syncFestPlace();
-  const dio = createDiorama({ gl: true, w: W, d: D, walls: false, zoom: 0.8, zmin: 0.34, zmax: 1.5, cy: 0.58, skirt: '#a6d987', horizon: 'town',
+  const dio0 = createDiorama({ gl: true, w: W, d: D, walls: false, zoom: 0.8, zmin: 0.34, zmax: 1.5, cy: 0.58, skirt: '#a6d987', horizon: 'town',
+    groundZ,   // 鏡頭看的那一點踩在地形上
     // 視線避山（11/25）：畫面中間那一點（坐車時就是自己的車）被山擋住 → 鏡頭自動抬高越過山
-    sightBlocked: (eye, x, y) => occludedBy(eye, x, y, Math.max(30, heightAt(x, y) + 30), { deck: false }) === 'hill',
+    sightBlocked: (eye, x, y) => occludedBy(eye, x, y, 30 + hillAt(x, y), { deck: false }) === 'hill',
     floorCss: 'background: radial-gradient(ellipse at 25% 30%, #b8e89a 0, transparent 40%), radial-gradient(ellipse at 75% 70%, #b0e392 0, transparent 45%), #a6d987' });
-  // 地面一張大圖：河、馬路、中線、斑馬線（都是彎的）
+  const dio = onTerrain(dio0);   // 之後加的東西都自動踩在地形上
+  // 地面一張大圖：河、馬路、中線、斑馬線（都是彎的）；貼在有高低的地形上
   const roadPath = EDGES.map(([a, b, c]) => `M${NODES[a].x} ${NODES[a].y} Q${c[0]} ${c[1]} ${NODES[b].x} ${NODES[b].y}`).join(' ');
   const crossings = [];
   let zebra = '';
@@ -646,8 +730,10 @@ export function buildTown() {
     ${zebra}
     ${Object.values(NODES).map((n) => `<circle cx="${n.x}" cy="${n.y}" r="56" fill="#8a8fa0"/>`).join('')}
   </svg>`;
-  dio.addDecal({ x: 0, y: 0, w: W, h: D, z: 0.8, cls: 'road', html: ground, budget: 6e6 });
-  buildTerrain(dio);   // 山、隧道、高架快速道路
+  // 地面大圖底下補一層草地顏色（大圖是透明底）
+  const groundTex = ground.replace(/^\s*(<svg[^>]*>)/, `$1<rect width="${W}" height="${D}" fill="#a6d987"/>`);
+  dio0.addTerrain({ html: groundTex, ground: groundZ });
+  buildTerrain(dio0);   // 山、隧道、高架快速道路
   // 地點
   const markers = {};
   for (const [id, p] of Object.entries(PLACES)) {
@@ -666,16 +752,18 @@ export function buildTown() {
     const h = PLACES.home;
     [[-150, 120], [150, 120]].forEach(([dx, dy]) => dio.addSprite({ x: h.x + dx, y: h.y + dy, w: 70, h: 70, shadow: 0.4, html: deco }));
   }
-  // 火車站後面的鐵軌，往東邊一直延伸出去（去郊區、海邊、山上）
-  dio.addDecal({ x: 2560, y: 480, w: 1400, h: 40, z: 0.9, css: 'background:repeating-linear-gradient(90deg,#8a6a4a 0 8px,transparent 8px 26px),linear-gradient(#bfc4cf 0 18%,transparent 18% 82%,#bfc4cf 82%)' });
+  // 火車站後面的鐵軌，往東邊一直延伸出去（去郊區、海邊、山上）；一段一段貼在地形上
+  for (let x = 2560; x < 3960; x += 104) dio.addDecal({ x, y: 480, w: 104, h: 40, z: 0.9, css: 'background:repeating-linear-gradient(90deg,#8a6a4a 0 8px,transparent 8px 26px),linear-gradient(#bfc4cf 0 18%,transparent 18% 82%,#bfc4cf 82%)' });
   // 高架捷運（11/25）：沿著市中心大馬路的南邊、跨過河；捷運站就在下面，月台有藍色屋頂
   {
-    const { y: MY, x0, x1, z: MZ } = MRT_LINE;
-    for (let x = x0 + 30; x <= x1 - 20; x += 116) dio.addBox({ x: x - 9, y: MY - 9, w: 18, d: 18, h: MZ, color: '#d8dde6' });
-    dio.addBox({ x: x0, y: MY - 17, w: x1 - x0, d: 34, h: 12, z: MZ, color: '#e8ecf2', top: '#c9ced8' });
+    // 地形有高低：高架軌道一樣平（用沿線最高的地面再往上 MRT_LINE.z），橋墩從各自的地面撐上去
+    const { y: MY, x0, x1 } = MRT_LINE;
+    const MZ = mrtZ();
+    for (let x = x0 + 30; x <= x1 - 20; x += 116) { const gz = groundZ(x, MY); dio0.addBox({ x: x - 9, y: MY - 9, w: 18, d: 18, z: gz, h: MZ - gz, color: '#d8dde6' }); }
+    dio0.addBox({ x: x0, y: MY - 17, w: x1 - x0, d: 34, h: 12, z: MZ, color: '#e8ecf2', top: '#c9ced8' });
     const mp = PLACES.mrt;
-    [[-66, -24], [62, -24], [-66, 20], [62, 20]].forEach(([dx, dy]) => dio.addBox({ x: mp.x + dx, y: MY + dy, w: 6, d: 6, h: 58, z: MZ + 12, color: '#3ea8e0' }));
-    dio.addBox({ x: mp.x - 72, y: MY - 30, w: 144, d: 60, h: 6, z: MZ + 70, color: '#3ea8e0', top: '#5fbbe8' });
+    [[-66, -24], [62, -24], [-66, 20], [62, 20]].forEach(([dx, dy]) => dio0.addBox({ x: mp.x + dx, y: MY + dy, w: 6, d: 6, h: 58, z: MZ + 12, color: '#3ea8e0' }));
+    dio0.addBox({ x: mp.x - 72, y: MY - 30, w: 144, d: 60, h: 6, z: MZ + 70, color: '#3ea8e0', top: '#5fbbe8' });
   }
   // 火車停靠的月台（車站東邊），月台邊一條黃線
   dio.addDecal({ x: TRAIN_LINE.stop - 120, y: TRAIN_LINE.y + 22, w: 240, h: 30, z: 1, css: 'background:linear-gradient(#ffd23f 0 4px,#d8dde6 4px)' });
@@ -723,7 +811,7 @@ export function buildTown() {
       dio.addSprite({ x: rx - 150, y, w: 80, h: 110, shadow: 0.6, html: treeSvg('#4fbf6e') });
     dio.addSprite({ x: rx + 160, y: y + 120, w: 80, h: 110, shadow: 0.6, html: treeSvg('#5fc76a') });
   }
-  for (const [x, y] of [[80, 120], [100, 1900], [900, 2100], [2900, 200], [2880, 2000], [2790, 1600], [2950, 1100], [60, 900], [1300, 120], [700, 1980]].filter(([x, y]) => heightAt(x, y) < 1)) {
+  for (const [x, y] of [[80, 120], [100, 1900], [900, 2100], [2900, 200], [2880, 2000], [2790, 1600], [2950, 1100], [60, 900], [1300, 120], [700, 1980]].filter(([x, y]) => hillAt(x, y) < 1)) {
     dio.addSprite({ x, y, w: 90, h: 120, shadow: 0.6, html: treeSvg(pick(['#4fbf6e', '#3f9f5a', '#6cc072'])) });
   }
   dio.seal();   // 之後加的（閃閃、叭叭、坐車時的車子和行人）用 CSS，才能動
@@ -767,7 +855,7 @@ export async function mountTown(root, app) {
   placeBar(root, dio, PLACES, T.markers, app.trip.location, (id) => { if (!going) dio.el.dispatchEvent(new CustomEvent('tapname', { detail: `go:${id}` })); }, shan.el);
   setHint(() => document.querySelector('.placebar button'));
   // 路上的車、高架捷運、火車（11/25）：一直有車在跑，點車子閃閃會說是什麼車
-  if (state.settings.traffic !== false) startTraffic(dio, { NODES, neighbors, edgePts, along, MRT_LINE, TRAIN_LINE, PLACES, heightAt, hwyPt, HWY, occludedBy }, { alive: () => app.alive() });
+  if (state.settings.traffic !== false) startTraffic(dio, { NODES, neighbors, edgePts, along, MRT_LINE, TRAIN_LINE, PLACES, hillAt, groundZ, hwyPt, hwyZ, mrtZ, occludedBy }, { alive: () => app.alive() });
   let lastVeh = 0;
 
   const onTapTown = async (name) => {
@@ -922,7 +1010,7 @@ export async function mountRide(root, app) {
   };
   // 路上的車流（11/25 坐車時也有）：靠近小孩的車會停下來等；開警笛時靠邊讓路
   const traffic = state.settings.traffic !== false
-    ? startTraffic(dio, { NODES, neighbors, edgePts, along, MRT_LINE, TRAIN_LINE, PLACES, heightAt, hwyPt, HWY, occludedBy }, { alive: () => alive, player: () => ({ x: car.x, y: car.y }) })
+    ? startTraffic(dio, { NODES, neighbors, edgePts, along, MRT_LINE, TRAIN_LINE, PLACES, hillAt, groundZ, hwyPt, hwyZ, mrtZ, occludedBy }, { alive: () => alive, player: () => ({ x: car.x, y: car.y }) })
     : null;
   drawPlacedStickers(dio);
   const flag = dio.addSprite({ x: path[path.length - 1].x + 30, y: path[path.length - 1].y - 30, z: 1, w: 90, h: 240, shadow: 0.4, live: true,   // live：永遠畫在山和房子上面，從哪個角度都看得到
@@ -1068,8 +1156,8 @@ export async function mountRide(root, app) {
           last = now;
           if (!paused) t = Math.min(1, t + dt / dur);
           { const cp = along(E, t); car.move(cp.x, cp.y, 1);
-            const hz = heightAt(cp.x, cp.y);
-            if (!tunnelSaid && hz < 30) { const ah = along(E, Math.min(1, t + 260 / len)); if (heightAt(ah.x, ah.y) > 30) { tunnelSaid = true; say('baba', 'ride_tunnel', car.el); } }
+            const hz = hillAt(cp.x, cp.y);
+            if (!tunnelSaid && hz < 30) { const ah = along(E, Math.min(1, t + 260 / len)); if (hillAt(ah.x, ah.y) > 30) { tunnelSaid = true; say('baba', 'ride_tunnel', car.el); } }
             setTunnel(hz > 30);
             // 開到高架橋下面：被橋面擋住就看不見（跟路上別的車一樣）；被山擋住（不是在隧道裡）留一個淡淡的影子，小孩才找得到自己的車
             if (!inTunnel && (occTick = (occTick + 1) % 4) === 0) { const oc = occludedBy(dio.eyePos(), cp.x, cp.y, 40); car.el.style.opacity = oc === 'deck' ? '0' : oc === 'hill' ? '.35' : ''; } }

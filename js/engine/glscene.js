@@ -141,13 +141,14 @@ export function createGLScene(canvas) {
   const colorOf = (c) => { const p = typeof c === 'string' ? parseColor(c) : c; const a = p ? p[3] : 1; return p ? [(p[0] / 255) * a, (p[1] / 255) * a, (p[2] / 255) * a, a] : [1, 1, 1, 1]; };
 
   // pts：3 或 4 個世界座標點（逆時針面向 normal 那一側）；uv 對應每個點
-  function addPoly({ pts, uv = null, color = '#ffffff', tex = null, pass = 'solid', oneSided = true, order = 0, pick = null }) {
+  function addPoly({ pts, uv = null, color = '#ffffff', tex = null, shade = null, pass = 'solid', oneSided = true, order = 0, pick = null }) {
     const n = (() => {
       const [a, b, c] = pts;
       const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
       return [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
     })();
-    const m = { pts, uv: uv || pts.map(() => [0, 0]), col: colorOf(tex ? '#ffffff' : color), tex, pass, oneSided, order, pick, n, hidden: false };
+    const m = { pts, uv: uv || pts.map(() => [0, 0]), col: colorOf(tex ? (shade || '#ffffff') : color), tex,   // shade：有貼圖時乘上的明暗（地形打光用）
+      pass, oneSided, order, pick, n, hidden: false };
     meshes.push(m);
     staticDirty = true;
     return m;

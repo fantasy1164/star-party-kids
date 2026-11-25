@@ -119,6 +119,8 @@ export function createDiorama(opt = {}) {
   // 鏡頭自動抬高（往正上方看，等於眼睛往前、往上越過山）直到看得到；轉開了再慢慢回到原本的角度。
   // view.t 一直是使用者自己選的角度，tEff 是實際用的角度。
   let tEff = view.t, sightRaf = 0;
+  // 有高低的地形（11/25 城市高程）：鏡頭看的那一點踩在地面上（o.groundZ 給地面高度），不是 z=0
+  const focusZ = () => (o.groundZ ? o.groundZ(view.px, view.py) : 0);
   function wantTilt() {
     if (!o.sightBlocked) return view.t;
     const keep = tEff;
@@ -145,7 +147,7 @@ export function createDiorama(opt = {}) {
       cam.style.left = `${stageW() / 2}px`;
       cam.style.top = `${900 * o.cy}px`;
     }
-    cam.style.transform = `scale(${view.z}) rotateX(${tEff}deg) rotateZ(${view.a}deg) translate3d(${-view.px}px,${-view.py}px,0)`;
+    cam.style.transform = `scale(${view.z}) rotateX(${tEff}deg) rotateZ(${view.a}deg) translate3d(${-view.px}px,${-view.py}px,${-focusZ()}px)`;
     if (shownAng === null || (exact ? shownAng !== view.a : Math.abs(view.a - shownAng) >= ANG_STEP)) {
       shownAng = view.a;
       world.style.setProperty('--ang', `${view.a}deg`);
@@ -159,7 +161,7 @@ export function createDiorama(opt = {}) {
   // ---- 跟 CSS 一模一樣的鏡頭矩陣（世界 → 畫面），給 WebGL 和點擊用 ----
   function viewSize() { return [el.offsetWidth || stageW(), el.offsetHeight || 900]; }
   function camMatrix() {
-    return [T4(stageW() / 2, 900 * o.cy, 0), S4(view.z, view.z, 1), RX(tEff), RZ(view.a), T4(-view.px, -view.py, 0)].reduce(mul);
+    return [T4(stageW() / 2, 900 * o.cy, 0), S4(view.z, view.z, 1), RX(tEff), RZ(view.a), T4(-view.px, -view.py, -focusZ())].reduce(mul);
   }
   function projMatrix(W, H) {
     const P = PERSP, ox = W / 2, oy = H * PO_Y, n = 60, f = P + 60000;
@@ -190,6 +192,33 @@ export function createDiorama(opt = {}) {
     const ox = W / 2, oy = H * PO_Y;
     return { o: xf(inv, [ox, oy, PERSP]), d: xf(inv, [p.x - ox, p.y - oy, -PERSP], 0) };
   }
+  // 有高低的地面（11/25）：一格一格的網格，每個點的高度由 ground(x, y) 給；地圖範圍內貼上地面大圖（馬路、河），
+  // 範圍外是草地；每格依朝向打光。只在 WebGL 場景用（封存前呼叫）。
+  function addTerrain({ html, ground, cell = 60, margin = 1400, grass = '#a6d987' }) {
+    if (!useGL()) return;
+    const big = Math.max(o.w, o.d);
+    const k = Math.min(big > 1500 && stageScale() < 0.6 ? 0.9 : 1.3, 4096 / big);
+    const tex = glS.texture({ svg: html, w: o.w, h: o.d, k, ground: true });
+    const x0 = -margin, y0 = -margin, nx = Math.ceil((o.w + margin * 2) / cell), ny = Math.ceil((o.d + margin * 2) / cell);
+    const Z = [];
+    for (let j = 0; j <= ny; j++) { Z[j] = []; for (let i = 0; i <= nx; i++) Z[j][i] = ground(x0 + i * cell, y0 + j * cell); }
+    const shadeOf = (c, a, b, d) => {
+      const u = [cell, 0, b - a], v = [0, cell, d - a];
+      const n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+      const L = Math.hypot(...n) || 1;
+      return lit(c, n[0] / L, n[1] / L, n[2] / L);
+    };
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+      const xa = x0 + i * cell, ya = y0 + j * cell, xb = xa + cell, yb = ya + cell;
+      const pts = [[xa, ya, Z[j][i]], [xb, ya, Z[j][i + 1]], [xb, yb, Z[j + 1][i + 1]], [xa, yb, Z[j + 1][i]]];
+      const inside = xb > 0 && xa < o.w && yb > 0 && ya < o.d;
+      if (inside) {
+        const uv = pts.map(([x, y]) => [Math.max(0, Math.min(1, x / o.w)), Math.max(0, Math.min(1, y / o.d))]);
+        const flat = Math.abs(Z[j][i] - Z[j + 1][i + 1]) < 0.5 && Math.abs(Z[j][i + 1] - Z[j + 1][i]) < 0.5;
+        glS.addPoly({ pts, uv, tex, shade: flat ? '#ffffff' : shadeOf('#ffffff', Z[j][i], Z[j][i + 1], Z[j + 1][i]), pass: 'solid', oneSided: false });
+      } else glS.addPoly({ pts, color: shadeOf(grass, Z[j][i], Z[j][i + 1], Z[j + 1][i]), pass: 'solid', oneSided: false });
+    }
+  }
   // 鏡頭（眼睛）在世界裡的位置：用來算「這台車有沒有被橋、山擋住」
   function eyePos() {
     const [W, H] = viewSize();
@@ -199,7 +228,7 @@ export function createDiorama(opt = {}) {
   function groundAt(clientX, clientY) {
     const { o: ro, d } = rayAt(clientX, clientY);
     if (Math.abs(d[2]) < 1e-9) return null;
-    const t = -ro[2] / d[2];
+    const t = (focusZ() - ro[2]) / d[2];   // 地形有高低時，用鏡頭看的那一點的高度當地面
     return t > 0 ? { x: ro[0] + d[0] * t, y: ro[1] + d[1] * t } : null;
   }
   // 拖曳、捏合時用：同一格畫面裡多次移動只套用一次
@@ -648,7 +677,7 @@ export function createDiorama(opt = {}) {
   apply();
   const api = {
     el, cam, world, view, walls, floor, o,
-    addBox, addGable, addPanel, addSprite, addDecal, addPolygon, wallArt, alongWall, seal, groundAt, eyePos, gl: !!glS,
+    addBox, addGable, addPanel, addSprite, addDecal, addPolygon, addTerrain, wallArt, alongWall, seal, groundAt, eyePos, gl: !!glS,
     animateTo, rotateBy, faceQuadrant, quadrant, snap, apply, setTint, glow, zoomBy, view,
     onRotate(fn) { rotHooks.push(fn); },
     lock(on) { locked = on; },

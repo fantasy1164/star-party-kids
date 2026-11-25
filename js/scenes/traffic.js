@@ -29,7 +29,8 @@ const FLEET = [
 export function startTraffic(dio, roads, { alive, player = null }) {
   let siren = false;
   let onYield = null;
-  const { NODES, neighbors, edgePts, along, MRT_LINE, TRAIN_LINE, PLACES, heightAt = () => 0, hwyPt = null, HWY = null, occludedBy = null } = roads;
+  const { NODES, neighbors, edgePts, along, MRT_LINE, TRAIN_LINE, PLACES, hillAt = () => 0, groundZ = () => 0, hwyPt = null, hwyZ = null, mrtZ = () => MRT_LINE.z, occludedBy = null } = roads;
+  const heightAt = hillAt;   // 下面「在山裡（隧道）」用的是山的高度
   // 被高架橋、山擋住（從鏡頭看過去）：每幾格才算一次，省電
   let eye = null, occN = 0, trainOcc = false;
   const hidden = (x, y, z) => (occludedBy && eye ? !!occludedBy(eye, x, y, z) : false);
@@ -96,7 +97,7 @@ export function startTraffic(dio, roads, { alive, player = null }) {
   }
 
   // ---- 捷運、火車：沿著一直線來回 ----
-  const mrt = dio.addSprite({ x: MRT_LINE.x0, y: MRT_LINE.y + 2, z: MRT_LINE.z + 12, w: 230, h: 46, html: mrtTrainSvg(), shadow: 0, tap: 'veh:mrt', live: true });
+  const mrt = dio.addSprite({ x: MRT_LINE.x0, y: MRT_LINE.y + 2, z: mrtZ() + 12, w: 230, h: 46, html: mrtTrainSvg(), shadow: 0, tap: 'veh:mrt', live: true, abs: true });
   mrt.el.classList.add('vehicle', 'gone');
   const train = dio.addSprite({ x: TRAIN_LINE.far, y: TRAIN_LINE.y + 6, z: 1, w: 210, h: 62, html: trainSvg(2), shadow: 0.3, tap: 'veh:train', live: true });
   train.el.classList.add('vehicle', 'gone');
@@ -132,7 +133,7 @@ export function startTraffic(dio, roads, { alive, player = null }) {
     while (alive()) {
       const [a, b] = dir > 0 ? [L.x0 + 120, L.x1 - 120] : [L.x1 - 120, L.x0 + 120];
       mrt.el.classList.remove('gone');
-      await runLegs(mrt, L.y + 2, L.z + 12, [[a, st, 4], [st, b, 0]]);
+      await runLegs(mrt, L.y + 2, mrtZ() + 12, [[a, st, 4], [st, b, 0]]);
       mrt.el.classList.add('gone');
       dir = -dir;
       await pause(7000);
@@ -151,10 +152,10 @@ export function startTraffic(dio, roads, { alive, player = null }) {
 
   // ---- 高架快速道路上的車：兩個方向各跑，從西山的隧道進出 ----
   const hw = [];
-  if (hwyPt && HWY) {
+  if (hwyPt && hwyZ) {
     const HL = (() => { let L = 0, p = hwyPt(0); for (let i = 1; i <= 60; i++) { const q = hwyPt(i / 60); L += Math.hypot(q.x - p.x, q.y - p.y); p = q; } return L; })();
     [['car', () => carSvg('#ffb627'), 0.1, 1], ['car', () => carSvg('#2f7fe0'), 0.55, 1], ['bus', () => VEHICLES.bus, 0.3, -1], ['van', () => vanSvg(), 0.8, -1]].forEach(([kind, art, t0, dir]) => {
-      const sp = dio.addSprite({ x: 0, y: 0, z: HWY.z, w: kind === 'bus' ? 100 : 74, h: kind === 'bus' ? 80 : 48, html: `<div class="veh">${art()}</div>`, shadow: 0.3, tap: `veh:${kind}`, live: true });
+      const sp = dio.addSprite({ x: 0, y: 0, z: hwyZ(t0), w: kind === 'bus' ? 100 : 74, h: kind === 'bus' ? 80 : 48, html: `<div class="veh">${art()}</div>`, shadow: 0.3, tap: `veh:${kind}`, live: true, abs: true });
       sp.el.classList.add('vehicle');
       hw.push({ sp, inner: sp.el.firstElementChild, t: t0, dir, speed: (dir > 0 ? 150 : 135) / HL, flip: false });
     });
@@ -166,9 +167,10 @@ export function startTraffic(dio, roads, { alive, player = null }) {
       const p = hwyPt(Math.max(0, Math.min(1, v.t)));
       const l = Math.hypot(p.dx, p.dy) || 1, off = 22 * v.dir;
       const x = p.x - (p.dy / l) * off, y = p.y + (p.dx / l) * off;
-      v.sp.move(x, y, HWY.z);
-      if (eye) v.occ = hidden(x, y, HWY.z + 20);
-      veil(v.sp.el, heightAt(x, y) > HWY.z + 6 || v.t < 0 || v.t > 1 || v.occ ? 1 : 0);
+      const dz = hwyZ(v.t);
+      v.sp.move(x, y, dz);
+      if (eye) v.occ = hidden(x, y, dz - groundZ(x, y) + 20);
+      veil(v.sp.el, groundZ(x, y) + hillAt(x, y) > dz + 6 || v.t < 0 || v.t > 1 || v.occ ? 1 : 0);
       facing(v, p.dx * v.dir, p.dy * v.dir);
     }
   }
