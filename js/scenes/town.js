@@ -75,11 +75,11 @@ const HWY = { p0: [-60, 1440], c: [700, 1700], p1: [1500, 2400], z: 100 };
 // CSS 畫的車子（會動的）永遠疊在 WebGL 的橋和山上面，所以要自己算：被擋住就藏起來，才不會像是車子開在橋上
 let HWY_PTS = null;
 function nearHwy(x, y) { HWY_PTS ||= [...Array(91)].map((_, i) => hwyPt(i / 90)); let d = 1e9; for (const p of HWY_PTS) d = Math.min(d, Math.hypot(p.x - x, p.y - y)); return d; }
-export function occludedBy(eye, x, y, z) {
+export function occludedBy(eye, x, y, z, { deck = true } = {}) {
   if (!eye) return null;
   const [ex, ey, ez] = eye;
   // 高架橋面：視線穿過橋面那個高度的地方，剛好在橋面上
-  if (ez > HWY.z && z < HWY.z) {
+  if (deck && ez > HWY.z && z < HWY.z) {
     const t = (ez - HWY.z) / (ez - z);
     const qx = ex + (x - ex) * t, qy = ey + (y - ey) * t;
     if (nearHwy(qx, qy) < 50 && heightAt(qx, qy) < HWY.z) return 'deck';
@@ -620,6 +620,8 @@ function buildTerrain(dio) {
 export function buildTown() {
   const festNow = syncFestPlace();
   const dio = createDiorama({ gl: true, w: W, d: D, walls: false, zoom: 0.8, zmin: 0.34, zmax: 1.5, cy: 0.58, skirt: '#a6d987', horizon: 'town',
+    // 視線避山（11/25）：畫面中間那一點（坐車時就是自己的車）被山擋住 → 鏡頭自動抬高越過山
+    sightBlocked: (eye, x, y) => occludedBy(eye, x, y, Math.max(30, heightAt(x, y) + 30), { deck: false }) === 'hill',
     floorCss: 'background: radial-gradient(ellipse at 25% 30%, #b8e89a 0, transparent 40%), radial-gradient(ellipse at 75% 70%, #b0e392 0, transparent 45%), #a6d987' });
   // 地面一張大圖：河、馬路、中線、斑馬線（都是彎的）
   const roadPath = EDGES.map(([a, b, c]) => `M${NODES[a].x} ${NODES[a].y} Q${c[0]} ${c[1]} ${NODES[b].x} ${NODES[b].y}`).join(' ');

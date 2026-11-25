@@ -115,20 +115,43 @@ export function createDiorama(opt = {}) {
   // 3. 手指移動事件（iPhone 一秒 120 次）先記下來，每個畫面格只套用一次。
   const ANG_STEP = 10;
   let shownAng = null, shownLean = null, camPos = '', pending = 0;
+  // 視線避山（11/25）：o.sightBlocked(eye, x, y) 說「從鏡頭看畫面中間那一點被山擋住了」時，
+  // 鏡頭自動抬高（往正上方看，等於眼睛往前、往上越過山）直到看得到；轉開了再慢慢回到原本的角度。
+  // view.t 一直是使用者自己選的角度，tEff 是實際用的角度。
+  let tEff = view.t, sightRaf = 0;
+  function wantTilt() {
+    if (!o.sightBlocked) return view.t;
+    const keep = tEff;
+    let t = view.t;
+    const lo = view.t - 30;   // 最多抬高 30 度
+    for (; t > lo; t -= 3) {
+      tEff = t;
+      if (!o.sightBlocked(eyePos(), view.px, view.py)) break;
+    }
+    tEff = keep;
+    return Math.max(lo, t);
+  }
   function apply(exact = true) {
+    // 鏡頭抬高、放下都慢慢來（每一格最多 1.5 度），不要突然跳
+    const want = wantTilt();
+    if (!o.sightBlocked) tEff = view.t;
+    else if (Math.abs(want - tEff) > 0.05) {
+      tEff += Math.max(-1.5, Math.min(1.5, want - tEff));
+      if (!sightRaf) sightRaf = requestAnimationFrame(() => { sightRaf = 0; apply(true); });
+    } else tEff = want;
     const pos = `${stageW() / 2}|${o.cy}`;
     if (pos !== camPos) {
       camPos = pos;
       cam.style.left = `${stageW() / 2}px`;
       cam.style.top = `${900 * o.cy}px`;
     }
-    cam.style.transform = `scale(${view.z}) rotateX(${view.t}deg) rotateZ(${view.a}deg) translate3d(${-view.px}px,${-view.py}px,0)`;
+    cam.style.transform = `scale(${view.z}) rotateX(${tEff}deg) rotateZ(${view.a}deg) translate3d(${-view.px}px,${-view.py}px,0)`;
     if (shownAng === null || (exact ? shownAng !== view.a : Math.abs(view.a - shownAng) >= ANG_STEP)) {
       shownAng = view.a;
       world.style.setProperty('--ang', `${view.a}deg`);
     }
     // 鏡頭往下看得更多時（學堂的「從高處看」），看板角色往後仰一點，才不會被壓扁
-    const lean = Math.round((o.tilt - view.t) * 2) / 2;
+    const lean = Math.round((o.tilt - tEff) * 2) / 2;
     if (lean !== shownLean) { shownLean = lean; world.style.setProperty('--lean', `${lean}deg`); }
     rotHooks.forEach((f) => f(view.a));
     if (glS) renderGL();
@@ -136,7 +159,7 @@ export function createDiorama(opt = {}) {
   // ---- 跟 CSS 一模一樣的鏡頭矩陣（世界 → 畫面），給 WebGL 和點擊用 ----
   function viewSize() { return [el.offsetWidth || stageW(), el.offsetHeight || 900]; }
   function camMatrix() {
-    return [T4(stageW() / 2, 900 * o.cy, 0), S4(view.z, view.z, 1), RX(view.t), RZ(view.a), T4(-view.px, -view.py, 0)].reduce(mul);
+    return [T4(stageW() / 2, 900 * o.cy, 0), S4(view.z, view.z, 1), RX(tEff), RZ(view.a), T4(-view.px, -view.py, 0)].reduce(mul);
   }
   function projMatrix(W, H) {
     const P = PERSP, ox = W / 2, oy = H * PO_Y, n = 60, f = P + 60000;
@@ -154,7 +177,7 @@ export function createDiorama(opt = {}) {
     const ratio = stageScale() * Math.min(2, window.devicePixelRatio || 1);
     const key = `${W}|${H}|${ratio}`;
     if (key !== glSize) { glSize = key; glS.resize(W, H, ratio); }
-    glS.render(mul(projMatrix(W, H), camMatrix()), view.a, o.tilt - view.t);
+    glS.render(mul(projMatrix(W, H), camMatrix()), view.a, o.tilt - tEff);
   }
   let glRaf = 0;
   const renderSoon = () => { if (!glS || glRaf) return; glRaf = requestAnimationFrame(() => { glRaf = 0; renderGL(); }); };
@@ -271,7 +294,7 @@ export function createDiorama(opt = {}) {
     const st = pinchState();
     view.z = clampZ(pinch.z * (st.d / Math.max(20, pinch.d)));
     const k = stageScale() * view.z;
-    const sx = (st.mx - pinch.mx) / k, sy = (st.my - pinch.my) / k / Math.max(0.35, Math.cos((view.t * Math.PI) / 180));
+    const sx = (st.mx - pinch.mx) / k, sy = (st.my - pinch.my) / k / Math.max(0.35, Math.cos((tEff * Math.PI) / 180));
     const a = (-view.a * Math.PI) / 180;
     view.px = pinch.px - (sx * Math.cos(a) - sy * Math.sin(a));
     view.py = pinch.py - (sx * Math.sin(a) + sy * Math.cos(a));
