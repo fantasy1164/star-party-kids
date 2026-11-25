@@ -21,6 +21,7 @@ import { PLACE_ICON, ZOO, SEA, MISC } from '../art/world.js';
 import { backdrop, homeBtn, rotateBtns, jars, roundBtn, zoomBtns } from '../ui/hud.js';
 import { ICON2 } from '../art/more.js';
 import { seatbelt, placeBar } from './town.js';
+import { buildCities } from './worldcity.js';
 
 const S = (inner, vb = '0 0 100 100') => `<svg viewBox="${vb}" width="100%" height="100%">${inner}</svg>`;
 const tree = (c = '#4fbf6e') => S(`<rect x="34" y="70" width="12" height="38" rx="5" fill="#a9744f"/><circle cx="40" cy="48" r="34" fill="${c}"/><circle cx="28" cy="36" r="10" fill="#fff" opacity=".2"/>`, '0 0 80 110');
@@ -218,7 +219,7 @@ function polyAt(P, t) {
   return { x: P[0][0], y: P[0][1], dx: 1, dy: 0 };
 }
 // 四個可以去的地方（真實的相對位置）
-const TW_ZONES = { city: [620, 1000], suburb: [520, 1450], sea: [720, 2310], mountain: [960, 350] };
+const TW_ZONES = { city: [620, 1000], suburb: [520, 1450], sea: [720, 2310], mountain: [1065, 455] };   // 動物園在木柵（台北盆地東南邊的山上），101 在盆地裡
 // 以後會開放的地方
 const SOON = [
   { id: 'sunmoon', x: 820, y: 1210, icon: '🚣' }, { id: 'hehuan', x: 930, y: 960, icon: '🏔️' },
@@ -232,6 +233,15 @@ const planeSvg = () => S(`<path d="M10 44 L96 40 Q112 40 112 48 Q112 54 96 54 L1
 const birdSvg = () => S(`<path d="M10 50 Q30 30 50 50 Q70 30 90 50" stroke="#fff" stroke-width="7" fill="none" stroke-linecap="round"/>`);
 const trainTW = () => S(`<rect x="4" y="18" width="70" height="30" rx="10" fill="#ff8a3d"/><rect x="78" y="18" width="70" height="30" rx="8" fill="#ff8a3d"/>${[12, 30, 48, 86, 104, 122].map((x) => `<rect x="${x}" y="24" width="14" height="10" rx="2" fill="#e9f6ff"/>`).join('')}<rect x="4" y="38" width="144" height="4" fill="#fff"/>`, '0 0 152 60');
 
+// 城市的地面：灰色的市區、白色的街道格子、幾個綠色的小公園
+const cityGround = (cx, cy, rx, ry, id) => {
+  let g = '';
+  for (let x = cx - rx; x <= cx + rx; x += 30) g += `<path d="M${x} ${cy - ry} V${cy + ry}" stroke="#fff" stroke-width="3.5" opacity=".75"/>`;
+  for (let y = cy - ry; y <= cy + ry; y += 30) g += `<path d="M${cx - rx} ${y} H${cx + rx}" stroke="#fff" stroke-width="3.5" opacity=".75"/>`;
+  g += [[-0.55, 0.45], [0.5, -0.6], [0.1, 0.7]].map(([u, v]) => `<rect x="${cx + u * rx - 13}" y="${cy + v * ry - 13}" width="26" height="26" rx="6" fill="#8fd07a"/>`).join('');
+  return `<clipPath id="cg${id}"><ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}"/></clipPath><ellipse cx="${cx}" cy="${cy}" rx="${rx + 8}" ry="${ry + 8}" fill="#a4d97f"/><g clip-path="url(#cg${id})"><rect x="${cx - rx}" y="${cy - ry}" width="${rx * 2}" height="${ry * 2}" fill="#cfd5de"/>${g}</g>`;
+};
+
 export async function mountWorld(root, app) {
   backdrop(root);
   const W = TW_W, D = TW_D;
@@ -244,7 +254,7 @@ export async function mountWorld(root, app) {
     <path d="${coastPath}" fill="#a4d97f" transform="translate(800 1300) scale(.975) translate(-800 -1300)"/>
     <path d="M${RIDGE.map(([x, y]) => `${x} ${y}`).join(' L')}" stroke="url(#mt)" stroke-width="300" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".55"/>
     ${[...Array(9)].map((_, i) => `<path d="M${450 + (i % 3) * 40} ${1380 + Math.floor(i / 3) * 50} l60 20" stroke="#e3d36a" stroke-width="20" opacity=".7" stroke-linecap="round"/>`).join('')}
-    <ellipse cx="620" cy="1000" rx="120" ry="95" fill="#d3d9e2"/><ellipse cx="950" cy="330" rx="95" ry="70" fill="#d3d9e2" opacity=".8"/><ellipse cx="560" cy="2070" rx="80" ry="60" fill="#d3d9e2" opacity=".7"/><ellipse cx="490" cy="1740" rx="60" ry="45" fill="#d3d9e2" opacity=".6"/>
+    ${cityGround(610, 985, 175, 140, 1)}${cityGround(955, 275, 130, 95, 2)}<ellipse cx="560" cy="2070" rx="80" ry="60" fill="#d3d9e2" opacity=".7"/><ellipse cx="490" cy="1740" rx="60" ry="45" fill="#d3d9e2" opacity=".6"/>
     <ellipse cx="820" cy="1210" rx="34" ry="24" fill="#7fd3ff"/>
     <path d="${linePath(HIGHWAY)}" stroke="#8a8fa0" stroke-width="22" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="${linePath(HIGHWAY)}" stroke="#fff" stroke-width="2.5" stroke-dasharray="14 14" fill="none"/>
     <path d="${linePath(RAILWAY)}" stroke="#a9744f" stroke-width="10" fill="none" stroke-dasharray="4 8" stroke-linecap="round"/>
@@ -260,12 +270,9 @@ export async function mountWorld(root, app) {
   app.onLeave(() => { alive = false; setHint(null); setPlaying(false); dio.destroy(); });
   dio.setTint(roomTint());
   const gz = (x, y) => twGround(x, y);
-  // 城市（台中）：一群小樓
-  [[540, 930, 50, 120, '#bfd3ef'], [600, 900, 56, 170, '#ffd6a0'], [670, 930, 46, 110, '#d6c8ff'], [560, 1010, 60, 90, '#c8f0d6'], [650, 1010, 50, 140, '#ffb8c0'], [700, 990, 40, 80, '#ffe0a8']].forEach(([x, y, w, h, c]) => dio.addBox({ x, y, w, d: w, h, color: c, tap: 'zone:city' }));
-  // 台北（動物園那一區）：101 和幾棟樓
-  dio.addBox({ x: 905, y: 300, w: 26, d: 26, h: 230, color: '#9fd0c8', tap: 'zone:mountain' });
-  [[860, 330, 40, 90, '#d6dceb'], [950, 280, 36, 70, '#e8d6c8']].forEach(([x, y, w, h, c]) => dio.addBox({ x, y, w, d: w, h, color: c, tap: 'zone:mountain' }));
-  dio.addSprite({ x: 1010, y: 380, z: gz(1010, 380) + 90, w: 100, h: 80, shadow: 0, tap: 'zone:mountain', html: cablecar() });
+  // 城市：台中（明星小鎮，有台中火車站）和台北盆地（有 101），每棟樓有窗、陽台、水塔（worldcity.js）
+  buildCities(dio, { gz, tree, night: isDark(), avoid: (x, y, r) => segDist(x, y, HIGHWAY) < r + 12 || segDist(x, y, RAILWAY) < r + 6 });
+  dio.addSprite({ x: 1010, y: 490, z: gz(1010, 490) + 60, w: 100, h: 80, shadow: 0, tap: 'zone:mountain', html: cablecar() });
   // 郊區：穀倉、風車、牛
   dio.addBox({ x: 540, y: 1470, w: 80, d: 80, h: 54, color: '#e0503a', tap: 'zone:suburb' });
   dio.addGable({ x: 540, y: 1470, w: 80, d: 80, z: 54, h: 40, over: 6, color: '#7a3b30', wallColor: '#e0503a', ridge: 'y', tap: 'zone:suburb' });
@@ -286,7 +293,7 @@ export async function mountWorld(root, app) {
   }
   // 區域標記（踩在地形上）
   const markers = {};
-  for (const [z, [x, y]] of Object.entries(TW_ZONES)) markers[z] = dio.addSprite({ x, y, z: gz(x, y) + (z === 'mountain' ? 250 : 110), w: 140, h: 140, cls: 'marker place-mark', shadow: 0, tap: `zone:${z}`, html: `<div class="inner">${ZONES[z].icon}</div>` });
+  for (const [z, [x, y]] of Object.entries(TW_ZONES)) markers[z] = dio.addSprite({ x, y, z: gz(x, y) + (z === 'mountain' ? 130 : 110), w: 140, h: 140, cls: 'marker place-mark', shadow: 0, tap: `zone:${z}`, html: `<div class="inner">${ZONES[z].icon}</div>` });
   // 以後會開放：灰色加鎖
   for (const s of SOON) dio.addSprite({ x: s.x, y: s.y, z: gz(s.x, s.y) + 90, w: 110, h: 110, cls: 'marker place-mark locked', shadow: 0, tap: `soon:${s.id}`, html: `<div class="inner"><span class="emo">${s.icon}</span></div><i class="lock">🔒</i>` });
   dio.seal();
