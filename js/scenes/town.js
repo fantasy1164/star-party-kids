@@ -97,15 +97,78 @@ const PAD_SPOTS = [
   [2200, 760, 80], [2400, 780, 80], [2560, 1180, 80], [1820, 1520, 80], [2080, 250, 80], [1780, 300, 80], [1820, 960, 70], [2240, 1000, 70], [2545, 1330, 110],
 ];
 let PADS = null;
-export function groundZ(x, y) {
+function rawGround(x, y) {
   PADS ||= [...PAD_SPOTS, ...Object.values(NODES).map((n) => [n.x, n.y, 90])].map(([px, py, r]) => ({ x: px, y: py, r, z: terrainBase(px, py) }));
   let z = terrainBase(x, y), w = 0, acc = 0;
   for (const p of PADS) {
     const d = Math.hypot(x - p.x, y - p.y);
-    if (d < p.r + 160) { const k = 1 - sstep(p.r * 0.85, p.r + 160, d); acc += k * p.z; w += k; }
+    if (d < p.r + 220) { const k = 1 - sstep(p.r * 0.8, p.r + 220, d); acc += k * p.z; w += k; }
   }
   if (w > 0) { const k = Math.min(1, w); z = z * (1 - k) + (acc / w) * k; }
   return z;
+}
+// 11/25 道路平滑：馬路自己有一條順順的坡度（沿著路把地面高度平均開來，兩頭接到路口的高度），
+// 路面和路肩貼著這條坡度，不會跟著旁邊房子的平台一高一低、扭來扭去；離路越遠越回到原本的地形。
+let ROADS = null;
+function roadProfiles() {
+  if (ROADS) return ROADS;
+  ROADS = EDGES.map(([a, b, c]) => {
+    const A = NODES[a], B = NODES[b], N = 60;
+    const pts = [...Array(N + 1)].map((_, i) => { const t = i / N; return { x: (1 - t) ** 2 * A.x + 2 * (1 - t) * t * c[0] + t * t * B.x, y: (1 - t) ** 2 * A.y + 2 * (1 - t) * t * c[1] + t * t * B.y, t }; });
+    const za = rawGround(A.x, A.y), zb = rawGround(B.x, B.y);
+    let z = pts.map((p) => terrainBase(p.x, p.y));
+    for (let pass = 0; pass < 6; pass++) z = z.map((_, i) => { const w = z.slice(Math.max(0, i - 8), i + 9); return w.reduce((t, v) => t + v, 0) / w.length; });
+    // 兩頭一定接到路口的高度（中間用平滑的差值修正，不會在路口附近突然折一下）
+    const e0 = za - z[0], e1 = zb - z[N];
+    z = z.map((v, i) => { const t = i / N, k = t * t * (3 - 2 * t); return v + e0 * (1 - k) + e1 * k; });
+    pts.forEach((p, i) => { p.z = z[i]; });
+    const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y);
+    return { pts, x0: Math.min(...xs) - 260, x1: Math.max(...xs) + 260, y0: Math.min(...ys) - 260, y1: Math.max(...ys) + 260 };
+  });
+  return ROADS;
+}
+function smoothGround(x, y) {
+  let z = rawGround(x, y);
+  let best = 1e9, bz = 0;
+  for (const R of roadProfiles()) {
+    if (x < R.x0 || x > R.x1 || y < R.y0 || y > R.y1) continue;
+    const P = R.pts;
+    for (let i = 0; i < P.length - 1; i++) {
+      const a = P[i], b = P[i + 1], dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy || 1;
+      const u = Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / L2));
+      const d = Math.hypot(x - (a.x + dx * u), y - (a.y + dy * u));
+      if (d < best) { best = d; bz = a.z + (b.z - a.z) * u; }
+    }
+  }
+  if (best < 260) { const k = 1 - sstep(80, 260, best); z = z * (1 - k) + bz * k; }
+  return z;
+}
+// 先算好一張高度表（每 25 一格），之後查表＋雙線性內插：又快、又順（表也順順地糊一次，去掉小折角）
+const GZ = { x0: -1500, y0: -1500, c: 25, nx: 0, ny: 0, h: null };
+function groundTable() {
+  if (GZ.h) return GZ;
+  GZ.nx = Math.ceil((W + 3000) / GZ.c) + 1; GZ.ny = Math.ceil((D + 3000) / GZ.c) + 1;
+  let h = new Float32Array(GZ.nx * GZ.ny);
+  for (let j = 0; j < GZ.ny; j++) for (let i = 0; i < GZ.nx; i++) {
+    const x = GZ.x0 + i * GZ.c, y = GZ.y0 + j * GZ.c;
+    const inMap = x > -400 && x < W + 400 && y > -400 && y < D + 400;
+    h[j * GZ.nx + i] = inMap ? smoothGround(x, y) : terrainBase(x, y);
+  }
+  // 糊一次（3×3 平均），把整平平台的邊緣磨圓
+  const o = new Float32Array(h.length);
+  for (let j = 0; j < GZ.ny; j++) for (let i = 0; i < GZ.nx; i++) {
+    let t = 0, n = 0;
+    for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) { const a = i + di, b = j + dj; if (a >= 0 && b >= 0 && a < GZ.nx && b < GZ.ny) { t += h[b * GZ.nx + a]; n++; } }
+    o[j * GZ.nx + i] = t / n;
+  }
+  GZ.h = o;
+  return GZ;
+}
+export function groundZ(x, y) {
+  const G = groundTable();
+  const fx = Math.max(0, Math.min(G.nx - 1.001, (x - G.x0) / G.c)), fy = Math.max(0, Math.min(G.ny - 1.001, (y - G.y0) / G.c));
+  const i = Math.floor(fx), j = Math.floor(fy), u = fx - i, v = fy - j, n = G.nx, h = G.h;
+  return (h[j * n + i] * (1 - u) + h[j * n + i + 1] * u) * (1 - v) + (h[(j + 1) * n + i] * (1 - u) + h[(j + 1) * n + i + 1] * u) * v;
 }
 // 地面＋山：這一點最上面有多高（算視線有沒有被擋住）
 export const heightAt = (x, y) => groundZ(x, y) + hillAt(x, y);
@@ -732,7 +795,7 @@ export function buildTown() {
   </svg>`;
   // 地面大圖底下補一層草地顏色（大圖是透明底）
   const groundTex = ground.replace(/^\s*(<svg[^>]*>)/, `$1<rect width="${W}" height="${D}" fill="#a6d987"/>`);
-  dio0.addTerrain({ html: groundTex, ground: groundZ });
+  dio0.addTerrain({ html: groundTex, ground: groundZ, cell: 45 });
   buildTerrain(dio0);   // 山、隧道、高架快速道路
   // 地點
   const markers = {};
